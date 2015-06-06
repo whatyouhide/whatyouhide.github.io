@@ -28,7 +28,7 @@ iex> ListParser.parse("[1, 2, [:foo, [:bar]]]")
 [1, 2, [:foo, [:bar]]]
 ```
 
-That's small, contrived and unrealistic, so I think we're good to go.
+That's small, contrived and unrealistic, so we should be good to go.
 
 ## The lexer
 
@@ -53,39 +53,42 @@ Our lexer is simple:
 ```
 Rules.
 
-[0-9]+   : {token, {integer, TokenChars}}.
-:[a-z_]+ : {token, {atom, TokenChars}}.
-\[       : {token, '['}.
-\]       : {token, ']'}
-,        : {token, ','}
+[0-9]+   : {token, {int,  TokenLine, TokenChars}}.
+:[a-z_]+ : {token, {atom, TokenLine, TokenChars}}.
+\[       : {token, {'[',  TokenLine}}.
+\]       : {token, {']',  TokenLine}}.
+,        : {token, {',',  TokenLine}}.
 ```
 
-`leex` makes `TokenChars` available in the Erlang expression following each regex; this variable contains the matched tokens as a char list. As you can see, sometimes we're interested in the token value but sometimes the token itself is its value (i.e., `:","`).
+We return a `{:token, value}` to tell `leex` we're interested in the matched token (that's why the first element of the tuple is `:token`) and we want to include it in the output of the lexical analysis.
 
-We return a tuple with the atom `:token` as the first element because that's the way we tell `leex` that we found a token we're interested in and which we want in the output of the lexical analysis. We don't have to keep all the tokens we find: we can discard them by returning the atom `:skip_token` instead of a `{token, ...}` tuple. A common use case is skipping whitespace:
+`TokenLine` and `TokenChars` are variables that `leex` makes available in the Erlang expression following each regex. These variables contain the line of the matching token and the matched token's contents (as a char list).
+
+We always use two- or three-element tuples as the value of tokens because this is the format `yecc` wants. As you can see, sometimes we're interested in the token value so we return a three-element tuple but sometimes the token itself is its value (e.g., the comma) so a two-element tuple is enough. The token line is mandatory so that `yecc` can spit out accurate error messages.
+
+We don't have to keep all the tokens we find: we can discard them by returning the atom `:skip_token` instead of a `{:token, value}` tuple. A common use case is skipping whitespace:
 
 ```
 [\s\t\n\r]+ : skip_token.
 ```
 
-Regular expressions can quickly become nasty, that's why we can extract them into *definitions* in the form `ALIAS = REGEX`. We put definitions at the top of the file, before the list of rules. To use these definitions in the regexes, we have to surround them with curly braces.
+Regular expressions can quickly become nasty, but we can extract them into *definitions* in the form `ALIAS = REGEX`. We put definitions at the top of the file, before the list of rules. To use these definitions in the regexes, we have to surround them with curly braces.
 
 ```
 Definitions.
 
-INT        : [0-9]+
-ATOM       : [a-z_]+
-WHITESPACE : [\s\t\n\r]
+INT        = [0-9]+
+ATOM       = :[a-z_]+
+WHITESPACE = [\s\t\n\r]
 
 Rules.
 
-{INT}         : {token, {integer, TokenChars}}.
-{ATOM}        : {token, {atom, TokenChars}}.
-\]            : {token, ']'}.
-\[            : {token, '['}.
-,             : {token, ','}
+{INT}         : {token, {int,  TokenLine, TokenChars}}.
+{ATOM}        : {token, {atom, TokenLine, TokenChars}}.
+\[            : {token, {'[',  TokenLine}}.
+\]            : {token, {']',  TokenLine}}.
+,             : {token, {',',  TokenLine}}.
 {WHITESPACE}+ : skip_token.
-
 ```
 
 We're ready to try out our lexer. First, we have to write it to a file with the `.xrl` extension. Then, we can turn the `.xrl` file into a `.erl` file with `:leex.file/1`. Finally, we can compile the newly generated Erlang module. Remember that most Erlang modules accept char lists instead of binaries, so we have to surround them in single quotes instead of double quotes. (Side note: Erlang uses single quotes to express complex atoms like `'foo bar'` that can't be expressed using the `regular` syntax, but you remembered that, right?)
@@ -93,33 +96,35 @@ We're ready to try out our lexer. First, we have to write it to a file with the 
 ```iex
 iex> :leex.file('list_lexer.xrl')
 iex> c("list_lexer.erl")
-iex> {:ok, tokens, _} = :list_lexer.string('[1, :foo, [:bar]]')
+iex> {:ok, tokens, _} = :list_lexer.string('[1, [:foo]]')
 iex> tokens
-[:"[", {:integer, '1'}, :",", {:atom, 'foo'}, :",", :"[", {:atom, 'bar'}, :"]", :"]"]
+{:"[", 1}, {:int, 1, '1'}, {:",", 1}, {:"[", 1}, {:atom, 1, ':foo'}, {:"]", 1}, {:"]", 1}]
 ```
 
-Nice! `leex` also provides the possibility to define some Erlang code associated with the lexer: this is done in the `Erlang code.` section at the bottom of the `.xrl` file. We could take advantage of this to convert integer tokens to actual Elixir integers (instead of char lists) and atom tokens into actual atoms:
+Nice! `leex` also provides the possibility to define some Erlang code associated with the lexer: this is done in the `Erlang code.` section at the bottom of the `.xrl` file. We could take advantage of this to convert atom tokens to atoms:
 
 ```
 ...
 
-{INT} : {token, {integer, to_i(TokenChars)}}.
+{INT}  : {token, {int,  list_to_integer(TokenChars)}}.
+{ATOM} : {token, {atom, to_atom(TokenChars)}}.
 
 ...
 
 Erlang code.
 
-to_i(Chars)    -> list_to_integer(Chars).
-to_atom(Chars) -> list_to_atom(Chars).
+to_atom([$:|Chars])
+  -> list_to_atom(Chars).
 ```
+
+`to_atom/1` just strips the first character of an atom token (which is a colon, `$:` in Erlang land) and converts the rest to an atom. We also used `list_to_integer/1` to convert integer tokens to integers.
 
 ```iex
 iex> {:ok, tokens, _} = :list_lexer.string('[1, :foo]')
 iex> tokens
-[:"[", {:integer, 1}, :",", {:atom, :foo}, :"]"]
+[{:"[", 1}, {:int, 1, 1}, {:",", 1}, {:atom, 1, :foo}, {:"]", 1}]
 ```
 
-We could have used `list_to_integer/1` and `list_to_atom/1` directly in the rule, but bear with me, it's hard to come up with plausible examples :).
 
 ## The parser
 
@@ -140,11 +145,9 @@ The left-hand side is a **category** of tokens, while the right-hand side is a c
 For example, the `:"["` or `{atom, Atom}` tokens are terminals. A list could be represented by the `list` non-terminal:
 
 ```
-list ->
-  '[' ']'.
+list -> '[' ']'.
 % or...
-list ->
-  '[' elems ']'.
+list -> '[' elems ']'.
 
 % By the way, '%' is used for comments just like in Erlang.
 ```
@@ -154,10 +157,8 @@ As you can see, we can define multiple "clauses" for each category: the category
 `elems` is a non-terminal itself. We can define it as a single element or an element, a comma and a list of elements:
 
 ```
-elems ->
-  elem.
-elems ->
-  elem ',' elems.
+elems -> elem.
+elems -> elem ',' elems.
 ```
 
 The `elems` category could be `elem`, `elem, elem`, and so on.
@@ -165,7 +166,7 @@ The `elems` category could be `elem`, `elem, elem`, and so on.
 `elem` is a non-terminal itself: it represents an integer, an atom, or a list. Note how elegantly we can represent the fact that an element of a list can be itself a list:
 
 ```
-elem -> integer.
+elem -> int.
 elem -> atom.
 elem -> list.
 ```
@@ -175,7 +176,7 @@ Beautiful!
 All non-terminals must at some point expand to terminals: you can't have a non-terminal that doesn't expand to anything. `yecc` also requires you to specify which categories are terminals and which ones are non-terminals at the top of the file:
 
 ```
-Terminals '[' ']' ',' integer atom.
+Terminals '[' ']' ',' int atom.
 Nonterminals list elems elem.
 ```
 
@@ -185,19 +186,7 @@ You also have to specify a **root symbol**, that is, the starting non-terminal t
 Rootsymbol list.
 ```
 
-To be understood by `yecc`, tokens have to have a specific form: they have to be **two- or three-element tuples**.
-
-The first element of the tuple has to be an atom with the name of the tokens: this is the name of the terminal categories we've been using since the beginning. For example, when we write `atom` in the `elem -> atom.` rule, the parser expects a token in the form of `{:atom, ...}`. The second element has to be the line of the token in the original string (used by `yecc` to give meaningful error messages). The third element can be the "content" of the token (e.g., if the token is an `:integer` the third element of the tuple can be its value). If the token is a "singleton" (e.g., only a value exists for that token), the third element can be discarded in favor of a two-element tuple: this is the case of `','`, `'['`, and `']'`.
-
-In the lexer we didn't associate a line with the tokens. We can do that using the `TokenLine` variable made available by `leex` (like `TokenChars`).
-
-```
-{ATOM} : {token, {atom, TokenLine, TokenChars}}.
-\[     : {token, {'[', TokenLine}}.
-...
-```
-
-We're almost finished! We only need to convert the parsed lists to Elixir lists. We can do this in the Erlang code associated with each parsing rule. In these Erlang expressions, we have some special atoms available: `'$1'`, `'$2'`, `'$3'` and so on. `yecc` replaces them with the value returned by the Erlang code associated with the category at the same index on the right-hand side of the rule. I just heard you think "*what?!*"; you're right, this is way easier to understand in practice.
+We're almost finished! We only need to convert the parsed lists to Elixir lists. We can do this in the Erlang code associated with each parsing rule. In these Erlang expressions, we have some special atoms available: `'$1'`, `'$2'`, `'$3'` and so on. `yecc` replaces them with the value returned by the Erlang code associated with the category at the same index on the right-hand side of the rule. I just heard you thought "*what?!*"; you're right, this is way easier to understand in practice:
 
 ```
 list ->
@@ -210,12 +199,9 @@ elems ->
 elems ->
   elem ',' elems : ['$1'|'$2']. % '$2' will be replaced recursively
 
-elem ->
-  integer : extract_token('$1').
-elem ->
-  atom : extract_token('$2').
-elem ->
-  list : '$1'.
+elem -> int : extract_token('$1').
+elem -> atom    : extract_token('$2').
+elem -> list    : '$1'.
 
 % Yep, we can use Erlang code here as well.
 Erlang code.
@@ -251,22 +237,22 @@ Awesome!
 
 Manually generating Erlang files from `.xrl` and `.yrl` files and then compiling those Erlang files can become tedious very quickly. Luckily, Mix can do that for you!
 
-Mix has the concept of "compilers": they're just what you think they are, compilers. Mix provides a compiler for Erlang (which just compiles `.erl` files through the Erlang installation), one for Elixir, but also a `:leex` compiler and `:yecc` compiler. They are actually enabled by default, as you can see by inspecting the return value of [`Mix.compilers/0`][docs-mix-compilers/0] in a Mix project:
+Mix has the concept of "compilers": they're just what you think they are, compilers. Mix provides a compiler for Erlang (which just compiles `.erl` files through the Erlang installation), one for Elixir, but also a `:leex` compiler and `:yecc` compiler. They are actually enabled by default, as you can see by inspecting the return value of [`Mix.compilers/0`][docs-mix-compilers/0] inside a Mix project:
 
 ```iex
 iex> Mix.compilers()
 [:yecc, :leex, :erlang, :elixir, :app]
 ```
 
-The only thing you have to do to make all of this work effortlessly in a Mix project is put your `.xrl` and `.yrl` files in the `src/` directory of the project and you'll have the compiled Erlang modules available.
+The only thing you have to do to make all of this work effortlessly inside a Mix project is put your `.xrl` and `.yrl` files in the `src/` directory of the project and you'll have the compiled Erlang modules available when the project is compiled.
 
 ```bash
-mix new list_parser && cd list_parser
-mkdir src
-mv ../list_parser.yrl ../list_lexer.xrl ./src/
+mix new list_parser
+mkdir list_parser/src
+mv ./list_parser.yrl ./list_lexer.xrl ./list_parser/src/
 ```
 
-Now, inside `lib/list_parser.ex`:
+Now, inside `list_parser/lib/list_parser.ex`:
 
 ```elixir
 defmodule ListParser do
