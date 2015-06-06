@@ -283,6 +283,15 @@ footer {
   text-align: center;
 }
 
+:not(pre) > code {
+  background-color: $lightGray;
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-bottom: 1px;
+  border-radius: 2px;
+  //display: inline-block;
+}
+
 // Settled on moving the import of syntax highlighting to the bottom of the CSS
 // ... Otherwise it really bloats up the top of the CSS file and makes it difficult to find the start
 @import "highlights";
