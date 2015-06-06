@@ -284,15 +284,15 @@ I'm realizing just now that this post, even if it's my first post about Elixir, 
 
 [wiki-lexical-analysis]: http://en.wikipedia.org/wiki/Lexical_analysis
 [wiki-parsing]: http://en.wikipedia.org/wiki/Parsing
-[dragon-book]: http://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
-[stackoverflow-html-regex]: http://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags
-[docs-leex]: http://erlang.org/doc/man/leex.html
-[docs-yecc]: http://erlang.org/doc/man/yecc.html
-[docs-mix-compilers/0]: http://elixir-lang.org/docs/master/mix/Mix.html#compilers/0
 [wiki-lex]: http://en.wikipedia.org/wiki/Lex_(software)
 [wiki-yacc]: http://en.wikipedia.org/wiki/Yacc
+[docs-leex]: http://erlang.org/doc/man/leex.html
+[docs-yecc]: http://erlang.org/doc/man/yecc.html
+[docs-parsetools]: http://www.erlang.org/doc/apps/parsetools/
+[docs-mix-compilers/0]: http://elixir-lang.org/docs/master/mix/Mix.html#compilers/0
+[dragon-book]: http://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
+[stackoverflow-html-regex]: http://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags
 [po-files]: https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html
 [gnu-gettext]: https://www.gnu.org/software/gettext/
 [gettext-for-elixir-parser-code]: https://github.com/elixir-lang/gettext/blob/e2e3d42edd2a8fa5aa2deada2e5779f122594e71/src/gettext_po_parser.yrl
 [elixir-parser-code]: https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_parser.yrl
-[docs-parsetools]: http://www.erlang.org/doc/apps/parsetools/
