@@ -7,11 +7,11 @@ Lexing and parsing are very important concepts in computer science and programmi
 
 ## Why
 
-Usually people tend to avoid using lexers and parsers in favor of manual string manipulation and often **regular expressions**. I think this may happen because of the inherent complexity that is often associated with these tools. In this post, we'll try to make this complexity go away!
+Usually people tend to avoid using lexers and parsers in favor of manual string manipulation and **regular expressions**. I think this may happen because of the inherent complexity that is generally associated with these tools. In this post, we'll try to make this complexity go away!
 
-First of all, let me disclaim this: lexers and parser are usually tied to each other, but they don't *need* to be. You can perfectly use a lexer in order to tokenize some string into a flat list of tokens and you can perfectly use a parser in order to understand a grammar of anything.
+First of all, let me disclaim this: lexers and parser are usually tied to each other, but they don't *need* to be. You can perfectly use a lexer to tokenize some string into a flat list of tokens and you can perfectly use a parser to understand a grammar of anything.
 
-A little side note before we begin. I said people often choose regular expressions to "parse" and understand text. While this is fine for very simple situations, it often results in cryptic and fragile code. Also, regular expressions are limited in what type of grammars they can parse (try [parsing HTML with regexes][stackoverflow-html-regex]), so you often will *need* something more powerful.
+A little side note before we begin. I said people often choose regular expressions to "parse" and understand text. While this is fine for very simple parsing tasks, most of the times it results in cryptic and fragile code. Also, regular expressions are limited in what type of grammars they can parse (try [parsing HTML with regexes][stackoverflow-html-regex]), so at times you will *need* something more powerful.
 
 ## Enter `leex` and `yecc`
 
@@ -21,24 +21,24 @@ Since these modules are available in the Erlang standard distribution (in the "P
 
 ## The small, contrived and unrealistic example
 
-Every post explaining something needs one of these, so let's make up ours: we're going to tokenize and parse Elixir lists of simple atoms and integers dumped as strings. The final goal will be to be able to read an Elixir list expressed as a string and convert it back to an Elixir string. We want to be able to do this:
+Every post explaining something needs one of these, so let's make up ours: we're going to tokenize and parse Elixir lists of atoms and integers dumped as strings. The final goal will be to be able to read an Elixir list expressed as a string and convert it back to an Elixir string. We want to be able to do this:
 
 ```iex
 iex> ListParser.parse("[1, 2, [:foo, [:bar]]]")
 [1, 2, [:foo, [:bar]]]
 ```
 
-That's small, contrived and unrealistic, I think we're good to go.
+That's small, contrived and unrealistic, so I think we're good to go.
 
 ## The lexer
 
-The first thing we have to do is **tokenize** the string: tokenizing just means turning a string (a list of characters) into a list of tokens, which are just things a bit more structured than simple characters.
+The first thing we have to do is **tokenize** the string: tokenizing just means turning a string into a list of tokens, which are just things a bit more structured than a flat list of characters.
 
 For example, a single token could be an integer like `4917`: the *integer* `4917` has "more structure" than the list of characters `[?4, ?9, ?1, ?7]` because we can treat it as a whole.
 
-Tokenizing our lists is very simple: we only tokenize parentheses (left `[` and right `]`), integers and atoms. We're going to tokenize only simple atoms, like `:foo` or `:foo_bar`, ignoring atoms that have to use double or single quotes, like `:'foo bar'` or `:"hello world!"`.
+Tokenizing our lists is straightforward: we only tokenize parentheses (left `[` and right `]`), commas, integers and atoms. We're going to tokenize only simple atoms, like `:foo` or `:foo_bar`, ignoring atoms that have to use double or single quotes, like `:'foo bar'` or `:"hello world!"`.
 
-Rolling our own tokenizer for this simple syntax would be easy, but `leex` greatly simplifies the job by letting us write a lexer with a very straightforward syntax. Basically, you identify tokens with regular expressions and you associate an Erlang expression to each regular expression in order to create a token. I mentioned that regular expressions aren't cut for this job before: well, they're not a great tool for parsing because of the recursive nature of the task, but they're great for splitting things in a flat structure.
+Rolling our own tokenizer for this basic syntax would be easy, but `leex` greatly simplifies the job by letting us write a lexer with a very straightforward syntax. Basically, you identify tokens with regular expressions and you associate an Erlang expression to each regular expression in order to create a token. I mentioned that regular expressions aren't cut for this job before: well, they're not a great tool for parsing because of the recursive nature of the task, but they're great for splitting things in a flat structure.
 
 The syntax of a `leex` **rule** is this:
 
@@ -48,7 +48,7 @@ Regular expression : Erlang code.
 
 In the "Erlang code", we have to return a `{:token, value}` tuple if we want the lexer to return that token to us (actually, a `{token, Value}` tuple since we have to use Erlang syntax, not Elixir).
 
-Our lexer is extremely simple:
+Our lexer is simple:
 
 ```
 Rules.
@@ -68,7 +68,7 @@ We return a tuple with the atom `:token` as the first element because that's the
 [\s\t\n\r]+ : skip_token.
 ```
 
-Regular expressions can quickly become nasty, that's why we can extract them into *definitions* in the form `ALIAS = REGEX`. We put definitions at the top of the file, before the list of rules. In order to use these definitions in the regexes, we have to surround them with curly braces.
+Regular expressions can quickly become nasty, that's why we can extract them into *definitions* in the form `ALIAS = REGEX`. We put definitions at the top of the file, before the list of rules. To use these definitions in the regexes, we have to surround them with curly braces.
 
 ```
 Definitions.
@@ -88,7 +88,7 @@ Rules.
 
 ```
 
-We're ready to try out our lexer. First, we have to write it to a file with the `.xrl` extension. Then, we can turn the `.xrl` file into a `.erl` file with `:leex.file/1`. Finally, we can compile the newly generated Erlang module. Remember that most Erlang modules accept Erlang strings, which are actually charlists and not binaries (as in Elixir) so they have to be surrounded by single quotes. (Side note: single quotes in Erlang are used to express more complex atoms like `'foo bar'`, but you remembered that, right?)
+We're ready to try out our lexer. First, we have to write it to a file with the `.xrl` extension. Then, we can turn the `.xrl` file into a `.erl` file with `:leex.file/1`. Finally, we can compile the newly generated Erlang module. Remember that most Erlang modules accept char lists instead of binaries, so we have to surround them in single quotes instead of double quotes. (Side note: Erlang uses single quotes to express complex atoms like `'foo bar'` that can't be expressed using the `regular` syntax, but you remembered that, right?)
 
 ```iex
 iex> :leex.file('list_lexer.xrl')
@@ -98,7 +98,7 @@ iex> tokens
 [:"[", {:integer, '1'}, :",", {:atom, 'foo'}, :",", :"[", {:atom, 'bar'}, :"]", :"]"]
 ```
 
-Nice! `leex` also provides the possibility to define some Erlang code associated with the lexer: this is done in the `Erlang code.` section at the bottom of the `.xrl` file. We could take advantage of this in order to convert integer tokens to actual Elixir integers (instead of char lists) and atom tokens into actual atoms:
+Nice! `leex` also provides the possibility to define some Erlang code associated with the lexer: this is done in the `Erlang code.` section at the bottom of the `.xrl` file. We could take advantage of this to convert integer tokens to actual Elixir integers (instead of char lists) and atom tokens into actual atoms:
 
 ```
 ...
@@ -185,9 +185,9 @@ You also have to specify a **root symbol**, that is, the starting non-terminal t
 Rootsymbol list.
 ```
 
-In order to be understood by `yecc`, tokens have to have a specific forn: they have to be **two- or three-element tuples**.
+To be understood by `yecc`, tokens have to have a specific form: they have to be **two- or three-element tuples**.
 
-The first element of the tuple has to be an atom with the name of the tokens: this is the name of the terminal categories we've been using since the beginning. For example, when we write `atom` in the `elem -> atom.` rule, the parser expects a token in the form of `{:atom, ...}`. The second element has to be the line of the token in the original string (used by `yecc` in order to give meaningful error messages). The third element can be the "content" of the token (e.g., if the token is an `:integer` the third element of the tuple can be its value). If the token is a "singleton" (e.g., only a value exists for that token), the third element can be discarded in favour of a two-element tuple: this is the case of `','`, `'['`, and `']'`.
+The first element of the tuple has to be an atom with the name of the tokens: this is the name of the terminal categories we've been using since the beginning. For example, when we write `atom` in the `elem -> atom.` rule, the parser expects a token in the form of `{:atom, ...}`. The second element has to be the line of the token in the original string (used by `yecc` to give meaningful error messages). The third element can be the "content" of the token (e.g., if the token is an `:integer` the third element of the tuple can be its value). If the token is a "singleton" (e.g., only a value exists for that token), the third element can be discarded in favour of a two-element tuple: this is the case of `','`, `'['`, and `']'`.
 
 In the lexer we didn't associate a line with the tokens. We can do that using the `TokenLine` variable made available by `leex` (like `TokenChars`).
 
@@ -197,7 +197,7 @@ In the lexer we didn't associate a line with the tokens. We can do that using th
 ...
 ```
 
-We're almost finished! We only need to convert the parsed lists to Elixir lists. This can be done in the Erlang code associated with each parsing rule. In these Erlang expressions, we have some special atoms available: `'$1'`, `'$2'`, `'$3'` and so on. They are replaced by `yecc` with the value returned by the Erlang code associated with the category at the same index on the right-hand side of the rule. I swear I just heard you think "what?!"; you're right, this is way easier to understand in practice.
+We're almost finished! We only need to convert the parsed lists to Elixir lists. We can do this in the Erlang code associated with each parsing rule. In these Erlang expressions, we have some special atoms available: `'$1'`, `'$2'`, `'$3'` and so on. `yecc` replaces them with the value returned by the Erlang code associated with the category at the same index on the right-hand side of the rule. I just heard you think "*what?!*"; you're right, this is way easier to understand in practice.
 
 ```
 list ->
@@ -281,7 +281,7 @@ end
 
 ## I'm not convinced yet
 
-All of this may sound very abstract, but I assure you that `leex` and `yecc` have tons of practical uses. For example, I recently had to write a parser for [PO files][po-files] in the context of writing an Elixir binding to [GNU gettext][gnu-gettext]. Well, I used `yecc` to write a parser: this resulted in a very declarative, simple and easy-to-understand grammar (you can see it [here][gettext-for-elixir-parser-code]) and I'm super-happy with it. We didn't use `leex` in Gettext but decided to roll our own lexer, but only because the tokenization was very simple and `leex` may have been slight overkill.
+All of this may sound very abstract, but I assure you that `leex` and `yecc` have tons of practical uses. For example, I recently had to write a parser for [PO files][po-files] in the context of writing an Elixir binding to [GNU gettext][gnu-gettext]. Well, I used `yecc` to write a parser: this resulted in a very declarative, clean and easy-to-understand grammar (you can see it [here][gettext-for-elixir-parser-code]) and I'm super-happy with it. We didn't use `leex` in Gettext but decided to roll our own lexer, but only because the tokenization was very simple and `leex` may have been slight overkill.
 
 Want another real-world™ example? Wait, I think I have one: ever heard of the Elixir programming language? It's a nice language built atop the Erlang virtual matching, focused on concurrency, fault to... Ok, it's [parsed by `yecc`][elixir-parser-code] :).
 
