@@ -3,13 +3,13 @@ layout: post
 title: Tokenizing and parsing in Elixir with yecc and leex
 ---
 
-Lexing and parsing are very important concepts in computer science and programming. There is a lot of theory behind these concepts, but I won't be talking about any of that here because, well, it's *a lot*. Also, I feel like approaching these topics in a "scientific" way makes them look a bit scary; however, using them in practice turns out to be pretty straightforward. If you want to know more about the theory, head over to Wikipedia ([lexical analysis][wiki-lexical-analysis] and [parsing][wiki-parsing]) or buy the amazing [dragon book][dragon-book].
-
-## Why
+Lexical analysis (tokenizing) and parsing are very important concepts in computer science and programming. There is a lot of theory behind these concepts, but I won't be talking about any of that here because, well, it's *a lot*. Also, I feel like approaching these topics in a "scientific" way makes them look a bit scary; however, using them in practice turns out to be pretty straightforward. If you want to know more about the theory, head over to Wikipedia ([lexical analysis][wiki-lexical-analysis] and [parsing][wiki-parsing]) or read the amazing [dragon book][dragon-book] (which I recommend to all programmers, it's fantastic).
 
 Usually people tend to avoid using lexers and parsers in favor of manual string manipulation and **regular expressions**. I think this may happen because of the inherent complexity that is generally associated with these tools. In this post, we'll try to make this complexity go away!
 
-First of all, let me disclaim this: lexers and parser are usually tied to each other, but they don't *need* to be. You can perfectly use a lexer to tokenize some string into a flat list of tokens and you can perfectly use a parser to understand a grammar of anything.
+## Why
+
+First of all, lexers and parser are usually used together, but they don't *need* to be. You can use a lexer to tokenize some string into a flat list of tokens and you can use a parser to understand a grammar of anything.
 
 A little side note before we begin. I said people often choose regular expressions to "parse" and understand text. While this is fine for very simple parsing tasks, most of the times it results in cryptic and fragile code. Also, regular expressions are limited in what type of grammars they can parse (try [parsing HTML with regexes][stackoverflow-html-regex]), so at times you will *need* something more powerful.
 
