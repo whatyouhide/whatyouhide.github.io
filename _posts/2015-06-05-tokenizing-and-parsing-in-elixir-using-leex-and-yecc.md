@@ -3,7 +3,7 @@ layout: post
 title: Tokenizing and parsing in Elixir with yecc and leex
 ---
 
-Lexing and parsing are very important concepts in computer science and programming. There is a lot of theory behind these concepts, but I won't be talking about any of that here because, well, it's *a lot*. Also, I feel like approaching these topics in a "scientific" way makes them look a bit scary; however, using them in practice turns out to be pretty straighforward. If you want to know more about the theory, head over to Wikipedia ([lexical analysis][wiki-lexical-analysis] and [parsing][wiki-parsing]) or buy the amazing [dragon book][dragon-book].
+Lexing and parsing are very important concepts in computer science and programming. There is a lot of theory behind these concepts, but I won't be talking about any of that here because, well, it's *a lot*. Also, I feel like approaching these topics in a "scientific" way makes them look a bit scary; however, using them in practice turns out to be pretty straightforward. If you want to know more about the theory, head over to Wikipedia ([lexical analysis][wiki-lexical-analysis] and [parsing][wiki-parsing]) or buy the amazing [dragon book][dragon-book].
 
 ## Why
 
@@ -60,9 +60,9 @@ Rules.
 ,        : {token, ','}
 ```
 
-`leex` makes `TokenChars` available in the Erlang expression following each regex; this variable contains the matched tokens as a charlist. As you can see, sometimes we're interested in the token value but sometimes the token itself is its value (i.e., `:","`).
+`leex` makes `TokenChars` available in the Erlang expression following each regex; this variable contains the matched tokens as a char list. As you can see, sometimes we're interested in the token value but sometimes the token itself is its value (i.e., `:","`).
 
-We return a tuple with the atom `:token` as the first element because that's the way we tell `leex` that we found a token we're interested in and which we want in the output of the lexical analysis. We don't hav to keep all the tokens we find: we can discard them by returning the atom `:skip_token` instead of a `{token, ...}` tuple. A common use case is skipping whitespace:
+We return a tuple with the atom `:token` as the first element because that's the way we tell `leex` that we found a token we're interested in and which we want in the output of the lexical analysis. We don't have to keep all the tokens we find: we can discard them by returning the atom `:skip_token` instead of a `{token, ...}` tuple. A common use case is skipping whitespace:
 
 ```
 [\s\t\n\r]+ : skip_token.
@@ -187,7 +187,7 @@ Rootsymbol list.
 
 To be understood by `yecc`, tokens have to have a specific form: they have to be **two- or three-element tuples**.
 
-The first element of the tuple has to be an atom with the name of the tokens: this is the name of the terminal categories we've been using since the beginning. For example, when we write `atom` in the `elem -> atom.` rule, the parser expects a token in the form of `{:atom, ...}`. The second element has to be the line of the token in the original string (used by `yecc` to give meaningful error messages). The third element can be the "content" of the token (e.g., if the token is an `:integer` the third element of the tuple can be its value). If the token is a "singleton" (e.g., only a value exists for that token), the third element can be discarded in favour of a two-element tuple: this is the case of `','`, `'['`, and `']'`.
+The first element of the tuple has to be an atom with the name of the tokens: this is the name of the terminal categories we've been using since the beginning. For example, when we write `atom` in the `elem -> atom.` rule, the parser expects a token in the form of `{:atom, ...}`. The second element has to be the line of the token in the original string (used by `yecc` to give meaningful error messages). The third element can be the "content" of the token (e.g., if the token is an `:integer` the third element of the tuple can be its value). If the token is a "singleton" (e.g., only a value exists for that token), the third element can be discarded in favor of a two-element tuple: this is the case of `','`, `'['`, and `']'`.
 
 In the lexer we didn't associate a line with the tokens. We can do that using the `TokenLine` variable made available by `leex` (like `TokenChars`).
 
@@ -258,7 +258,7 @@ iex> Mix.compilers()
 [:yecc, :leex, :erlang, :elixir, :app]
 ```
 
-The only thing you have to do to make all of this work effortlessy in a Mix project is put your `.xrl` and `.yrl` files in the `src/` directory of the project and you'll have the compiled Erlang modules available.
+The only thing you have to do to make all of this work effortlessly in a Mix project is put your `.xrl` and `.yrl` files in the `src/` directory of the project and you'll have the compiled Erlang modules available.
 
 ```bash
 mix new list_parser && cd list_parser
@@ -283,13 +283,13 @@ end
 
 All of this may sound very abstract, but I assure you that `leex` and `yecc` have tons of practical uses. For example, I recently had to write a parser for [PO files][po-files] in the context of writing an Elixir binding to [GNU gettext][gnu-gettext]. Well, I used `yecc` to write a parser: this resulted in a very declarative, clean and easy-to-understand grammar (you can see it [here][gettext-for-elixir-parser-code]) and I'm super-happy with it. We didn't use `leex` in Gettext but decided to roll our own lexer, but only because the tokenization was very simple and `leex` may have been slight overkill.
 
-Want another real-world™ example? Wait, I think I have one: ever heard of the Elixir programming language? It's a nice language built atop the Erlang virtual matching, focused on concurrency, fault to... Ok, it's [parsed by `yecc`][elixir-parser-code] :).
+Want another real-world™ example? Wait, I think I have one: ever heard of the Elixir programming language? It's a nice language built atop the Erlang virtual matching, focused on concurrency, fault to... Well, it's [parsed by `yecc`][elixir-parser-code] :).
 
 ## Recap
 
 We built a lexer and a parser for transforming strings representing Elixir lists to actual Elixir lists. We used the `leex` Erlang module to generate the lexer and the `yecc` module to generate the parser.
 
-I'm realising just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to interop with Erlang from Elixir, shall we? :)
+I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we? :)
 
 
 [wiki-lexical-analysis]: http://en.wikipedia.org/wiki/Lexical_analysis
