@@ -15,13 +15,13 @@ A little side note before we begin. I said people often choose regular expressio
 
 ## Enter `leex` and `yecc`
 
-Erlang provides two modules that greatly simplify the task of writing lexers and parsers: [`leex`][docs-leex] and [`yecc`][docs-yecc]. The `leex` module is a lexer *generator*: it reads a file written in a special syntax and it spits out an Erlang module (in a `.erl` file) that you can compile and use to do the actual tokenizing. `yecc` behaves in the exact same way, except it generates parsers instead of lexers.
+Erlang provides two modules that greatly simplify the task of writing lexers and parsers: [`leex`][docs-leex] and [`yecc`][docs-yecc]. The `leex` module is a lexer *generator*: it reads a file written in a special syntax and it spits out an Erlang module (in a `.erl` file) that you can compile and use to do the actual tokenizing. `yecc` behaves in the same way, except it generates parsers instead of lexers.
 
-Since these modules are available in the Erlang standard distribution (in the "Parse tools" application group), I think there are little to no downsides in using them whenever there's a problem they could make easier to solve.
+Since these modules are available in the Erlang standard distribution (in the "Parse tools" application group), I think there are little to no downsides in using them whenever there's a problem they could help solving.
 
 ## The small, contrived and unrealistic example
 
-Every post explaining something needs one of these, so let's make up ours: we're going to tokenize and parse Elixir lists of atoms and integers dumped as strings. The final goal will be to be able to read an Elixir list expressed as a string and convert it back to an Elixir string. We want to be able to do this:
+Every post explaining something needs one of these examples, so let's make up ours: we're going to tokenize and parse Elixir lists of atoms and integers dumped as strings. The final goal will be to be able to read an Elixir list expressed as a string and convert it back to an Elixir string, like this:
 
 ```iex
 iex> ListParser.parse("[1, 2, [:foo, [:bar]]]")
@@ -275,7 +275,11 @@ Want another real-world™ example? Wait, I think I have one: ever heard of the 
 
 We built a lexer and a parser for transforming strings representing Elixir lists to actual Elixir lists. We used the `leex` Erlang module to generate the lexer and the `yecc` module to generate the parser.
 
-I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we? :)
+We only covered the basics of these two tools: they can do more complicated things (`yecc` generates LALR parsers if you know what that means) but for that, as usual, there's their [documentation][docs-parsetools].
+
+---
+
+I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we?
 
 
 [wiki-lexical-analysis]: http://en.wikipedia.org/wiki/Lexical_analysis
@@ -291,3 +295,4 @@ I'm realizing just now that this post, even if it's my first post about Elixir, 
 [gnu-gettext]: https://www.gnu.org/software/gettext/
 [gettext-for-elixir-parser-code]: https://github.com/elixir-lang/gettext/blob/e2e3d42edd2a8fa5aa2deada2e5779f122594e71/src/gettext_po_parser.yrl
 [elixir-parser-code]: https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_parser.yrl
+[docs-parsetools]: http://www.erlang.org/doc/apps/parsetools/
