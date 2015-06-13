@@ -209,7 +209,29 @@ Erlang code.
 extract_token({_Token, _Line, Value}) -> Value.
 ```
 
-We're done! We can now create an Erlang file from the `yecc` file (which has a `.yrl` extension) just like we did with `leex`:
+We're done! This is how our full parser looks like:
+
+```
+Nonterminals list elems elem.
+Terminals '[' ']' ',' int atom.
+Rootsymbol list.
+
+list -> '[' ']'       : [].
+list -> '[' elems ']' : '$2'.
+
+elems -> elem           : ['$1'].
+elems -> elem ',' elems : ['$1'|'$2'].
+
+elem -> int  : extract_token('$1').
+elem -> atom : extract_token('$2').
+elem -> list : '$1'.
+
+Erlang code.
+
+extract_token({_Token, _Line, Value}) -> Value.
+```
+
+We can now create an Erlang file from the `yecc` file (which has a `.yrl` extension) just like we did with `leex`:
 
 ```iex
 iex> :yecc.file('list_parser.yrl')
