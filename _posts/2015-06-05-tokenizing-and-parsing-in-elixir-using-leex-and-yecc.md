@@ -197,11 +197,11 @@ list ->
 elems ->
   elem : ['$1']. % single-element list (and base case for the recursion)
 elems ->
-  elem ',' elems : ['$1'|'$2']. % '$2' will be replaced recursively
+  elem ',' elems : ['$1'|'$3']. % '$3' will be replaced recursively
 
-elem -> int : extract_token('$1').
-elem -> atom    : extract_token('$2').
-elem -> list    : '$1'.
+elem -> int  : extract_token('$1').
+elem -> atom : extract_token('$1').
+elem -> list : '$1'.
 
 % Yep, we can use Erlang code here as well.
 Erlang code.
@@ -220,10 +220,10 @@ list -> '[' ']'       : [].
 list -> '[' elems ']' : '$2'.
 
 elems -> elem           : ['$1'].
-elems -> elem ',' elems : ['$1'|'$2'].
+elems -> elem ',' elems : ['$1'|'$3'].
 
 elem -> int  : extract_token('$1').
-elem -> atom : extract_token('$2').
+elem -> atom : extract_token('$1').
 elem -> list : '$1'.
 
 Erlang code.
