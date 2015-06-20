@@ -281,9 +281,31 @@ The great thing about `Connection` is that you can return `{:backoff, timeout, s
 
 When `{:backoff, timeout, state}` is returned, `connect/2` is called with `:backoff` as its first argument: this lets us easily detect **re**-connections (instead of first connections) and deal with them appropriately. For example, we may want to implement exponential backoff, i.e., we retry after one second, then after two seconds, then after four seconds and so on, possibly with a maximum number of retries.
 
+## Pooling
+
+Just one last tip: the GenServer we built can be used smoothly with pooling libraries like the famous [poolboy][poolboy]. There's plenty of literature about poolboy around the web, so I'm not going to describe how it works here. I will just show you a small example.
+
+First, we can can create a pool of a given number of our GenServers using `:poolboy.start_link/2`.
+
+```elixir
+poolboy_opts = [worker_module: Redis, size: 50]
+redis_opts   = []
+{:ok, pool}  = :poolboy.start_link(poolboy_opts, redis_opts)
+```
+
+Then, we can just checkout worker processes (which are our `Redis` GenServers) out of the pool, perform operations on Redis through them, and then check them back in the pool.
+
+```elixir
+worker = :poolboy.checkout(pool)
+Redis.command(worker, ["SET", "mykey", 1])
+:ok = :poolboy.checkin(pool, worker)
+```
+
+Nothing smoother than that!
+
 ## Conclusion
 
-We saw how to implement a GenServer that works as an interface to a TCP server. We built a non-blocking GenServer that queues clients in order to send multiple commands to the TCP server while waiting for responses from the server. Finally, we used the [connection][connection] library to deal with TCP errors (e.g., the server being temporarely unavailable) by implementing a backoff strategy.
+We saw how to implement a GenServer that works as an interface to a TCP server. We built a non-blocking GenServer that queues clients in order to send multiple commands to the TCP server while waiting for responses from the server. We used the [connection][connection] library to deal with TCP errors (e.g., the server being temporarely unavailable) by implementing a backoff strategy. Finally, we briefly looked at how [poolboy][poolboy] can be used to make a pool of our GenServers.
 
 Thanks for reading!
 
@@ -301,3 +323,4 @@ Thanks for reading!
 [orientdb]: http://orientdb.com/orientdb/
 [fishcakez]: https://github.com/fishcakez
 [connection]: https://github.com/fishcakez/connection
+[poolboy]: https://github.com/devinus/poolboy
