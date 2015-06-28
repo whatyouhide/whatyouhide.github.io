@@ -106,18 +106,44 @@ Nice! `leex` also provides the possibility to define some Erlang code associated
 ```
 ...
 
-{INT}  : {token, {int,  list_to_integer(TokenChars)}}.
-{ATOM} : {token, {atom, to_atom(TokenChars)}}.
+{INT}  : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
+{ATOM} : {token, {atom, TokenLine, to_atom(TokenChars)}}.
 
 ...
 
 Erlang code.
 
-to_atom([$:|Chars])
-  -> list_to_atom(Chars).
+to_atom([$:|Chars]) ->
+  list_to_atom(Chars).
 ```
 
 `to_atom/1` just strips the first character of an atom token (which is a colon, `$:` in Erlang land) and converts the rest to an atom. We also used `list_to_integer/1` to convert integer tokens to integers.
+
+Our full lexer looks like this:
+
+```
+Definitions.
+
+INT        = [0-9]+
+ATOM       = :[a-z_]+
+WHITESPACE = [\s\t\n\r]
+
+Rules.
+
+{INT}         : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
+{ATOM}        : {token, {atom, TokenLine, to_atom(TokenChars)}}.
+\[            : {token, {'[',  TokenLine}}.
+\]            : {token, {']',  TokenLine}}.
+,             : {token, {',',  TokenLine}}.
+{WHITESPACE}+ : skip_token.
+
+Erlang code.
+
+to_atom([$:|Chars]) ->
+    list_to_atom(Chars).
+```
+
+It works like we expect it to:
 
 ```iex
 iex> {:ok, tokens, _} = :list_lexer.string('[1, :foo]')
