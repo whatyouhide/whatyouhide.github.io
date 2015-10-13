@@ -1,9 +1,11 @@
 ---
 layout: post
 title: Compile-time work with Elixir macros
+tags:
+  - elixir
 ---
 
-Macros are a very common way to do metaprogramming in Elixir There are many
+Macros are a very common way to do metaprogramming in Elixir. There are many
 resources that explain what macros are and how to use them (much better than I
 could): there's the [Macro chapter][macro-chapter-elixir-website] from the
 "Getting Started" guide on Elixir's website, an awesome

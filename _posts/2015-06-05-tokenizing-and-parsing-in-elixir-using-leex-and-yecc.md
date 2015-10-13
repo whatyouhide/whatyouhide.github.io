@@ -1,6 +1,8 @@
 ---
 layout: post
 title: Tokenizing and parsing in Elixir with yecc and leex
+tags:
+  - elixir
 ---
 
 Lexical analysis (tokenizing) and parsing are very important concepts in computer science and programming. There is a lot of theory behind these concepts, but I won't be talking about any of that here because, well, it's *a lot*. Also, I feel like approaching these topics in a "scientific" way makes them look a bit scary; however, using them in practice turns out to be pretty straightforward. If you want to know more about the theory, head over to Wikipedia ([lexical analysis][wiki-lexical-analysis] and [parsing][wiki-parsing]) or read the amazing [dragon book][dragon-book] (which I recommend to all programmers, it's fantastic).
