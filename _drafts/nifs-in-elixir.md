@@ -183,7 +183,133 @@ Writing "pure" NIFs (with no side effects, just transformations) is extremely us
 
 ## Something useful: resources
 
-TODO
+As I mentioned above, a great use of NIFs is for wrapping existing C libraries. Often, however, these libraries provide their own data abstractions and data structures. For example, a C database driver could export a `db_conn_t` type to represent a database connection, defined like this:
+
+```c
+typedef struct {
+  // fields
+} db_conn_t;
+```
+
+alongside functions to issue queries, like this:
+
+```c
+db_conn_t *db_init_conn();
+db_type db_query(db_conn_t *conn, const char *query);
+void db_free_conn(db_conn_t *conn);
+```
+
+It would be useful to be able to handle `db_conn_t` values in Erlang/Elixir and pass them around between NIF calls. The NIF API has something just like that: **resources**. No better way to quickly explain what resources do than the Erlang documentation:
+
+> The use of resource objects is a safe way to return pointers to native data structures from a NIF. A resource object is just a block of memory [...].
+
+Resources are blocks of memory, and we can build and return safe pointers to that memory *as Erlang terms*.
+
+Let's explore how we could wrap the simple API sketched above inside NIFs. We're going to start with this skeleton C file:
+
+```c
+#include "db.h"
+#include "erl_nif.h"
+
+typedef struct {
+  // fields here
+} db_conn_t;
+
+db_type db_query(db_conn_t *, const char *query);
+```
+
+### Creating resources
+
+To create a resource, we have to allocate some memory with the help of the `enif_alloc_resource` function. This function is similar (in principle) to `malloc`, as you can tell by its signature:
+
+```c
+void *enif_alloc_resource(ErlNifResourceType *res_type, unsigned size);
+```
+
+`enif_alloc_resource` takes a resource type (which is just something we use to distinguish resources of different types) and the size of the memory to allocate, and returns a pointer to the allocated memory.
+
+#### Resource types
+
+Resource types are created with the `enif_open_resource_type` function. We can declare resource types as global variables in our C files and take advantage of the `load` hook passed to `ERL_NIF_INIT` to create the resource types and assign them to the global variables. It goes something like this:
+
+```c
+ErlNifResourceType *DB_RES_TYPE;
+
+// This is called everytime a resource is deallocated (which happens when
+// enif_release_resource is called and Erlang garbage collects the memory)
+void db_res_destructor(ErlNifEnv *env, void *res) {
+  db_free_conn((db_conn_t *) res);
+}
+
+int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
+  int flags = ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER;
+  DB_RES_TYPE = enif_open_resource_type(env, NULL, "db", db_res_destructor, flags, NULL);
+}
+```
+
+#### Creating the resource
+
+We can now wrap `db_init_conn` and create our resource.
+
+```c
+static ERL_NIF_TERM db_init_conn_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  db_conn_t *conn = db_init_conn();
+
+  // Now, let's allocate the memory for a db_conn_t * pointer
+  db_conn_t **conn_res = enif_alloc_memory(DB_RES_TYPE, sizeof(db_conn_t *));
+
+  // Now, we should copy the `conn` pointer into `conn_res`
+  memcpy((void *) conn_res, (void *) &conn, sizeof(db_conn_t *));
+
+  // We can now make the Erlang term that holds the resource...
+  ERL_NIF_TERM term = enif_make_resource(env, conn_res);
+  // ...and release the resource so that it will be freed when Erlang garbage collects
+  enif_release_resource(conn_res);
+
+  return term;
+}
+```
+
+### Retrieving the resource
+
+In order to wrap `db_query`, we'll need to retrieve the resource that we returned in `db_init_conn_nif`. To do that, we'll use `enif_get_resource`.
+
+```c
+static ERL_NIF_TERM db_query_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  db_conn_t **conn_res;
+  enif_get_resource(env, argv[0], DB_RES_TYPE, (void *) &conn_res);
+
+  db_conn_t *conn = *conn_res;
+
+  // We can now run our query
+  db_type query_result = db_query(conn, ...);
+
+  return argv[0];
+}
+```
+
+### Using resources in Elixir
+
+Let's skip the part where we export the NIFs we created to a `DB` module and jump right into IEx, assuming the C code is compiled and loaded by `DB`. As I mentioned above, resources are completely opaque terms when returned to Erlang/Elixir. They're represented as empty binaries.
+
+```elixir
+iex> conn_res = DB.db_conn_init()
+""
+iex> DB.db_query(conn_res, ...)
+...
+```
+
+Since resources are opaque, you can't really do anything with them in Erlang/Elixir other than passing them back to other NIFs. They act and look like binaries, and this can even cause problems because they can be mistaken for just binaries. For this reason, my advice is to wrap resources inside structs. This way, we can only pass structs around in our public API, and handle resources internally. We also get the benefit of being able to implement the `Inspect` protocol for structs, which means we can safely inspect resources, hiding the fact that they look like empty binaries.
+
+```elixir
+defmodule DBConn do
+  defstruct [:resource]
+
+  defimpl Inspect do
+    # ...
+  end
+end
+```
 
 ## Compiling with Mix
 
@@ -194,5 +320,5 @@ TODO
 TODO
 
 
-[docs-erlang-load_nif-2]: foo.com
+[docs-erlang-load_nif-2]: http://www.erlang.org/doc/man/erlang.html#load_nif-2
 [devinus-markdown]: https://github.com/devinus/markdown
