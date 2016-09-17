@@ -47,7 +47,7 @@ baseurl: ""
 #
 
 markdown: kramdown
-highlighter: pygments
+highlighter: rouge
 permalink: /posts/:title/
 
 # The release of Jekyll Now that you're using
