@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Handling TCP connections in Elixir
+description: A look at some strategies to handle TCP connections and data flowing through them.
 tags:
   - elixir
 ---

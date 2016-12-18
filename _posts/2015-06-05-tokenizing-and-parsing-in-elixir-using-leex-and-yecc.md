@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Tokenizing and parsing in Elixir with yecc and leex
+description: A showcase of these two Erlang builtin tools and how they can be used from Elixir.
 tags:
   - elixir
 ---

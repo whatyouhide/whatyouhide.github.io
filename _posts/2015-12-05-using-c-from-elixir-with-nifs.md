@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Using C from Elixir with NIFs
+description: An in-depth look at how to use NIFs from Elixir to run native code in the Erlang VM.
 tags:
   - elixir
 ---

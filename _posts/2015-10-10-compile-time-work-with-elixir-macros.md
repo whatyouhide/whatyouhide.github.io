@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Compile-time work with Elixir macros
+description: An overview of possible things to do through Elixir macros at compile time.
 tags:
   - elixir
 ---
