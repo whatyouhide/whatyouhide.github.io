@@ -26,8 +26,8 @@ definition of the `if` macro looks something like this:
 defmacro if(condition, do: do_block, else: else_block) do
   quote do
     case unquote(condition) do
-      x in [false, nil] -> unquote(else_block)
-      _                 -> unquote(do_block)
+      x when x in [false, nil] -> unquote(else_block)
+      _                        -> unquote(do_block)
     end
   end
 end
