@@ -96,7 +96,7 @@ defmodule Redis do
 
     # `0` means receive all available bytes on the socket.
     {:ok, msg} = :gen_tcp.recv(socket, 0)
-    {:ok, Redis.RESP.decode(msg), state}
+    {:reply, Redis.RESP.decode(msg), state}
   end
 end
 ```
