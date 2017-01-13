@@ -277,7 +277,7 @@ We can feed the output of the lexer directly into the parser now:
 
 ```iex
 iex> source = "[:foo, [1], [:bar, [2, 3]]]"
-iex> {:ok, tokens, _} = source |> String.to_char_list |> :list_lexer.string
+iex> {:ok, tokens, _} = source |> String.to_charlist() |> :list_lexer.string
 iex> :list_parser.parse(tokens)
 {:ok, [:foo, [1], [:bar, [2, 3]]]}
 ```
@@ -309,8 +309,8 @@ Now, inside `list_parser/lib/list_parser.ex`:
 defmodule ListParser do
   @spec parse(binary) :: list
   def parse(str) do
-    {:ok, tokens, _} = str |> to_char_list |> :list_lexer.string
-    {:ok, list}      = :list_parser.parse(tokens)
+    {:ok, tokens, _} = str |> to_charlist() |> :list_lexer.string()
+    {:ok, list} = :list_parser.parse(tokens)
     list
   end
 end
@@ -332,6 +332,9 @@ We only covered the basics of these two tools: they can do more complicated thin
 
 I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we?
 
+#### Very small update
+
+I updated the source code in this blog post to use `String.to_charlist/1` and `to_charlist/1` instead of `String.to_char_list/1` and `to_char_list/1` respectively; the `charlist` spelling has been deprecated in Elixir 1.3.
 
 [wiki-lexical-analysis]: http://en.wikipedia.org/wiki/Lexical_analysis
 [wiki-parsing]: http://en.wikipedia.org/wiki/Parsing
