@@ -1,0 +1,5 @@
+{% assign filename = page.path | remove: ".md" | remove: "_posts" | remove: "_drafts" %}
+{% assign assets_path = "/assets/media/" | prepend: site.baseurl | append: filename %}
+{% assign image_path = assets_path | append: "/" | append: include.name %}
+
+<img alt="{{ include.alt }}" src="{{ image_path }}" />

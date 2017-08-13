@@ -12,6 +12,9 @@
     <meta name="description" content="{{ description }}" />
     <meta name="author" content="{{ site.name }}" />
 
+    {% assign filename = page.path | remove: ".md" | remove: "_posts" | remove: "_drafts" %}
+    {% assign assets_path = "/assets/media/" | prepend: site.baseurl | append: filename %}
+
     <!-- Open Graph -->
     {% if page.title %}
       <meta property="og:title" content="{{ page.title }}" />
@@ -21,6 +24,9 @@
     {% if page.layout == "post" %}
       <meta property="og:type" content="article" />
       <meta property="article:published_time" content="{{ page.date | date: "%Y-%m-%d" }}" />
+      {% if page.cover_image %}
+        <meta property="og:image" content="{{ site.domain_name }}{{ assets_path }}/{{ page.cover_image }}" />
+      {% endif %}
     {% else %}
       <meta property="og:type" content="website" />
     {% endif %}
@@ -31,4 +37,7 @@
       <meta name="twitter:title" content="{{ page.title }}" />
     {% endif %}
     <meta name="twitter:description" content="{{ description }}" />
-    <meta name="twitter:image" content="{{ site.avatar }}" />
+    {% if page.cover_image %}
+      <meta property="og:image" content="{{ site.domain_name }}{{ assets_path }}/{{ page.cover_image }}" />
+      <meta name="twitter:image" content="{{ site.domain_name }}{{ assets_path }}/{{ page.cover_image }}" />
+    {% endif %}
