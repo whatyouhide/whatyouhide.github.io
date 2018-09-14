@@ -232,9 +232,9 @@ Most ideas in StreamData are not original and are taken partially from QuickChec
 [quickcheck-paper]: http://www.cs.tufts.edu/~nr/cs257/archive/john-hughes/quick.pdf
 [elixir]: https://elixir-lang.org
 [library-haskell]: https://hackage.haskell.org/package/QuickCheck
-[library-erlang]: http://www.quviq.com/products/
+[library-erlang]: https://www.quviq.com/products/
 [library-clojure]: https://github.com/clojure/test.check
-[library-python]: http://hypothesis.works
+[library-python]: https://hypothesis.works
 [library-scala]: https://www.scalacheck.org
 [streamdata]: https://github.com/whatyouhide/stream_data
-[hypothesis-article]: http://hypothesis.works/articles/how-hypothesis-works/
+[hypothesis-article]: https://hypothesis.works/articles/how-hypothesis-works/

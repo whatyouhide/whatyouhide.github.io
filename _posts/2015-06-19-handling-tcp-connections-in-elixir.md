@@ -312,18 +312,18 @@ We saw how to implement a GenServer that works as an interface to a TCP server. 
 
 Thanks for reading!
 
-[docs-inet-setopts/2]: http://www.erlang.org/doc/man/inet.html#setopts-2
-[docs-gen_tcp-recv/2]: http://www.erlang.org/doc/man/gen_tcp.html#recv-2
-[docs-gen_tcp]: http://www.erlang.org/doc/man/gen_tcp.html
-[docs-genserver-reply/2]: http://elixir-lang.org/docs/stable/elixir/GenServer.html#reply/2
-[docs-connection]: http://hexdocs.pm/connection
-[redis]: http://redis.io
-[resp-specification]: http://redis.io/topics/protocol
+[docs-inet-setopts/2]: https://www.erlang.org/doc/man/inet.html#setopts-2
+[docs-gen_tcp-recv/2]: https://www.erlang.org/doc/man/gen_tcp.html#recv-2
+[docs-gen_tcp]: https://www.erlang.org/doc/man/gen_tcp.html
+[docs-genserver-reply/2]: https://elixir-lang.org/docs/stable/elixir/GenServer.html#reply/2
+[docs-connection]: https://hexdocs.pm/connection
+[redis]: https://redis.io
+[resp-specification]: https://redis.io/topics/protocol
 [eredis]: https://github.com/wooga/eredis
 [eredis-comment]: https://github.com/wooga/eredis/blob/770f828918db710d0c0958c6df63e90a4d341ed7/src/eredis_client.erl#L1-L21
 [postgrex]: https://github.com/ericmj/postgrex
 [mongodb]: https://github.com/ericmj/mongodb
-[orientdb]: http://orientdb.com/orientdb/
+[orientdb]: https://orientdb.com/orientdb/
 [fishcakez]: https://github.com/fishcakez
 [connection]: https://github.com/fishcakez/connection
 [poolboy]: https://github.com/devinus/poolboy

@@ -205,12 +205,12 @@ experimented with using macros to do compile-time work. We saw a non-real-world
 example and then a real-world example taken from the gettext Elixir library.
 
 
-[understanding-macros-sasa-juric]: http://www.theerlangelist.com/2014/06/understanding-elixir-macros-part-1.html "Understanding Elixir Macros by Saša Jurić"
+[understanding-macros-sasa-juric]: https://www.theerlangelist.com/2014/06/understanding-elixir-macros-part-1.html "Understanding Elixir Macros by Saša Jurić"
 [metaprogramming-elixir]: https://pragprog.com/book/cmelixir/metaprogramming-elixir "Metaprogramming Elixir"
-[macro-chapter-elixir-website]: http://elixir-lang.org/getting-started/meta/macros.html "Chapter on macros from Elixir's \"Getting Started\" guide"
-[docs-macro-expand-2]: http://elixir-lang.org/docs/stable/elixir/Macro.html#expand/2 "Docs for Macro.expand/2"
-[docs-macro-expand_once-2]: http://elixir-lang.org/docs/stable/elixir/Macro.html#expand_once/2 "Docs for Macro.expand_once/2"
-[docs-macro-prewalk-3]: http://elixir-lang.org/docs/stable/elixir/Macro.html#prewalk/3 "Docs for Macro.prewalk/3"
+[macro-chapter-elixir-website]: https://elixir-lang.org/getting-started/meta/macros.html "Chapter on macros from Elixir's \"Getting Started\" guide"
+[docs-macro-expand-2]: https://elixir-lang.org/docs/stable/elixir/Macro.html#expand/2 "Docs for Macro.expand/2"
+[docs-macro-expand_once-2]: https://elixir-lang.org/docs/stable/elixir/Macro.html#expand_once/2 "Docs for Macro.expand_once/2"
+[docs-macro-prewalk-3]: https://elixir-lang.org/docs/stable/elixir/Macro.html#prewalk/3 "Docs for Macro.prewalk/3"
 
 [gettext-for-elixir]: https://github.com/elixir-lang/gettext "gettext for Elixir"
 

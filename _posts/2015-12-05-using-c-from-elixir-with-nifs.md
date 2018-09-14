@@ -379,8 +379,8 @@ This was a long post, but I hope I covered most of the NIF universe in it. As yo
 
 Thanks for making it this far!
 
-[docs-erlang-load_nif-2]: http://www.erlang.org/doc/man/erlang.html#load_nif-2
+[docs-erlang-load_nif-2]: https://www.erlang.org/doc/man/erlang.html#load_nif-2
 [devinus-markdown]: https://github.com/devinus/markdown
-[sasa-juric-ports]: http://theerlangelist.com/article/outside_elixir
-[erl-nif-docs]: http://www.erlang.org/doc/man/erl_nif.html
-[mix-compilers-0]: http://elixir-lang.org/docs/stable/mix/Mix.html#compilers/0
+[sasa-juric-ports]: https://theerlangelist.com/article/outside_elixir
+[erl-nif-docs]: https://www.erlang.org/doc/man/erl_nif.html
+[mix-compilers-0]: https://elixir-lang.org/docs/stable/mix/Mix.html#compilers/0
