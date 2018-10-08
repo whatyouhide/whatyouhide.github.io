@@ -77,4 +77,4 @@ Bye short_maps. It was a fun ride. Thanks for listening.
 [ml-discussion]: https://groups.google.com/forum/#!topic/elixir-lang-core/NoUo2gqQR3I
 [short_maps]: https://github.com/whatyouhide/short_maps
 [shorter_maps]: https://github.com/meyercm/shorter_maps
-[shorter_maps-issue]: https://github.com/whatyouhide/short_maps/issues/13
+[shorter_maps-issue]: https://github.com/whatyouhide/short_maps/issues/11
