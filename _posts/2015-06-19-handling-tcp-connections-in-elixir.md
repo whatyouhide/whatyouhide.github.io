@@ -69,14 +69,16 @@ At this point, I should mention the Redis binary protocol, RESP: this is the pro
 * `Redis.RESP.encode/1` which encodes a list into a Redis command, like this:
 
 ```elixir
-Redis.RESP.encode(["GET", "mykey"]) # <<...>>
+Redis.RESP.encode(["GET", "mykey"])
+#=> <<...>>
 ```
 
 * `Redis.RESP.decode/1` which decodes a binary into an Elixir term, like this:
 
 ```elixir
 resp_to_get_command = <<...>>
-Redis.RESP.decode(resp_to_get_command) #=> 1
+Redis.RESP.decode(resp_to_get_command)
+#=> 1
 ```
 
 #### `:gen_tcp.send/2`
@@ -104,9 +106,10 @@ end
 This works fine...
 
 ```elixir
-{:ok, pid} = Redis.start_link
+{:ok, pid} = Redis.start_link()
 Redis.command(pid, ["SET", "mykey", 1])
-Redis.command(pid, ["GET", "mykey"]) #=> 1
+Redis.command(pid, ["GET", "mykey"])
+#=> 1
 ```
 
 ...but there's a big problem.
@@ -150,19 +153,19 @@ defmodule Redis do
   @initial_state %{socket: nil, queue: :queue.new()}
   # ...as before...
 
-  def handle_call({:command, cmd}, from, %{queue: q} = state) do
+  def handle_call({:command, cmd}, from, %{queue: queue} = state) do
     # We send the command...
     :ok = :gen_tcp.send(state.socket, Redis.RESP.encode(cmd))
 
     # ...enqueue the client...
-    state = %{state | queue: :queue.in(from, q)}
+    state = %{state | queue: :queue.in(from, queue)}
 
     # ...and we don't reply right away.
     {:noreply, state}
   end
 
   def handle_info({:tcp, socket, msg}, %{socket: socket} = state) do
-    # We dequeue the next client
+    # We dequeue the next client:
     {{:value, client}, new_queue} = :queue.out(state.queue)
 
     # We can finally reply to the right client.
@@ -185,7 +188,7 @@ defmodule Redis do
   # ...as before...
 
   def handle_info({:tcp, socket, msg}, %{socket: socket} = state) do
-    # Allow the socket to send us the next message
+    # Allow the socket to send us the next message.
     :inet.setopts(socket, active: :once)
 
     # exactly as before
@@ -258,13 +261,13 @@ The line where we connect to the Redis server using `:gen_tcp.connect/3` should 
 case :gen_tcp.connect('localhost', 6379, opts) do
   {:ok, socket} ->
     {:ok, %{state | socket: socket}}
+
   {:error, reason} ->
     # now what?
 end
 ```
 
 Now we have to decide what we want to do in case there's an error. Blowing up the GenServer or returning the error to the client is trivial, but in real-world™ code we would probably want to try to reconnect to the TCP server. `Connection` to the rescue! We can make `connect/2` return a `{:backoff, timeout, state}` tuple: `connect/2` will be called again after `timeout` in an attempt to reconnect to the peer. Our `connect/2` would look like this:
-
 
 ```elixir
 def connect(_info, state) do
@@ -273,9 +276,11 @@ def connect(_info, state) do
   case :gen_tcp.connect('localhost', 6379, opts) do
     {:ok, socket} ->
       {:ok, %{state | socket: socket}}
+
     {:error, reason} ->
-      IO.puts "TCP connection error: #{inspect reason}"
-      {:backoff, 1000, state} # try again in one second
+      IO.puts("TCP connection error: #{inspect reason}")
+      # Try again in one second:
+      {:backoff, 1000, state}
   end
 end
 ```
@@ -292,8 +297,8 @@ First, we can can create a pool of a given number of our GenServers using `:pool
 
 ```elixir
 poolboy_opts = [worker_module: Redis, size: 50]
-redis_opts   = []
-{:ok, pool}  = :poolboy.start_link(poolboy_opts, redis_opts)
+redis_opts = []
+{:ok, pool} = :poolboy.start_link(poolboy_opts, redis_opts)
 ```
 
 Then, we can just checkout worker processes (which are our `Redis` GenServers) out of the pool, perform operations on Redis through them, and then check them back in the pool.
