@@ -1,4 +1,4 @@
-{% assign filename = page.path | remove: ".md" | remove: "_posts" | remove: "_drafts" %}
+{% assign filename = page.path | remove: ".md" | remove: "_posts" %}
 {% assign assets_path = "/assets/media/" | prepend: site.baseurl | append: filename %}
 {% assign image_path = assets_path | append: "/" | append: include.name %}
 
