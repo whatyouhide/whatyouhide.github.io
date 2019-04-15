@@ -1,57 +1,32 @@
-#
-# This file contains configuration flags to customize your site
-#
+google_analytics: UA-41860599-4
 
-# Name of your site (displayed in the header)
-name: Andrea Leopardi
+# Enter your Disqus shortname (not your username) to enable commenting on posts
+disqus: blog-andrealeopardi
 
-# Short bio or description (displayed in the header)
-description: Software developer
-
-# URL of your avatar or profile pic (you could use your GitHub profile pic)
-avatar: https://www.gravatar.com/avatar/faafc04d9e69b73b9f49995fd4c94d4d?s=500
-
-#
-# Flags below are optional
-#
-
-# Includes an icon in the footer for each username you enter
 footer-links:
   email: an.leopardi@gmail.com
   github: whatyouhide
-  linkedin: anleopardi
   twitter: whatyouhide
-  rss: # just type anything here for a working RSS icon, make sure you set the "url" above!
-  stackoverflow: # your stackoverflow profile, e.g. "users/50476/bart-kiers"
+  rss: true
 
+# Name of your site (displayed in the header)
+title_name: Andrea Leopardi
 
-# Enter your Disqus shortname (not your username) to enable commenting on posts
-# You can find your shortname on the Settings page of your Disqus account
-disqus: blog-andrealeopardi
+# Short bio or description (displayed in the header)
+title_description: Tech blog
 
-# Enter your Google Analytics web tracking code (e.g. UA-2110908-2) to activate tracking
-google_analytics: UA-41860599-4
+# URL of your avatar or profile pic. Displayed on the top.
+avatar_url: https://www.gravatar.com/avatar/faafc04d9e69b73b9f49995fd4c94d4d?s=500
 
-# Your website URL (e.g. https://barryclark.github.io or https://www.barryclark.co)
-# Used for Sitemap.xml and your RSS feed
+# Your website URL, used for sitemap.xml and your RSS feed.
 url: https://andrealeopardi.com
 
-# If you're hosting your site at a Project repository on GitHub pages
-# (https://yourusername.github.io/repository-name)
-# and NOT your User repository (https://yourusername.github.io)
-# then add in the baseurl here, like this: "/repository-name"
+# Appended to {{ site.url }}.
 baseurl: ""
-
-#
-# !! You don't need to change any of the configuration flags below !!
-#
 
 markdown: kramdown
 highlighter: rouge
 permalink: /posts/:title/
-
-# The release of Jekyll Now that you're using
-version: v1.1.0
 
 # Set the Sass partials directory, as we're using @imports
 sass:
