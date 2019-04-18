@@ -27,7 +27,7 @@ It's important to understand the design and purpose of our connection process. T
 
 A side effect of the design of the connection process so that it's independent of the state of the connection is that we don't need to establish the TCP connection synchronously when starting up our process. We can start our connection process and return a PID right away, start establishing the connection in the background, and then act as if the connection is "broken" until the connection is established. After all, our connection process and application will need to deal with the connection being broken at some point, so there's often no reason to require synchronous connecting.
 
-The ideas briefly mentioned above come from an article by Fred Hebert, ["It's about the guarantees"](its-about-the-guarantees), which does a great job at explaining why the design I discussed works well especially in Erlang and Elixir applications.
+The ideas briefly mentioned above come from an article by Fred Hebert, ["It's about the guarantees"][its-about-the-guarantees], which does a great job at explaining why the design I discussed works well especially in Erlang and Elixir applications.
 
 ## `gen_statem` primer
 
