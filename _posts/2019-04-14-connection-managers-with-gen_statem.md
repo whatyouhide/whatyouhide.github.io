@@ -84,7 +84,7 @@ defmodule Connection do
   def start_link(opts) do
     host = Keyword.fetch!(opts, :host)
     port = Keyword.fetch!(opts, :port)
-    :gen_statem.start_link(__MODULE__, {String.to_charlist(host), port})
+    :gen_statem.start_link(__MODULE__, {String.to_charlist(host), port}, [])
   end
 end
 ```
@@ -95,7 +95,7 @@ As we mentioned, the state machine starts in the `disconnected` state. Similarly
 def init({host, port}) do
   data = %__MODULE__{host: host, port: port}
   actions = [{:next_event, :internal, :connect}]
-  {:next_state, :disconnected, data, actions}
+  {:ok, :disconnected, data, actions}
 end
 ```
 
