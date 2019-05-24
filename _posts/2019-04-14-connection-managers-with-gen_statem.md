@@ -261,7 +261,7 @@ end
 
 We've now got a pretty neat connection process that holds the TCP connection to our database and is able to reply to clients regardless of the state of such connection. However, in the code we built we try to reconnect as soon as the connection goes down or we fail to connect. This is usually a terrible idea, because if a connection goes down there's a good chance it won't be up right away, especially if we also fail to reconnect. A common technique to avoid frequent connection attempts is to wait a **backoff period** before attempting reconnections. When the connection goes down or we fail to connect, we'll wait a few hundred milliseconds before trying again.
 
-`:gen_statem` has the perfect tool to implement this: **timeouts**. One of the possible actions you can return from state functions is `:timeout`, which you can use to set a timeout with some term attached to it after a given amount of time. When the timeout expires, an event of type `:timeout` is fired.
+`:gen_statem` has the perfect tool to implement this: **timeouts**. One of the possible actions you can return from state functions is `{:timeout, timeout_name}`, which you can use to set a timeout with some term attached to it after a given amount of time. When the timeout expires, an event of type `{:timeout, timeout_name}` is fired.
 
 Let's start by setting the timeout when we enter the disconnected state.
 
@@ -270,15 +270,15 @@ def disconnected(:enter, :connected, data) do
   # Same as before: logging, replying to
   # waiting clients, resetting the data.
 
-  actions = [{:timeout, 500, :reconnect}]
+  actions = [{{:timeout, :reconnect}, 500, nil}]
   {:keep_state, data, actions}
 end
 ```
 
-Our timeout will fire after 500 milliseconds and will have `:reconnect` as its term. When the timeout expires, we need to handle it in `disconnected/3`:
+Our timeout will fire after 500 milliseconds We use `nil` as its term since we're not carrying any information alongside the timeout other than its name (`:reconnect`). When the timeout expires, we need to handle it in `disconnected/3`:
 
 ```elixir
-def disconnected(:timeout, :reconnect, data) do
+def disconnected({:timeout, :reconnect}, _content, data) do
   actions = [{:next_event, :internal, :connect}]
   {:keep_state, data, actions}
 end
