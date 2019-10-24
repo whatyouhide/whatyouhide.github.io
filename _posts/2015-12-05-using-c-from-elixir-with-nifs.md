@@ -269,7 +269,7 @@ We can now wrap `db_init_conn` and create our resource.
 static ERL_NIF_TERM
 db_init_conn_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   // Let's allocate the memory for a db_conn_t * pointer
-  db_conn_t **conn_res = enif_alloc_memory(DB_RES_TYPE, sizeof(db_conn_t *));
+  db_conn_t **conn_res = enif_alloc_resource(DB_RES_TYPE, sizeof(db_conn_t *));
 
   // Let's create conn and copy the memory where the pointer is stored
   db_conn_t *conn = db_init_conn();
