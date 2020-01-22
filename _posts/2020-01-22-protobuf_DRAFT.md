@@ -14,7 +14,8 @@ The system that we built at ([Community.com][community-website]) is made of a fe
 
 {% include post_img.html alt="Cover image of TODO" name="cover-image.jpg" %}
 
-{% include unsplash_credit.html name="Israel Palacio" link="https://unsplash.com/photos/ImcUkZ72oUs?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" %}
+{% include unsplash_credit.html name="Fahrul Azmi" link="https://unsplash.com/s/photos/library?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" %}
 
-[community-website]: TODO
-[protobuf]: TODO
+
+[community-website]: https://www.community.com
+[protobuf]: https://developers.google.com/protocol-buffers
