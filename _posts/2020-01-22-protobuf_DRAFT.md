@@ -55,6 +55,20 @@ This whole approach worked okay for a while, but soon we needed to use our Proto
 
 ## Sharing Protobuf schemas through Git submodules
 
+The first thing that came to mind when we thought about sharing Protobuf schema definitions across different programming languages was [Git submodules][git-submodules]. We created a `proto_schemas` repository containing all the `.proto` files and added it as a Git submodule to our `events` Elixir library and to a single Python service. Not much changed on the Elixir side, but on the Python side things were working a bit differently. The Protobuf Python library uses a common approach among Protobuf libraries, which is to use a plugin to the `protoc` compiler in order to generate Python code from the `.proto` files. Essentially, you call:
+
+```bash
+# TODO
+protoc --python_out=...
+```
+
+So for example, our `event_envelope.proto` file became `event_envelope.pb2.py`.
+
+The Git submodule approach worked okay for a while but it presented two main challenges: how to version schemas in an uniform way across languages? How to avoid having every project contain a copy of the Protobuf schemas and having to compile them individually to the host language?
+
+Lucky for me, one day I was discussing these problems with my good friend [Eric][ericmj] from the Elixir team and we figured out a way to only keep the Protobuf schemas in a single place, compile them all in a single place, but use them from different languages all around.
+
+## `protoc` and CI make for a great pair
 
 [community-website]: https://www.community.com
 [hex-website]: https://hex.pm
