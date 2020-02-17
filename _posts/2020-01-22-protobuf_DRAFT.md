@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Sanely sharing Protobuf schemas across services
+title: Sharing Protobuf schemas across services in a sane way
 description: How we're managing, evolving, and sharing Protobuf schemas across several services and programming languages.
 cover_image: cover-image.jpg
 tags:
@@ -28,7 +28,7 @@ defmodule Events do
 end
 ```
 
-The most common approach to turning a Protobuf schema into a data structure representable by the programming language you're using is to turn the schema into some kind of "struct" representation. That's exactly what exprotobuf does. This is a schema we had:
+The most common approach to turning a Protobuf schema into a data structure representable by the programming language you're using is to turn the schema into some kind of "struct" representation. That's exactly what exprotobuf does for Elixir. This is one of our schemas:
 
 ```protobuf
 # In schemas/event_envelope.proto
@@ -40,7 +40,7 @@ message EventEnvelope {
 }
 ```
 
-Exprotobuf loaded this up at compile time and turned it into roughly this Elixir definition:
+Exprotobuf loads this up at compile time and turns it into roughly this Elixir definition:
 
 ```elixir
 defmodule Events.EventEnvelope do
@@ -51,26 +51,26 @@ defmodule Events.EventEnvelope do
 end
 ```
 
-This whole approach worked okay for a while, but soon we needed to use our Protobuf definitions from a service written in Python (out of necessity).
+This whole approach worked okay for a while, but soon we needed to use our Protobuf definitions from a service written in Python.
 
 ## Sharing Protobuf schemas through Git submodules
 
-The first thing that came to mind when we thought about sharing Protobuf schema definitions across different programming languages was [Git submodules][git-submodules]. We created a `proto_schemas` repository containing all the `.proto` files and added it as a Git submodule to our `events` Elixir library and to a single Python service. Not much changed on the Elixir side, but on the Python side things were working a bit differently. The Protobuf Python library uses a common approach among Protobuf libraries, which is to use a plugin to the `protoc` compiler in order to generate Python code from the `.proto` files. Essentially, you call:
+The first thing that came to mind when we thought about sharing Protobuf schema definitions across different programming languages was [Git submodules][git-submodules]. We created a `proto_schemas` repository containing all the `.proto` files and added it as a Git submodule to our `events` Elixir library and to a single Python service. Not much changed on the Elixir side, but on the Python side things were working a bit differently. The Protobuf Python library uses a common approach among Protobuf libraries, which is to use a plugin to the [`protoc`][protoc] compiler in order to generate Python code from the `.proto` files. Essentially, you call:
 
 ```bash
 # TODO
 protoc --python_out=...
 ```
 
-So for example, our `event_envelope.proto` file became `event_envelope.pb2.py`.
+So, for example, our `event_envelope.proto` file would become `event_envelope.pb2.py` once compiled.
 
 The Git submodule approach worked okay for a while but it presented two main challenges: how to version schemas in an uniform way across languages? How to avoid having every project contain a copy of the Protobuf schemas and having to compile them individually to the host language?
 
-Lucky for me, one day I was discussing these problems with my good friend [Eric][ericmj] from the Elixir team and we figured out a way to only keep the Protobuf schemas in a single place, compile them all in a single place, but use them from different languages all around.
+Lucky for me, one day I was discussing these problems with my friend [Eric][ericmj] from the Elixir team and we figured out a way to only keep the Protobuf schemas in a single place, compile them all in a single place, but use them from different languages all around.
 
-## `protoc` and CI
+## `protoc`, CI, and libraries
 
-I did some research on available Protobuf libraries for Elixir and was lucky to find an alternative to exprotobuf called [elixir-protobuf][TODO]. The APIs that this library exposes are exactly the same as the APIs exposed by exprotobuf, so compatibility was not an issue. However, this library has a key features that I was interested in: it supports code generation through the `protoc` Protobuf compiler. It works like it does in Python (and many other languages).
+I did some research on available Protobuf libraries for Elixir and was lucky to find an alternative to Exprotobuf called [elixir-protobuf][elixir-protobuf]. The APIs that this library exposes to manipulate Protobuf structs and manage serialization were exactly the same as the APIs exposed by Exprotobuf, so compatibility was not an issue. However, this library had a key features that I was interested in: it supported code generation through the `protoc` Protobuf compiler. It worked like it does in Python (and many other languages).
 
 ```bash
 # TODO
@@ -131,7 +131,7 @@ defmodule EventsSchemas.MixProject do
 end
 ```
 
-There are a few peculiar things here. First of all, we read the version of the library from a magic `VERSION` file. We keep this file alongside the `.proto` schemas. This file contains the version of the schemas themselves. Keeping it alongside the schemas means that we can copy it over in the right places when building libraries for different languages so that the `events_schemas` library can have the same version regardless of the target language. We copy this file to the root of the `events_schemas` Elixir directory before building and publishing the library. A similar idea is used for the `PROTOBUF_EX_VERSION` file. This file contains the version of the elixir-protobuf library that we use. We keep that in a separate file so that we can make sure it's the same between plugin for the `protoc` compiler as well as the dependency of the `events_schemas` library.
+There are a couple of peculiar things here. First of all, we read the version of the library from a magic `VERSION` file. We keep this file alongside the `.proto` schemas. This file contains the version of the schemas themselves. Keeping it alongside the schemas means that we can copy it over in the right places when building libraries for different languages so that the `events_schemas` library can have the same version across all target languages. We copy this file to the root of the `events_schemas` Elixir directory before building and publishing the library. A similar idea is used for the `PROTOBUF_EX_VERSION` file. This file contains the version of the elixir-protobuf library that we use. We keep that in a separate file so that we can make sure it's the same between the plugin for the `protoc` compiler as well as the dependency of the `events_schemas` library.
 
 Other that the things we just talked about, this looks like a pretty standard `mix.exs` file. Now, the magic happens in CI.
 
@@ -164,9 +164,11 @@ end
 
 ## Conclusion
 
-To recap, our Protobuf pipeline and workflow currently work like this. First, you make changes to a Protobuf schema. Then, you bump a version in a file. Then, you push those changes up to GitHub. Once CI makes sure you didn't break anything, you log into Concourse and kickstart the `build-and-publish` task. A new version of the right library gets published to different package repositories for different languages. It's not the simplest system, but the workflow is easy to use and effective. Maybe it'll solve the same problem for you.
+To recap, our Protobuf pipeline and workflow currently work like this. First, you make changes to a Protobuf schema. Then, you bump a version in a file. Then, you push those changes up to GitHub. Once CI makes sure you didn't break anything, you log into Concourse and kickstart the `build-and-publish` task. A new version of the right library gets published to different package repositories for different languages. It's not the simplest system, but the workflow is easy to use and effective. Most of all, this workflow can apply to most programming languages and make it easier to manage versioning and evolving shared collections of Protobuf schemas.
 
 [community-website]: https://www.community.com
 [hex-website]: https://hex.pm
 [protobuf]: https://developers.google.com/protocol-buffers
 [exprotobuf]: https://github.com/bitwalker/exprotobuf
+[protoc]: TODO
+[elixir-protobuf]: TODO
