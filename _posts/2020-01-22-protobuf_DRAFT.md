@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Sharing Protobuf schemas across services in a sane way
+title: Sharing Protobuf schemas across services
 description: How we're managing, evolving, and sharing Protobuf schemas across several services and programming languages.
 cover_image: cover-image.jpg
 tags:
@@ -10,7 +10,7 @@ tags:
   - tooling
 ---
 
-The system that we built at ([Community.com][community-website]) is made of a few services (around fifteen at the time of writing) that interact with each other through a basic version of event sourcing. All events are exchanged (published and consumed) through RabbitMQ and are serialized with [Protobuf][protobuf]. With several services already and many more coming in the future, managing the Protobuf schemas becomes a painful part of evolving and maintaining the system. Do we copy the schemas in all services? Do we keep them somewhere and use something akin to Git submodules to keep them in sync in all of our projects? What do we do?! In this post, I'll go through the tooling that we came up with in order to sanely manage our Protobuf schemas throughout our services and technology stack.
+The system that we're building at [Community.com][community-website] is made of a few services (around fifteen at the time of writing) that interact with each other through a basic version of event sourcing. All events are exchanged (published and consumed) through RabbitMQ and are serialized with [Protobuf][protobuf]. With several services already and many more coming in the future, managing the Protobuf schemas becomes a painful part of evolving and maintaining the system. Do we copy the schemas in all services? Do we keep them somewhere and use something akin to Git submodules to keep them in sync in all of our projects? What do we do?! In this post, I'll go through the tooling that we came up with in order to sanely manage our Protobuf schemas throughout our services and technology stack.
 
 {% include post_img.html alt="Cover image of a library with books" name="cover-image.jpg" %}
 
@@ -24,7 +24,8 @@ When we started defining schemas for our Protobuf events, we were only using suc
 
 ```elixir
 defmodule Events do
-  use Protobuf, from: Path.wildcard(Path.expand("../schemas/*.proto", __DIR__))
+  use Protobuf,
+    from: Path.wildcard(Path.expand("../schemas/*.proto", __DIR__))
 end
 ```
 
@@ -46,7 +47,8 @@ Exprotobuf loads this up at compile time and turns it into roughly this Elixir d
 defmodule Events.EventEnvelope do
   defstruct [:timestamp, :source]
 
-  # A bunch of encode/decode functions plus new/1 to create a new struct.
+  # A bunch of encode/decode functions plus
+  # new/1 to create a new struct.
   # ...
 end
 ```
@@ -114,7 +116,12 @@ defmodule EventsSchemas.MixProject do
   defp package do
     [
       organization: "community",
-      files: ["lib/**/*.pb.ex", "mix.exs", "VERSION", "PROTOBUF_EX_VERSION"]
+      files: [
+        "lib/**/*.pb.ex",
+        "mix.exs",
+        "VERSION",
+        "PROTOBUF_EX_VERSION"
+      ]
     ]
   end
 
@@ -136,7 +143,7 @@ Other that the things we just talked about, this looks like a pretty standard `m
 
 Our CI system of choice is [Concourse CI][concourse]. Concourse lets you define pipelines with different steps. Here, we're interested in the last step of our CI pipeline: publishing the libraries for all the languages. Our Concourse pipeline looks like this:
 
-<!-- TODO: screenshot of concourse -->
+{% include post_img.html alt="Screenshot of our Concourse CI pipeline" name="concourse.png" %}
 
 The last step, `build-and-publish`, is triggered manually by clicking on it and telling it to start. This means that if you want to release a new version of the `events_schemas` library in all languages, you have to go to Concourse and click this. That's all you need to do. Note that we have Docker containers that build and publish the library for each target langauge so that we don't have to install anything on the CI system. At thit point, Concourse will do the same routine for all target languages:
 
