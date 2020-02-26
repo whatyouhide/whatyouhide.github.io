@@ -176,3 +176,4 @@ To recap, our Protobuf pipeline and workflow currently work like this. First, yo
 [exprotobuf]: https://github.com/bitwalker/exprotobuf
 [protoc]: https://github.com/protocolbuffers/protobuf/releases
 [protobuf-elixir]: https://github.com/tony612/protobuf-elixir
+[concourse]: https://concourse-ci.org
