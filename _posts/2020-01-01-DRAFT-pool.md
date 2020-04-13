@@ -21,9 +21,13 @@ There are two most common pool kinds in Elixir: **checkout pools** and **routing
 
 A **checkout pool** is a pool where resources are used *exclusively* by callers. What this means is that when a caller needs a resource from the pool, it will check the resource out of the pool and will be able to use it. While the resource is checked out, then the caller is the only process that is able to use the resource at that time. When the caller is finished with the resource, it can check it back in the pool for other processes to use.
 
+{% include post_img.html alt="Sketch of a checkout pool" name="sketch-checkout-pool.png" %}
+
 Checkout pools are great for resources that can't be shared, like a TCP socket in passive mode, where only one process can call `:gen_tcp.recv/3` to receive data in a blocking way. They're also great for cases where sharing a resource doesn't really bring an advantage: for example, worker pools where a worker (the resource) can only do one thing at a time. However, checkout pools limit performance and utilization of resources that *can* be shared. An example that I really like for a good use case around checkout pools is HTTP/1 connections. Imagine you use a client like [Mint][mint], which behaves like a wrapper around a `:gen_tcp` or `:ssl` socket. HTTP/1 supports pipelining of requests (where you send multiple requests and await for multiple responses) but in practice it's rarely used. What clients usually do is send a request and await for the response before sending the next request. This is a natural case of "doing one thing at a time", as requests can't be parallelized. In this case a checkout pool works great because it allows to *move* the HTTP/1 connection (and socket) over to the process that makes the request, minimizing the message passing and copying of request and response data between the caller and the HTTP client.
 
 A **routing pool** is a pool where resources can be shared by callers. In a routing pool, the pool only acts as a *router* to route the caller to the right resource, based on a variety of possible strategies (such as least used resource or round-robin). Resources are not checked out from the pool, so multiple callers can use the resource at the same time.
+
+{% include post_img.html alt="Sketch of a routing pool" name="sketch-routing-pool.png" %}
 
 This pooling strategy leads to some advantages if the resource is shareable. Some examples of shareable resources are ETS tables or TCP connections where you want to use of multiplexing (to have multiple in-flight requests and responses). In contrast with the HTTP/1 example above, a great use case for routing pools is HTTP/2 connections. HTTP/2 supports *streams*, which are essentially requests. The difference with HTTP/1 requests is that you can have multiple streams in flight on the same connection. If you use a checkout pool for an HTTP/2 connection, then you won't be able to have multiple requests (streams) in flight from different callers and will not take advantage of this fundamental feature of the HTTP/2 design. With a routing pool, instead, you can have a pool of HTTP/2 connections and when you need to make a request the caller can be *routed* to one connection which will send the request. Multiple callers can be routed to the *same* connection before requests receive a response, since multiple requests can be in flight on the same connection.
 
@@ -133,7 +137,7 @@ Registry.lookup(FantaRegistry, :cool_processes)
 
 That's some cool stuff right there.
 
-Since Registry is a smart bee, every registry monitors processes that are registered in it, so that if a process dies, then it will be removed from the Registry.
+Since registries are smart bees, they monitor processes that are registered in them, so that if a process dies, then it will be removed from that registry.
 
 Alright, we're ready to get pooling.
 
