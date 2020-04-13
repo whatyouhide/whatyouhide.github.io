@@ -29,6 +29,114 @@ This pooling strategy leads to some advantages if the resource is shareable. Som
 
 Checkout pools tend to be more common in the Erlang and Elixir ecosystem. We have established libraries like [poolboy][poolboy] or [DBConnection][dbconnection] that implement checkout pools. However, routing pools tend to be hand rolled. In this post, we're going to take a look at how we can leverage [Registry][registry-docs] to build routing pools that can route using different strategies. Brace yourself!
 
+## What we need before we go
+
+Let's take a quick look at an example I came up with for a resource that we'll build a pool for, as well as at a small intro to what Registry is and how it works.
+
+### Coming up with a resource to pool
+
+The example we'll use to describe routing pools is a pool of GenServers that hold a TCP socket. These GenServers (let's call them `FantaTCP`) are able to send messages over TCP according to an imaginary serialization protocol (let's call it `Fantaprotocol`) and receive responses serialized through the same protocol. Requests have an ID so that responses for those requests can come in any order. This means that we can take advantage of a single TCP socket from multiple callers, but we can respond to callers as soon as we receive responses from the socket. Using one of these GenServers looks like this:
+
+```elixir
+FantaTCP.request(genserver_pid, "PING")
+#=> {:ok, "PONG"}
+```
+
+The implementation for `FantaTCP` GenServers looks like this:
+
+```elixir
+defmodule FantaTCP do
+  use GenServer
+
+  def start_link(hostname, port) do
+    GenServer.start_link(__MODULE__, {hostname, port})
+  end
+
+  def request(pid, request) do
+    GenServer.call(pid, {:request, request})
+  end
+
+  @impl true
+  def init({hostname, port}) do
+    case :gen_tcp.connect(hostname, port, []) do
+      {:ok, socket} ->
+        # "requests" is a map of request IDs to "from"s
+        # (callers from handle_call/3). See handle_call/3.
+        {socket, _requests = %{}}
+
+      {:error, reason} ->
+        {:stop, reason}
+    end
+  end
+
+  def handle_call({:request, request}, from, {socket, requests}) do
+    # We build the request ID.
+    id = make_id()
+
+    :ok = :gen_tcp.send(socket, Fantaprotocol.encode({id, request}))
+
+    # We store the "from" under the request ID so we'll know
+    # who to reply to. We don't reply right away so that we can
+    # send other requests while the response for this request comes back.
+    {:noreply, {socket, Map.put(requests, id, from)}}
+  end
+
+  # Let's pretend that "data" is always a complete response and can't
+  # have less or more data than that.
+  def handle_info({:tcp, socket, data}, {socket, requests}) do
+    {id, response} = Fantaprotocol.decode(data)
+    {from, requests} = Map.pop!(requests, id)
+    GenServer.reply(from, {:ok, response})
+    {:noreply, {socket, requests}}
+  end
+end
+```
+
+It's a bit of code, but the idea is that:
+
+  * when we get a request, we encode it and send it through TCP, and then return without sending a response to the caller
+  * while waiting for a response, the caller is blocked on the `GenServer.call/2`
+  * when we get a response, we match it to the right caller and reply to that caller through `GenServer.reply/2`
+
+With this in mind, we're ready to build our first pool of `FantaTCP`s.
+
+### Registry 101
+
+If you're not familiar with Registry, I'll give you a quick rundown. Registry is a key-value store tailored to registering PIDs under given keys. It's the same principle as when you call `Process.register(pid, :some_name)` to register a process under a name. To use it like `Process.register/2`, you can start it as a *unique* registry:
+
+```elixir
+pid = self()
+
+Registry.start_link(name: FantaRegistry, keys: :unique)
+Registry.register(FantaRegistry, :some_name, _value = nil)
+Registry.lookup(FantaRegistry, :some_name)
+#=> [{pid, nil}]
+```
+
+As you might have already noticed, you can even store an arbitrary value alongside a PID under a certain key. We'll make pretty cool uses of this later!
+
+Another cool feature of Registry is that you can create a *duplicate* registry, that is, a registry that can store multiple PID-value pairs *under the same key*.
+
+```elixir
+Registry.start_link(name: FantaRegistry, keys: :duplicate)
+
+# From a process with PID pid1 we call this:
+Registry.register(FantaRegistry, :cool_processes, "cool process 1")
+
+# From a process with PID pid2 we call this:
+Registry.register(FantaRegistry, :cool_processes, "cool process 2")
+
+# From whatever process:
+Registry.lookup(FantaRegistry, :cool_processes)
+#=> [{pid1, "cool process 1"}, {pid2, "cool process 2"}]
+```
+
+That's some cool stuff right there.
+
+Since Registry is a smart bee, every registry monitors processes that are registered in it, so that if a process dies, then it will be removed from the Registry.
+
+Alright, we're ready to get pooling.
+
 ## Building a naive Registry-based routing pool
 
 ## Improving our routing pool by accounting for disconnections
