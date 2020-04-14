@@ -143,6 +143,63 @@ Alright, we're ready to get pooling.
 
 ## Building a naive Registry-based routing pool
 
+For our first naive pool, we're going to use Registry like we would use the built-in process registry (the one used by `Process.register/2`). We'll start a registry and pass it to the GenServers in the pool. Each GenServer will register itself in the registry. Let's start by looking at the changes needed in the `FantaTCP` GenServers.
+
+```elixir
+defmodule FantaTCP do
+  use GenServer
+
+  def start_link(hostname, port, registry) do
+    GenServer.start_link(__MODULE__, {hostname, port, registry})
+  end
+
+  @impl true
+  def init({hostname, port, registry}) do
+    case :gen_tcp.connect(hostname, port, []) do
+      {:ok, socket} ->
+        Registry.register(registry, :connections, _value = nil)
+        {socket, _requests = %{}}
+
+      {:error, reason} ->
+        {:stop, reason}
+    end
+  end
+end
+```
+
+When a `FantaTCP` GenServer starts up, it will register itself in the given registry under the `:connections` key. All the GenServers will register under that same key, so retrieving all the GenServers in the pool will be a matter of looking up that key in the registry.
+
+```elixir
+defmodule FantaPool do
+  def start_link(hostname, port) do
+    {:ok, _} = Registry.start_link(name: FantaRegistry, keys: :duplicate)
+
+    for _ <- 1..10 do
+      {:ok, _} = FantaTCP.start_link(hostname, port, FantaRegistry)
+    end
+  end
+
+  def request(request) do
+    # "connections" is a list of {pid, nil} tuples.
+    connections = Registry.lookup(FantaRegistry, :connections)
+    {pid, _value = nil} = Enum.random(connections)
+
+    # Now we got "routed" to a connection to which we can send the request.
+    FantaTCP.request(pid, request)
+  end
+end
+```
+
+Here we're using `Enum.random/1` to pick a connection from the ones registered in the registry, which means we'll do random routing. It tends to work well for many use cases since the load distribution is uniform over a decent number of requests, but we could potentially make things more complicated and use smarted strategies like round robin.
+
+### Supervising the pool and its connections
+
+The `FantaPool` is a proper OTP disaster: no supervisors in sight. In this case, a single supervisor with the registry plus all the connections under it won't work. The reason is this: which supervision strategy would we pick? We want all connections to go down if the registry goes down since they become unreachable, so `:one_for_one` is a no-go. We don't want other connections to go down if a single connection goes down (so no `:rest_for_one`), but we also don't want *everything* to go down if anything goes down (so no `:one_for_all`). So, we have to go with more supervision layers: we'll have a `:rest_for_one` supervisor supervising the registry and a *connections supervisor*. The connections supervisor will be a `:one_for_one` supervisor that will supervise all the connections. Now go back on this paragraph and count all the variations of the word "supervisor": we're truly living the OTP life, aren't we?
+
+{% include post_img.html alt="Sketch of the pool supervision tree" name="pool-supervision-tree.png" %}
+
+CONTINUE: write the code for the supervision tree above
+
 ## Improving our routing pool by accounting for disconnections
 
 ## Routing based on different strategies
