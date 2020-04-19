@@ -198,9 +198,57 @@ The `FantaPool` is a proper OTP disaster: no supervisors in sight. In this case,
 
 {% include post_img.html alt="Sketch of the pool supervision tree" name="pool-supervision-tree.png" %}
 
-CONTINUE: write the code for the supervision tree above
+Here's the code for the supervision tree above, with clarifying comments inline:
+
+```elixir
+defmodule FantaPool do
+  use Supervisor
+
+  def start_link({host, port}) do
+    Supervisor.start_link(__MODULE__, {host, port})
+  end
+
+  @impl true
+  def init({host, port}) do
+    connections_specs =
+      for index <- 1..10 do
+        # Since all these children will live under the same supervisor,
+        # they need to have different IDs. We overwrite the ID with
+        # Supervisor.child_spec/2.
+        Supervisor.child_spec({FantaTCP, [host, port]}, id: {FantaTCP, index})
+      end
+
+    # Here we build the child spec for another supervisor inline, without
+    # having to define a new module.
+    connections_supervisor_spec = %{
+      id: :connections_supervisor,
+      type: :supervisor,
+      start: {Supervisor, :start_link, [connections_specs, [strategy: :one_for_one]]}
+    }
+
+    children = [
+      {Registry, name: FantaRegistry, keys: :duplicate},
+      connections_supervisor_spec
+    ]
+
+    Supervisor.init(children, strategy: :rest_for_one)
+  end
+
+  def request(request) do
+    # Same as before, with random routing
+  end
+end
+```
+
+This code does already *a lot*. The registry monitors registered processes so if a connection crashes, you don't get accidentally routed to it (unless you catch the moment where the connection crashes but the registry hasn't had time to deregisted the connection yet, which is pretty rare.
 
 ## Improving our routing pool by accounting for disconnections
+
+The implementation of pooling we just described works very well for processes like the `FantaTCP` GenServer. However, most connection-like processes handle disconnections gracefully by going into a *disconnected* state. In this state, they reply with some kind of error to the caller and wait until they're reconnected (for example, to the TCP host) before accepting requests again. We can optimize our pool in these cases by *unregistering* a connection when it disconnects from the resource (TCP) and registering it again once it reconnects. Essentially, we can a registry where every connection registered under the `:connections` key is *connected*. This way, when we pick a random connection we'll most likely get one that's connected and that can handle our request.
+
+<!-- TODO: code  -->
+
+There's a race condition to consider: if a connection disconnects, it might take a bit before it gets notified and unregisters itself. In that time frame, our callers might be routed to the disconnected connection. This is totally fine, because connections are prepared to return an error in case they can't send the request and get a response. However, with this strategy such cases happen in very short periods of time so we can still see substantail benefits.
 
 ## Routing based on different strategies
 
