@@ -66,7 +66,7 @@ defmodule FantaTCP do
       {:ok, socket} ->
         # "requests" is a map of request IDs to "from"s
         # (callers from handle_call/3). See handle_call/3.
-        {socket, _requests = %{}}
+        {:ok, {socket, _requests = %{}}}
 
       {:error, reason} ->
         {:stop, reason}
@@ -158,7 +158,7 @@ defmodule FantaTCP do
     case :gen_tcp.connect(hostname, port, []) do
       {:ok, socket} ->
         Registry.register(registry, :connections, _value = nil)
-        {socket, _requests = %{}}
+        {:ok, {socket, _requests = %{}}}
 
       {:error, reason} ->
         {:stop, reason}
@@ -244,9 +244,38 @@ This code does already *a lot*. The registry monitors registered processes so if
 
 ## Improving our routing pool by accounting for disconnections
 
-The implementation of pooling we just described works very well for processes like the `FantaTCP` GenServer. However, most connection-like processes handle disconnections gracefully by going into a *disconnected* state. In this state, they reply with some kind of error to the caller and wait until they're reconnected (for example, to the TCP host) before accepting requests again. We can optimize our pool in these cases by *unregistering* a connection when it disconnects from the resource (TCP) and registering it again once it reconnects. Essentially, we can a registry where every connection registered under the `:connections` key is *connected*. This way, when we pick a random connection we'll most likely get one that's connected and that can handle our request.
+The implementation of pooling we just described works great for processes like the `FantaTCP` GenServer. However, most connection-like processes handle disconnections gracefully by going into a *disconnected* state. In this state, they reply with some kind of error to the caller and wait until they're reconnected (for example, to the TCP host) before accepting requests again. We can optimize our pool in these cases by *unregistering* a connection when it disconnects from the resource (TCP) and registering it again once it reconnects. Essentially, we can a registry where every connection registered under the `:connections` key is *connected*. This way, when we pick a random connection we'll most likely get one that's connected and that can handle our request.
 
-<!-- TODO: code  -->
+```elixir
+defmodule FantaTCP do
+  use GenServer
+
+  # ...
+
+  @impl true
+  def init({hostname, port, registry}) do
+    case :gen_tcp.connect(hostname, port, []) do
+      {:ok, socket} ->
+        Registry.register(registry, :connections, _value = nil)
+        {:ok, {socket, _requests = %{}, registry}
+
+      {:error, reason} ->
+        {:stop, reason}
+    end
+  end
+
+  @impl true
+  def handle_info({:tcp_closed, socket}, {socket, _requests, registry}) do
+    Registry.unregister(registry, :connections)
+
+    # Let's imagine we can send a messaeg to ourselves to reconnect in 1
+    # second, without actually implementing the handle_info/2 clause.
+    Process.send_after(self(), :reconnect, 1000)
+
+    {:noreply, {:nosocket, _requests = %{}, registry}}
+  end
+end
+```
 
 There's a race condition to consider: if a connection disconnects, it might take a bit before it gets notified and unregisters itself. In that time frame, our callers might be routed to the disconnected connection. This is totally fine, because connections are prepared to return an error in case they can't send the request and get a response. However, with this strategy such cases happen in very short periods of time so we can still see substantail benefits.
 
