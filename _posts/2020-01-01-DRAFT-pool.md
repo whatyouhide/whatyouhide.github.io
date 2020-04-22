@@ -281,7 +281,68 @@ There's a race condition to consider: if a connection disconnects, it might take
 
 ## Routing based on different strategies
 
+Wow, we've been already through a lot. Hopefully at this point you had a glimpse of the potential of routing pools built on top of Registry. The last thing I want to sketch out is how you can build more "complex" routing strategies on top of what we built until now. We used the simplest routing strategy: choosing a resource at random. This requires no state and no coordination between callers of the pool.
+
+Let's start with a well-known strategy, round robin.
+
 ### Round robin
+
+The round robin strategy consists in going over the list of resources in the pool in order. The first caller gets the first resource, the second caller gets the second resource, and so on. Once callers got routed to all resources in the pool, they start over from the first one. To do this, a common strategy is to keep a shared index for the pool across all callers. When a caller needs a resource, it reads the index and then increments it (both operations are performed as an atomic transaction). The index is used as the index in the list of connections to the pool.
+
+Our registry-based pools have the desirable property that callers don't need to talk to a centralized pool process to get resources from the pool, but can directly read the resources from the registry. To keep this property, we'll make the shared index readable and writable across callers. The simplest tool to do that in Erlang is ETS. Alongside the registry, our pool can spin up a process whose only job is to create an ETS table and keep it alive. The code for this "table owner" looks something like this.
+
+```elixir
+defmodule FantaTable do
+  use GenServer
+
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, [])
+  end
+
+  def init([]) do
+    ets = :ets.new(__MODULE__, [:public, :named_table])
+    # We start with -1 so that when we start incrementing the first value
+    # will be 0.
+    :ets.insert(__MODULE__, {:index, -1})
+    {:ok, ets}
+  end
+end
+```
+
+Now, whenever a caller needs a resource, it can read plus increment the counter stored in the ETS table. The `:ets` module provides a useful function to do these operations atomically: `:ets.update_counter/3`. Let's add that as part of the API exposed by `FantaTable`.
+
+```elixir
+defmodule FantaTable do
+  # ...
+
+  def read_and_increment do
+    :ets.update_counter(__MODULE__, _key = :index, _increment_by = 1)
+  end
+end
+```
+
+`:ets.update_counter/3` increments the counter under the given key by the given amount and returns the updated amount. We can now change the `FantaPool.request/1` function that we wrote above:
+
+```elixir
+def request(request) do
+  # "connections" is a list of {pid, nil} tuples.
+  connections = Registry.lookup(FantaRegistry, :connections)
+  next_index = FantaTable.read_and_increment()
+
+  # We get the connection in the list at the incremented index, modulo
+  # the number of connections in the list (so that we wrap around).
+  {pid, _value = nil} = Enum.at(connections, rem(next_index, length(connections)))
+
+  # Now we got "routed" to a connection to which we can send the request.
+  FantaTCP.request(pid, request)
+end
+```
+
+There are two tiny issues with this implementation.
+
+The first one is almost non-existent: we never reset the index in the ETS table. This means that if we do *a lot* of requests, we could potentially overflow the memory of the machine by making the index very big. In practice, if you do that many requests without restarting your node, you'll probably have other kinds of problems! It's a simple problem to fix though, since `:ets.update_counter/4` exists. This variant of the `updated_counter` function lets you specify a *threshold* after which the counter should reset to a given value. That way, you can reset the counter to `0` after you reach a high enough number.
+
+The second problem is only a problem if we really stick with the definition of round robin. Since the number of resources in our pool can vary, it might be that we have `10` resources in the pool when we do one request but then the first two resources disconnect. Now we have `8` resources in the pool. A caller might get the fifth resource when there's `10` resources in the pool, but if the next caller asks for the sixth resource *after* the first two resources disconnected, it's actually gonna skip two resources and jump to the eighth resource in the original list. There are other ways to implement stricter round robin where every resource is hit exactly once before the next one, but in practice this algorithm works fine for most use cases since often resources stay connected most of the time.
 
 ### Least used resource
 
