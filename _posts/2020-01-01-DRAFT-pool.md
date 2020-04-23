@@ -348,7 +348,6 @@ Hopefully, this post gave you an idea of how to build this kind of pools as well
 
 If you build something cool from this article, you're welcome to share it with me. Now let's get pooling!
 
-
 [registry-docs]: https://hexdocs.pm/elixir/Registry.html
 [mint]: https://github.com/elixir-mint/mint
 [poolboy]: https://github.com/devinus/poolboy
