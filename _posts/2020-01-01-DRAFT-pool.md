@@ -52,7 +52,7 @@ The implementation for `FantaTCP` GenServers looks like this:
 defmodule FantaTCP do
   use GenServer
 
-  def start_link(hostname, port) do
+  def start_link({hostname, port}) do
     GenServer.start_link(__MODULE__, {hostname, port})
   end
 
@@ -149,15 +149,15 @@ For our first naive pool, we're going to use Registry like we would use the buil
 defmodule FantaTCP do
   use GenServer
 
-  def start_link(hostname, port, registry) do
-    GenServer.start_link(__MODULE__, {hostname, port, registry})
+  def start_link({hostname, port}) do
+    GenServer.start_link(__MODULE__, {hostname, port})
   end
 
   @impl true
-  def init({hostname, port, registry}) do
+  def init({hostname, port}) do
     case :gen_tcp.connect(hostname, port, []) do
       {:ok, socket} ->
-        Registry.register(registry, :connections, _value = nil)
+        Registry.register(FantaRegistry, :connections, _value = nil)
         {:ok, {socket, _requests = %{}}}
 
       {:error, reason} ->
@@ -175,7 +175,7 @@ defmodule FantaPool do
     {:ok, _} = Registry.start_link(name: FantaRegistry, keys: :duplicate)
 
     for _ <- 1..10 do
-      {:ok, _} = FantaTCP.start_link(hostname, port, FantaRegistry)
+      {:ok, _} = FantaTCP.start_link({hostname, port})
     end
   end
 
@@ -215,7 +215,7 @@ defmodule FantaPool do
         # Since all these children will live under the same supervisor,
         # they need to have different IDs. We overwrite the ID with
         # Supervisor.child_spec/2.
-        Supervisor.child_spec({FantaTCP, [host, port]}, id: {FantaTCP, index})
+        Supervisor.child_spec({FantaTCP, {host, port}}, id: {FantaTCP, index})
       end
 
     # Here we build the child spec for another supervisor inline, without
@@ -253,11 +253,11 @@ defmodule FantaTCP do
   # ...
 
   @impl true
-  def init({hostname, port, registry}) do
+  def init({hostname, port}) do
     case :gen_tcp.connect(hostname, port, []) do
       {:ok, socket} ->
-        Registry.register(registry, :connections, _value = nil)
-        {:ok, {socket, _requests = %{}, registry}
+        Registry.register(FantaRegistry, :connections, _value = nil)
+        {:ok, {socket, _requests = %{}}
 
       {:error, reason} ->
         {:stop, reason}
@@ -265,29 +265,25 @@ defmodule FantaTCP do
   end
 
   @impl true
-  def handle_info({:tcp_closed, socket}, {socket, _requests, registry}) do
-    Registry.unregister(registry, :connections)
+  def handle_info({:tcp_closed, socket}, {socket, _requests}) do
+    Registry.unregister(FantaRegistry, :connections)
 
     # Let's imagine we can send a messaeg to ourselves to reconnect in 1
     # second, without actually implementing the handle_info/2 clause.
     Process.send_after(self(), :reconnect, 1000)
 
-    {:noreply, {:nosocket, _requests = %{}, registry}}
+    {:noreply, {:nosocket, _requests = %{}}}
   end
 end
 ```
 
 There's a race condition to consider: if a connection disconnects, it might take a bit before it gets notified and unregisters itself. In that time frame, our callers might be routed to the disconnected connection. This is totally fine, because connections are prepared to return an error in case they can't send the request and get a response. However, with this strategy such cases happen in very short periods of time so we can still see substantail benefits.
 
-## Routing based on different strategies
+## Round-robin routing
 
-Wow, we've been already through a lot. Hopefully at this point you had a glimpse of the potential of routing pools built on top of Registry. The last thing I want to sketch out is how you can build more "complex" routing strategies on top of what we built until now. We used the simplest routing strategy: choosing a resource at random. This requires no state and no coordination between callers of the pool.
+Wow, we've been already through a lot. Hopefully at this point you had a glimpse of the potential of routing pools built on top of Registry. The last thing I want to sketch out is how you can build more "complex" routing strategies on top of what we built until now. We used the simplest routing strategy: choosing a resource at random. This requires no state and no coordination between callers of the pool. We'll look at how to build a pool that uses a round robin routing strategy.
 
-Let's start with a well-known strategy, round robin.
-
-### Round robin
-
-The round robin strategy consists in going over the list of resources in the pool in order. The first caller gets the first resource, the second caller gets the second resource, and so on. Once callers got routed to all resources in the pool, they start over from the first one. To do this, a common strategy is to keep a shared index for the pool across all callers. When a caller needs a resource, it reads the index and then increments it (both operations are performed as an atomic transaction). The index is used as the index in the list of connections to the pool.
+The **round robin** strategy consists in going over the list of resources in the pool in order. The first caller gets the first resource, the second caller gets the second resource, and so on. Once callers got routed to all resources in the pool, they start over from the first one. To do this, a common strategy is to keep a shared index for the pool across all callers. When a caller needs a resource, it reads the index and then increments it (both operations are performed as an atomic transaction). The index is used as the index in the list of connections to the pool.
 
 Our registry-based pools have the desirable property that callers don't need to talk to a centralized pool process to get resources from the pool, but can directly read the resources from the registry. To keep this property, we'll make the shared index readable and writable across callers. The simplest tool to do that in Erlang is ETS. Alongside the registry, our pool can spin up a process whose only job is to create an ETS table and keep it alive. The code for this "table owner" looks something like this.
 
@@ -344,7 +340,13 @@ The first one is almost non-existent: we never reset the index in the ETS table.
 
 The second problem is only a problem if we really stick with the definition of round robin. Since the number of resources in our pool can vary, it might be that we have `10` resources in the pool when we do one request but then the first two resources disconnect. Now we have `8` resources in the pool. A caller might get the fifth resource when there's `10` resources in the pool, but if the next caller asks for the sixth resource *after* the first two resources disconnected, it's actually gonna skip two resources and jump to the eighth resource in the original list. There are other ways to implement stricter round robin where every resource is hit exactly once before the next one, but in practice this algorithm works fine for most use cases since often resources stay connected most of the time.
 
-### Least used resource
+## Conclusion
+
+Oooph. This post was a **large** one. We went over the basics of pools and the two most common kinds of pools used in the Erlang and Elixir landscape, that is, checkout pools and routing pools. Then, we set some context by describing the common use cases for a pool, with a focus on where routing pools shine and a look at a sample resource to pool (our `FantaTCP` GenServer). After that, we had a first look at how to use Elixir's built-in Registry module to build a naive routing pool that routes randomly to connections in the pool. We then improved this pool by adding logic to handle disconnections and reconnections of resources in the pool. Finally, we looked at a "smarter" routing strategy, round robin, and how to implement that on top of our pool with the help of some hand-rolled ETS moves.
+
+Hopefully, this post gave you an idea of how to build this kind of pools as well as help you understand the distinction between checkout pools and routing pools (and when to use one or the other). In my experience, building pools is not a day-to-day activity but I had the need to build something like what I described here a few times, so it's not an extremely rare thing to do either.
+
+If you build something cool from this article, you're welcome to share it with me. Now let's get pooling!
 
 
 [registry-docs]: https://hexdocs.pm/elixir/Registry.html
