@@ -37,7 +37,7 @@ The ideas briefly mentioned above come from an article by Fred Hebert, ["It's ab
 
 There are states that the ATM can be in (like `waiting_for_pin` or `requesting_cash`) and events that cause state transitions, that is, moving from one state to another.
 
-`gen_statem` mirrors the design of a state machine very closely. Essentially, you have something similar to a GenServer, where you have callbacks and events like user calls or messages. In a `gen_statem` module, however, you have a state which represents the state machine's state and a `data` term that represents information that the state machine is carrying around. The "data" in a `gen_statem` is what we usually call the "state" in a GenServer (this is confusing, bear with me). 
+`gen_statem` mirrors the design of a state machine very closely. Essentially, you have something similar to a GenServer, where you have callbacks and events like user calls or messages. In a `gen_statem` module, however, you have a state which represents the state machine's state and a `data` term that represents information that the state machine is carrying around. The "data" in a `gen_statem` is what we usually call the "state" in a GenServer (this is confusing, bear with me).
 
 The `gen_statem` states are represented through functions: in the ATM machine, you would have a `waiting_for_pin/3` function (with one or more clauses) to handle events in the `waiting_for_pin` state, and so on for the other states. The return value of state functions determines what the state machine should do next and looks something like this:
 
@@ -301,12 +301,12 @@ next_backoff + Enum.random(-1000..1000)
 
 The last feature of `:gen_statem` that I want to explore is **dynamic state**. Let's see how that could be needed in our state machine. Right now, the `:socket` field in the data is only present in the `:connected` state and `nil` the rest of the time. This information perfectly mirrors the state but it's encoded in the data and has to be managed side by side with the state and state transitions. It would be nice if we could stick the socket alongside the `:connected` state, wouldn't it? Well, we can do exactly that with "handle event" functions instead of state functions. With "handle event" functions, the state is not a simple atom (like `:connected` or `:disconnected`) any more, but it can be any term. However, this means we can't use functions to represent the state: we'll have to use a common `handle_event/4` callback to handle all events in all state. We'll pattern match on the state to mimic what we were essentially doing with the names of the functions.
 
-The first thing to do to use "handle event" functions is change `:state_functions` to `:handle_event_functions` in `callback_mode/0`:
+The first thing to do to use "handle event" functions is change `:state_functions` to `:handle_event_function` in `callback_mode/0`:
 
 ```elixir
 @impl true
 def callback_mode() do
-  [:handle_event_functions, :state_enter]
+  [:handle_event_function, :state_enter]
 end
 ```
 
