@@ -35,7 +35,8 @@ TODO: compromise about speed since you have a message broker
 
 ## Acknowledgements
 
-  * Tom
-  * José for making me write this post
+Two people have been instrumental in this architecture and implementation (I'd say not *equally* instrumental...). First and foremost my coworker and friend [Tom Patterer][tom], who designed and implemented the system with me. Then, I also need to thank [José][jose] because he pushed me to write this blog post when I chatted with him about all of this.
 
 [community]: https://www.community.com
+[tom]: TODO
+[jose]: https://twitter.com/josevalim?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor
