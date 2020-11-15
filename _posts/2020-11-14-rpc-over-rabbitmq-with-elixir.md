@@ -33,7 +33,7 @@ On the other hand, we heavily focused on reliability and resource usage. We want
 
 With these goals in mind, we came up with this architecture:
 
-TODO: drawing
+{% include post_img.html alt="Sketch of the architecture of the sender service" name="sketch-caller-architecture.png" %}
 
 I think it's easier to show what happens when we make an RPC through a good old bullet list.
 
@@ -59,7 +59,7 @@ The Elixir process architecture and supervision tree structure we use for the ca
 
 With these constraints, we designed this supervision tree:
 
-TODO: supervision tree
+{% include post_img.html alt="Sketch of the supervision tree" name="sketch-supervision-tree.png" %}
 
 All the code in there is build on top of the [AMQP][amqp-library] Elixir library.
 
@@ -81,6 +81,8 @@ From here, it's all downhill: when a request comes in on a channel, the node dec
 response = process_request(request)
 publish(exchange: "amqp.direct", routing_key: request.metadata["reply_to"])
 ```
+
+{% include post_img.html alt="Sketch of the pool supervision tree" name="sketch-receiver-architecture.png" %}
 
 ### As always, Broadway is the answer
 
