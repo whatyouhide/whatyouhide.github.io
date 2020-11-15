@@ -1,7 +1,7 @@
 ---
 layout: post
 title: RPC over RabbitMQ (with Elixir)
-description: TODO
+description: A look into the RabbitMQ topology (exchanges, queues, bindings) and Elixir architecture that we use to perform RPCs over RabbitMQ.
 cover_image: cover-image.jpg
 tags:
   - elixir
@@ -89,7 +89,11 @@ end
 
 It's worth focusing on the **response queue**. This queue is declared by all AMQP channels in the caller pool when they start up. This is a common pattern in RabbitMQ since declaring resources (queues, exchanges, and bindings) is *idempotent*, that is, you can do it as many times as you want and the resource is declared only once.
 
-The response queue is declared with a key property: `auto_delete`. When this property is present, a queue is deleted as soon as there are no channels consuming from it anymore. This is exactly the behavior we want: as long as a caller pool is "up and running", there's gonna be at least one channel consuming from the queue and handing responses over to caller processes. However, if the whole pool or the whole node for the caller goes down then the queue will be deleted. This works perfectly, because if the caller node goes down, then we likely lost the "context" of the requests, and even if the node will come back up then it won't know what to do with the responses anymore. In this way, we allow RabbitMQ to clean itself up and avoid leaving garbage in it, without writing any code to do so.
+The response queue is declared with a key property: `auto_delete`. When this property is present, a queue is deleted as soon as there are no channels consuming from it anymore. This is exactly the behavior we want: as long as a caller pool is "up and running", there's gonna be at least one channel consuming from the queue and handing responses over to caller processes. However, if the whole pool or the whole node for the caller goes down then the queue will be deleted. This works perfectly, because if the caller node goes down, then we likely lost the "context" of the requests, and even if the node will come back up then it won't know what to do with the responses anymore. As [one RabbitMQ documentation page][rabbitmq-direct-reply-to] puts it:
+
+> Reply messages sent using \[RPC\] are in general not fault-tolerant; they will be discarded if the client that published the original request subsequently disconnects. The assumption is that an RPC client will reconnect and submit another request in this case.
+
+In this way, we allow RabbitMQ to clean itself up and avoid leaving garbage in it, without writing any code to do so.
 
 The code for each AMQP channel that consumes responses goes something like this:
 
@@ -135,26 +139,39 @@ All the code in there is build on top of the [AMQP][amqp-library] Elixir library
 
 ## Receiver architecture and topology
 
-The receiver architecture, compared to the caller, is straightforward. Every service sets up a pool of RabbitMQ connections (and channels), declares a queue, and binds it to the main RPC exchange (`rpc`). That exchange is a *headers* exchange, and each service usually binds the queue with the `destination` header matching that service. For example, here's the pseudocode for service `portal`:
+The receiver architecture, compared to the caller, is straightforward. Every service sets up a pool of RabbitMQ connections (and channels), declares a queue, and binds it to the main RPC exchange (`rpc`). That exchange is a *headers* exchange, and each service usually binds the queue with the `destination` header matching that service. For example, here's the pseudocode for the `receiver_svc` service:
 
-```text
-declare_queue("portal.rpcs", durable: true)
-bind("portal.rpcs", exchange: "rpc", headers: [{"destination", "portal"}])
-consume_from_queue("portal.rpcs")
+```elixir
+AMQP.Queue.declare(channel, "receiver_svc.rpcs", durable: true)
+
+AMQP.Queue.bind(
+  channel,
+  "receiver_svc.rpcs",
+  exchange: "rpc",
+  headers: [{"destination", "receiver_svc"}]
+)
+
+AMQP.Basic.consume(channel, "receiver_svc.rpcs")
 ```
 
-All AMQP channels over all nodes of a service declare the queue and bind it *on every startup*. Idempotence, friends!
+All AMQP channels over all nodes of the receiver service declare the queue and bind it *on every startup*. Idempotency, friends!
 
 From here, it's all downhill: when a request comes in on a channel, the node decodes it, processes it, produces a response, and publishes it back on RabbitMQ. Where does it publish it? Well, good question. That's why all requests have the `reply_to` RabbitMQ metadata field set to the reply queue of the caller. We take advantage of the default `amqp.direct` exchange, which is pre-declared by all RabbitMQ nodes, to publish the response directly to the reply queue. The pseudocode to handle a request is this:
 
-```text
+```elixir
 response = process_request(request)
-publish(exchange: "amqp.direct", routing_key: request.metadata["reply_to"])
+
+AMQP.Basic.publish(
+  exchange: "amqp.direct",
+  routing_key: request.metadata["reply_to"]
+)
 ```
+
+Below is a nice artsy drawing focusing on the RabbitMQ topology and interactions of the receiver service.
 
 {% include post_img.html alt="Sketch of the pool supervision tree" name="sketch-receiver-architecture.png" %}
 
-### As always, Broadway is the answer
+### In Elixir, as always, the answer is Broadway
 
 As far as Elixir specifics goes, we use [Broadway][broadway] to consume RPCs, hooking it up with the [broadway_rabbitmq][] producer.
 
@@ -168,7 +185,9 @@ defmodule MyService.RPCConsumer do
     broadway_rabbitmq_options = [
       queue: "my_service.rpcs",
       declare: [durable: true],
-      bindings: [{"rpc", arguments: [{"destination", :longstr, "my_service"}]}],
+      bindings: [
+        {"rpc", arguments: [{"destination", :longstr, "my_service"}]}
+      ],
       metadata: [:reply_to]
     ]
 
@@ -179,15 +198,19 @@ defmodule MyService.RPCConsumer do
     )
   end
 
-  def handle_message(:default, %Broadway.Message{} = message, _context) do
-    request = decode_request!(message.data)
-    response = request |> process_request() |> encode()
+  def handle_message(_, %Broadway.Message{} = message, _context) do
+    response =
+      request
+      |> decode_request!()
+      |> process_request()
+      |> encode_response!()
 
     # This is where we publish the response.
     AMQP.Basic.publish(
       message.metadata.amqp_channel,
-      "amqp.direct",
-      message.metadata.reply_to
+      exchange: "amqp.direct",
+      routing_key: message.metadata.reply_to,
+      payload: response
     )
 
     message
@@ -197,17 +220,31 @@ end
 
 As you can see, broadway_rabbitmq exposes the AMQP channel it uses to consume under the hood in the message metadata. We use that to send replies. Easy peasy.
 
-To be clear, we have a wrapper library around Broadway that makes this slightly boilerplatey code a bit simpler and more tailored to our use case. It also provides us with some nice additions such as round-robin connection attempts over a list of RabbitMQ URLs (since our RabbitMQ provider gives us a few URLs for reliability), automatic decoding of requests so that the decoding is done under the hood, metrics, error reporting, and so on. However, the gist of it is exactly the code above.
+Small disclaimer: we have a wrapper library around Broadway that makes this slightly boilerplatey code a bit simpler and more tailored to our use case. It also provides us with some nice additions such as round-robin connection attempts over a list of RabbitMQ URLs (since our RabbitMQ provider gives us a few URLs for reliability), automatic decoding of requests so that the decoding is done under the hood, metrics, error reporting, and so on. However, the gist of it is exactly the code above.
+
+## Conclusion
+
+We saw how we architected a system to make service-to-service RPCs over RabbitMQ. We went over the RabbitMQ topology we use, showing all the queues, exchanges, and bindings involved. We also covered the Elixir-specific implementation of this system, to sprinkle some practical examples on top of this stuff.
+
+Here's some more resources on RPCs over RabbitMQ:
+
+  * [RabbitMQ's tutorial][rabbitmq-rpc-python-tutorial] shows a nice step-by-step implementation of RPCs over RabbitMQ using the Python client. It's a bit less complex than our architecture since the response queue doesn't get deleted when the caller stops, but it can still go a long way. They do make it clear that this is not a totally production-ready solution.
+
+  * [RabbitMQ's "direct reply-to" documentation][rabbitmq-direct-reply-to], which shows an alternative way to do RPCs over RabbitMQ that's built-in into RabbitMQ. This solution is simpler than ours as it doesn't allow multiple consumers to get messages from a shared *response queue*, but it's pretty cool and I learned about it while writing this blog post.
+
+  * [A nice blog post][medium-blog-post] about RPC over RabbitMQ. Lots of Python code to look at.
 
 ## Acknowledgements
 
-Two people have been instrumental in this architecture and implementation (I'd say not *equally* instrumental...). First and foremost my coworker and friend [Tom Patterer][tom], who designed and implemented the system with me. Then, I also need to thank [José][jose] because he pushed me to write this blog post when I chatted with him about all of this.
+I need to thank my coworker and friend Tom Patterer, who designed and implemented the system with me and helps me maintain it while our architecture and needs keep growing. I also need to thank [José][jose] because he pushed me to write this blog post when I chatted with him about all of this.
 
 [community]: https://www.community.com
-[tom]: TODO
 [jose]: https://twitter.com/josevalim
 [broadway]: https://github.com/dashbitco/broadway
 [broadway_rabbitmq]: https://github.com/dashbitco/broadway_rabbitmq
 [amqp-library]: https://github.com/pma/amqp
 [process-pools-with-registry-post]: /posts/process-pools-with-elixirs-registry
 [wikipedia-rpc]: https://en.wikipedia.org/wiki/Remote_procedure_call
+[rabbitmq-rpc-python-tutorial]: https://www.rabbitmq.com/tutorials/tutorial-six-python.html
+[rabbitmq-direct-reply-to]: https://www.rabbitmq.com/direct-reply-to.html
+[medium-blog-post]: https://medium.com/swlh/scalable-microservice-architecture-using-rabbitmq-rpc-d07fa8faac32
