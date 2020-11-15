@@ -9,49 +9,113 @@ tags:
   - rpc
 ---
 
-At [Community][community] we rely heavily on RabbitMQ. It's the infrastructure backbone that allows our services (over thirty at this point) to communicate with each other. That communication mostly happens through **events**: our system is what you might call an event-sourced system. However, in some cases what we need is really a *request-response* interaction between two services. This is useful for all sorts of things, as you can imagine, like retrieving data on the fly or asking a service to do something and return a response. An industry standard for such interactions is HTTP, but we are not big fans of that over here. Instead, since RabbitMQ is so ubiquitous in our system, we settled on using it for request-response interactions as well. In this post, I'll go over the architecture of such interactions, the RabbitMQ topologies we use to make them work, the benefits around reliability and the compromises around performance, and finally how this all implemented to be as fault-tolerant as possible with Elixir.
+At [Community][community] we use RabbitMQ, a lot. It's the infrastructure backbone that allows our services (over fourty at this point) to communicate with each other. That mostly happens through **events** (since we have an event-sourced system), but in some cases what we need is a *request-response* interaction between two services. This is the best tool in a few use cases, like retrieving data on the fly or asking a service to do something and return a response. An industry standard for such interactions is HTTP, but we are not big fans of that. Instead, since RabbitMQ is so ubiquitous in our system, we settled on using it for request-response interactions as well in the form of **Remote Procedure Calls** (RPCs). In this post, I'll go over the architecture of such interactions, the RabbitMQ topologies we use to make them work, the benefits around reliability and the compromises around performance, and finally how this all implemented to be as fault-tolerant as possible with Elixir.
 
 {% include post_img.html alt="Cover image people queueing" name="cover-image.jpg" %}
 
 {% include unsplash_credit.html name="amandazi photography" link="https://unsplash.com/@amandazi_photography?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" %}
 
+## What is an RPC
+
+An RPC can be seen as a function call across sytem boundaries, instead of at the code execution level. An RPC allows you to call a *procedure* on another service and treat it mostly like a local function call (with the additional error handling to account for the network interaction).
+
+{% include post_img.html alt="Sketch of caller and receiver of an RPC" name="sketch-rpc-definition.png" %}
+
+I won't go into too much detail about RPCs themselves, but you're probably familiar with a common form of RPC: HTTP. HTTP request-response interactions between services in a service-oriented architecture are essentially RPCs, they're just less explicit on the fact that they're *calling a procedure*. One of the benefits of RPCs is, like HTTP, that they are agnostic of technologies. A services written in Elixir can make an RPC (or HTTP request) to a service written in Go, for example. If you want to read more about RPCs, their definition, their benefits, and more, guess where I'll link you to? Exactly, [Wikipedia][wikipedia-rpc].
+
+Throughout this post, I will refer to the services involved in an RPC as the **caller service** and the **receiver service**.
+
 ## Why RPCs over RabbitMQ
 
-We chose to do RPCs over RabbitMQ, instead of the more common service-to-service communication via HTTP, for a few reasons.
+At Community, we chose to do RPCs over RabbitMQ, instead of the common service-to-service communication via HTTP, for a few reasons.
 
-The main reason is the same reason why we extensively use message queues as often as possible. When you have a queue-based message broker between services that talk to each other, the availability requirements of the services can be less demanding. If you have two services that communicate over HTTP, then if the receiver service is down it means that the requester service will not get a response and will have to implement request retries in order to increase the chances of a successful request.
+The main reason is that we want to use message queues as often as possible. When you have a queue-based message broker between services that talk to each other, the availability requirements of the services can be less demanding. If you have two services that communicate over HTTP, then if the receiver service is down it means that the requester service will not get a response and will have to implement request retries in order to increase the chances of a successful request. With RabbitMQ in the middle, if the receiver is down then the RPC is queued and can be picked up once the receiver comes back up.
 
-TODO: we already have RabbitMQ
+Another important reason that influenced our decision is that we make heavy use of RabbitMQ for all sorts of things. This means our engineer know it well, our infrastructure is solid, and we have good systems to trace and observe messages flowing through it.
 
-TODO: compromise about speed since you have a message broker
+One compromise we had to make is that, generally speaking, RPCs over RabbitMQ tend to be *slower* than direct service-to-service communication (such as HTTP). This is hard to avoid given that in our case we have a message broker sitting between the caller service and the receiver service. That means that you'll *at least* have twice the RTT (round-trip time) on the network, since the messages you're sending and receiving need to jump through one more hop than if you do direct service-to-service communication. However, when we do RPCs the bottleneck is rarely the network or the message broker, and instead tends to be the processing of the RPC itself. So, we're fine with the compromise here.
 
-## Requester architecture and topology
+## RabbitMQ topology
 
-Our focus when designing this architecture was not really performance. Since our system is event-sourced, we have alternatives to RPCs for when services need to access data *fast*. In those cases, instead of fetching data from another service via RPC, a service can build a "local" data store (usually Redis, but whatever fits best) by consuming events and have fast access to that data store.
+Let's talk about the **RabbitMQ topology** that powers our RPC system. We have the following components in place:
 
-On the other hand, we heavily focused on reliability and resource usage. We wanted our RPCs succeed whenever they can. We also wanted to limit RabbitMQ resource utilization as much as possible, since the message broker architecture shares the broker between all the services that use it.
+  * A *headers* exchange called `rpc`. Caller services publish RPCs to this exchange with two headers, `destination` (the receiver service name) and `procedure` (the procedure name).
 
-With these goals in mind, we came up with this architecture:
+  * Per-service queues where RPCs end up. Their name usually looks like `receiver_service.rpcs`. A single queue is shared across multiple *instances* (nodes) of the same service. All the running instances of the receiver service consume from this queue.
+
+  * A binding between each per-service queue and the `rpc` exchange. Since `rpc` is a headers exchange, the binding happens on the headers. Most commonly, receiver services bind their queue to the `rpc` exchange on the `destination: receiver_service_name` header, but sometimes we can be more flexible and specific by also using the `procedure` header.
+
+  * A per-instance *response queue* where responses to RPCs are published by the receiver service. Each *instance* of the caller service consumes from its dedicated response queue.
+
+Below is an artistic representation of the RabbitMQ topology. This one is for you, my visual friends.
+
+{% include post_img.html alt="Sketch of RabbitMQ topology" name="sketch-rabbitmq-topology.png" %}
+
+## Caller architecture
+
+Our focus when designing this architecture *was not* performance. Since our system is event-sourced, when services need to access data *fast*, we usually have alternatives to RPCs. In those cases, instead of fetching data from another service via RPC, a service can usually build a "local" data store (usually Redis, but whatever fits best) by consuming events and have fast access to that data store. However, this doesn't cover use cases where a service wants to ask another service to do something and return a result. This can be usually also be done via asynchronous events, but sometimes it really can't and in any case we like the agility of RPCs for when we're moving fast and don't want to commit to particular data exchanges in the long term.
+
+Instead, we heavily focused on reliability and resource utilization. We want our RPCs to succeed whenever they can. We also want to limit RabbitMQ resource utilization as much as possible, since the message broker architecture shares the broker between all the services that use it.
+
+With these goals in mind, we came up with the topology described above. In the sketch below, I'm focusing on the caller service perspective.
 
 {% include post_img.html alt="Sketch of the architecture of the sender service" name="sketch-caller-architecture.png" %}
 
-I think it's easier to show what happens when we make an RPC through a good old bullet list.
+This is what happens, step by step, when a service makes an RPC:
 
   * The caller assigns a new UUID to the request and encodes the request (we happen to use Protobuf, but anything would work).
 
-  * The caller has a dedicated queue for responses (more on this later), and it puts the name of such queue in the `reply_to` metadata field of the request.
+  * The caller includes the name of the *response queue* in the `reply_to` metadata field of the RabbitMQ message.
 
-  * The caller publishes the request on the main RPC exchange (`rpc` in our case) using headers to specify the `destination` and `procedure` to call.
+  * The caller publishes the request on the main RPC exchange (`rpc`) using headers to specify the `destination` and `procedure` to call.
 
-  * If publishing the request is successful, the caller stores the request in an in-memory key-value store (ETS for Elixir and Erlang folks), storing the mapping from request ID to caller process.
+  * If publishing the request is successful, the caller stores the request in an in-memory key-value store (ETS for Elixir and Erlang folks), storing the mapping from request ID to caller process. This is used to map responses back to requests when they come back.
 
-  * The caller has a pool of processes also consuming from the response queue. When the response comes back on such queue, a consumer process picks it up, finds the corresponding caller process from the in-memory key-value store, and hands the caller process the response.
+  * The caller has a pool of AMQP channels also consuming from the response queue. When the response comes back on such queue, a consumer channel picks it up, finds the corresponding caller process from the in-memory key-value store, and hands the caller process the response.
 
-It's worth focusing on the response queue. That queue is declared by all AMQP channels in the caller pool when they start up. This is a common pattern in RabbitMQ since declaring resources (queues, exchanges, and bindings) is idempotent, that is, you can do it as many times as you want and the resource is declared only once. The response queue is declared with a key property: `auto_delete`. When this property is present, a queue is deleted as soon as there are no channels consuming from it anymore. This is exactly the behavior we want: as long as a caller pool is "up and running", there's gonna be at least one channel consuming from the queue and handing responses over to caller processes. However, if the whole pool or the whole node for the caller goes down then the queue will be deleted. This works perfectly, because if the caller node goes down, then we likely lost the "context" of the requests, and even if the node will come back up then it won't know what to do with the responses anymore. In this way, we allow RabbitMQ to clean itself up and avoid leaving garbage in it, without writing any code to do so.
+From a code standpoint, an RPC really does look like a function call. The main difference is that an RPC can *definitely* fail due to the network interaction, so we always make sure to return a successful value or an error value. In Elixir, that translates to `{:ok, response}` or `{:error, reason}` tuples. In a typed language (say Haskell) it would be the "either" type. In Elixir-flavoured pseudocode, this is what an RPC looks like from the caller side:
+
+```elixir
+case RPCPool.call("my_receiver_svc", "add", %{"args" => [4, 9]}) do
+  {:ok, %{"result" => result}} ->
+    result #=> 13
+
+  {:error, reason} ->
+    raise "failed because: #{inspect(reason)}" #=> such as :timeout
+end
+```
+
+### The response queue
+
+It's worth focusing on the **response queue**. This queue is declared by all AMQP channels in the caller pool when they start up. This is a common pattern in RabbitMQ since declaring resources (queues, exchanges, and bindings) is *idempotent*, that is, you can do it as many times as you want and the resource is declared only once.
+
+The response queue is declared with a key property: `auto_delete`. When this property is present, a queue is deleted as soon as there are no channels consuming from it anymore. This is exactly the behavior we want: as long as a caller pool is "up and running", there's gonna be at least one channel consuming from the queue and handing responses over to caller processes. However, if the whole pool or the whole node for the caller goes down then the queue will be deleted. This works perfectly, because if the caller node goes down, then we likely lost the "context" of the requests, and even if the node will come back up then it won't know what to do with the responses anymore. In this way, we allow RabbitMQ to clean itself up and avoid leaving garbage in it, without writing any code to do so.
+
+The code for each AMQP channel that consumes responses goes something like this:
+
+```elixir
+channel = AMQP.Channel.open(amqp_connection)
+
+# "response_queue" is determined per-pool.
+# Usually it looks like: "caller_service.#{UUID.generate()}"
+AMQP.Queue.declare(channel, response_queue, auto_delete: true)
+
+AMQP.Basic.consume(channel, response_queue)
+```
+
+When a response comes back, the caller does a key lookup on the response's request ID in the in-memory key-value data store to retrieve the original request and moreover the process that's waiting on the response. It looks like this:
+
+```elixir
+def handle_rabbitmq_message(message) do
+  response = decode!(message)
+  caller_process = KVStore.fetch(response.request_id)
+  send(caller_process, response)
+end
+```
 
 ### Elixir process architecture
 
-The Elixir process architecture and supervision tree structure we use for the caller is based on the properties of the response queue described previously. We have the following constraints:
+The Elixir process architecture and supervision tree structure we use for the caller is based on the properties of the response queue described above. We have the following constraints:
 
   * If the in-memory key-value store that holds the mappings between request IDs and caller processes (ETS) crashes, we want the whole pool to crash. We wouldn't be able to map responses back to requests anyways at that point, and it's better to let RabbitMQ delete the whole response queue in such cases.
 
@@ -60,6 +124,12 @@ The Elixir process architecture and supervision tree structure we use for the ca
 With these constraints, we designed this supervision tree:
 
 {% include post_img.html alt="Sketch of the supervision tree" name="sketch-supervision-tree.png" %}
+
+It's pretty deep and nested, but a lot of it is dancing to use the right supervision strategies. We have a main supervisor for the whole caller architecture. Then, we have a pool supervisor that supervises the connections and channels. That supervisor's children are supervisors that each look over one AMQP connection and one "channel supervisor". The channel supervisor supervises AMQP channels. That was hard to type, but hopefully it makes sense?
+
+I won't go into detail here, but the point of this design is that if anything in that supervisor fails, the failures bubble up and cascade correctly. If there's really nothing more fun that you could do (I hardly believe that), play "kill the process" in your head and see what happens when you kill any process above. It's fun, if this sort of stuff is fun for you (which is a tautology).
+
+The registry shown in the diagram is an Elixir `Registry` that all AMQP channels register themselves to. This allows us to access AMQP channels fast, without going through a single pool process. I talked more about Registry-based process pools in Elixir in [another blog post][process-pools-with-registry-post].
 
 All the code in there is build on top of the [AMQP][amqp-library] Elixir library.
 
@@ -88,7 +158,7 @@ publish(exchange: "amqp.direct", routing_key: request.metadata["reply_to"])
 
 As far as Elixir specifics goes, we use [Broadway][broadway] to consume RPCs, hooking it up with the [broadway_rabbitmq][] producer.
 
-I personally made enough changes to broadway_rabbitmq by now that, look at that, it perfectly fits our use case! This is how a typical Broadway pipeline to consume RPCs looks like:
+I personally made enough changes to broadway_rabbitmq by now that, look at that, it perfectly fits our use case! This is how a typical Broadway pipeline to consume RPCs looks like in our services:
 
 ```elixir
 defmodule MyService.RPCConsumer do
@@ -109,10 +179,11 @@ defmodule MyService.RPCConsumer do
     )
   end
 
-  def handle_message(:default, message, _context) do
-    request = decode_message!(message.data)
+  def handle_message(:default, %Broadway.Message{} = message, _context) do
+    request = decode_request!(message.data)
     response = request |> process_request() |> encode()
 
+    # This is where we publish the response.
     AMQP.Basic.publish(
       message.metadata.amqp_channel,
       "amqp.direct",
@@ -126,7 +197,7 @@ end
 
 As you can see, broadway_rabbitmq exposes the AMQP channel it uses to consume under the hood in the message metadata. We use that to send replies. Easy peasy.
 
-To be fair, we have a wrapper library around Broadway that makes this boilerplaty code a bit simpler and more tailored to our use case. It also provides us with some nice additions such as round-robin connection attempts over a list of RabbitMQ URLs (since our RabbitMQ provider gives us a few URLs for reliability), automatic decoding of requests so that the decoding is done under the hood, metrics, error reporting, and so on. However, the gist of it is exactly the code above.
+To be clear, we have a wrapper library around Broadway that makes this slightly boilerplatey code a bit simpler and more tailored to our use case. It also provides us with some nice additions such as round-robin connection attempts over a list of RabbitMQ URLs (since our RabbitMQ provider gives us a few URLs for reliability), automatic decoding of requests so that the decoding is done under the hood, metrics, error reporting, and so on. However, the gist of it is exactly the code above.
 
 ## Acknowledgements
 
@@ -134,7 +205,9 @@ Two people have been instrumental in this architecture and implementation (I'd s
 
 [community]: https://www.community.com
 [tom]: TODO
-[jose]: https://twitter.com/josevalim?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor
-[broadway]: TODO
-[broadway_rabbitmq]: TODO
-[amqp-library]: TODO
+[jose]: https://twitter.com/josevalim
+[broadway]: https://github.com/dashbitco/broadway
+[broadway_rabbitmq]: https://github.com/dashbitco/broadway_rabbitmq
+[amqp-library]: https://github.com/pma/amqp
+[process-pools-with-registry-post]: /posts/process-pools-with-elixirs-registry
+[wikipedia-rpc]: https://en.wikipedia.org/wiki/Remote_procedure_call
