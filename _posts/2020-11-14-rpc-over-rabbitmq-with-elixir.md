@@ -9,7 +9,7 @@ tags:
   - rpc
 ---
 
-At [Community][community] we use RabbitMQ, a lot. It's the infrastructure backbone that allows our services (over fourty at this point) to communicate with each other. That mostly happens through **events** (since we have an event-sourced system), but in some cases what we need is a *request-response* interaction between two services. This is the best tool in a few use cases, like retrieving data on the fly or asking a service to do something and return a response. An industry standard for such interactions is HTTP, but we are not big fans of that. Instead, since RabbitMQ is so ubiquitous in our system, we settled on using it for request-response interactions as well in the form of **Remote Procedure Calls** (RPCs). In this post, I'll go over the architecture of such interactions, the RabbitMQ topologies we use to make them work, the benefits around reliability and the compromises around performance, and finally how this all implemented to be as fault-tolerant as possible with Elixir.
+At [Community][community] we use [RabbitMQ][rabbitmq], a lot. It's the infrastructure backbone that allows our services (over fourty at this point) to communicate with each other. That mostly happens through **events** (since we have an event-sourced system), but in some cases what we need is a *request-response* interaction between two services. This is the best tool in a few use cases, like retrieving data on the fly or asking a service to do something and return a response. An industry standard for such interactions is HTTP, but we are not big fans of that. Instead, since RabbitMQ is so ubiquitous in our system, we settled on using it for request-response interactions as well in the form of **Remote Procedure Calls** (RPCs). In this post, I'll go over the architecture of such interactions, the RabbitMQ topologies we use to make them work, the benefits around reliability and the compromises around performance, and finally how this all implemented to be as fault-tolerant as possible with Elixir.
 
 {% include post_img.html alt="Cover image people queueing" name="cover-image.jpg" %}
 
@@ -248,3 +248,4 @@ I need to thank my coworker and friend Tom Patterer, who designed and implemente
 [rabbitmq-rpc-python-tutorial]: https://www.rabbitmq.com/tutorials/tutorial-six-python.html
 [rabbitmq-direct-reply-to]: https://www.rabbitmq.com/direct-reply-to.html
 [medium-blog-post]: https://medium.com/swlh/scalable-microservice-architecture-using-rabbitmq-rpc-d07fa8faac32
+[rabbitmq]: https://www.rabbitmq.com
