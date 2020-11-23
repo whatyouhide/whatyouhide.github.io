@@ -7,6 +7,7 @@ tags:
   - elixir
   - rabbitmq
   - rpc
+  - community
 ---
 
 At [Community][community] we use [RabbitMQ][rabbitmq], a lot. It's the infrastructure backbone that allows our services (over fourty at this point) to communicate with each other. That mostly happens through **events** (since we have an event-sourced system), but in some cases what we need is a *request-response* interaction between two services. This is the best tool in a few use cases, like retrieving data on the fly or asking a service to do something and return a response. An industry standard for such interactions is HTTP, but we are not big fans of that. Instead, since RabbitMQ is so ubiquitous in our system, we settled on using it for request-response interactions as well in the form of **Remote Procedure Calls** (RPCs). In this post, I'll go over the architecture of such interactions, the RabbitMQ topologies we use to make them work, the benefits around reliability and the compromises around performance, and finally how this all implemented to be as fault-tolerant as possible with Elixir.
