@@ -292,7 +292,7 @@ In order to wrap `db_query`, we'll need to retrieve the resource that we returne
 static ERL_NIF_TERM
 db_query_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   db_conn_t **conn_res;
-  enif_get_resource(env, argv[0], DB_RES_TYPE, (void *) conn_res);
+  enif_get_resource(env, argv[0], DB_RES_TYPE, (void *) &conn_res);
 
   db_conn_t *conn = *conn_res;
 
