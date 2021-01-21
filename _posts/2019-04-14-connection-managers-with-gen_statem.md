@@ -35,7 +35,7 @@ The ideas briefly mentioned above come from an article by Fred Hebert, ["It's ab
 
 {% include post_img.html alt="ATM state machine diagram" name="atm-state-machine-diagram.png" %}
 
-There are states that the ATM can be in (like `waiting_for_pin` or `requesting_cash`) and events that cause state transitions, that is, moving from one state to another.
+There are states that the ATM can be in (like `waiting_for_pin` or `requesting_cash`) and events that cause state transitions, that is, moving from one state to another state (or to the same state).
 
 `gen_statem` mirrors the design of a state machine very closely. Essentially, you have something similar to a GenServer, where you have callbacks and events like user calls or messages. In a `gen_statem` module, however, you have a state which represents the state machine's state and a `data` term that represents information that the state machine is carrying around. The "data" in a `gen_statem` is what we usually call the "state" in a GenServer (this is confusing, bear with me).
 
