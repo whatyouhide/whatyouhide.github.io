@@ -280,6 +280,10 @@ db_init_conn_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   // ...and release the resource so that it will be freed when Erlang garbage collects
   enif_release_resource(conn_res);
 
+  // We also need to free the memory that's not being used by the VM, otherwise
+  // we got a memory leak on our hands
+  free(conn);
+
   return term;
 }
 ```
