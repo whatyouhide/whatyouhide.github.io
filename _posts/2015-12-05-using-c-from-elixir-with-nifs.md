@@ -312,16 +312,16 @@ db_query_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
 ### Using resources in Elixir
 
-Let's skip the part where we export the NIFs we created to a `DB` module and jump right into IEx, assuming the C code is compiled and loaded by `DB`. As I mentioned above, resources are completely opaque terms when returned to Erlang/Elixir. They're represented as empty binaries:
+Let's skip the part where we export the NIFs we created to a `DB` module and jump right into IEx, assuming the C code is compiled and loaded by `DB`. As I mentioned above, resources are completely opaque terms when returned to Erlang/Elixir. They're represented as references:
 
 ```elixir
 iex> conn_res = DB.db_conn_init()
-""
+#Reference<0.3569050097.3772514305.191818>
 iex> DB.db_query(conn_res, ...)
 ...
 ```
 
-Since resources are opaque, you can't really do anything with them in Erlang/Elixir other than passing them back to other NIFs. They act and look like binaries, and this can even cause problems because they can be mistaken for just binaries. For this reason, my advice is to wrap resources inside structs. This way, we can limit our public API to only handle structs and handle resources internally. We also get the benefit of being able to implement the `Inspect` protocol for structs, which means we can safely inspect resources, hiding the fact that they look like empty binaries.
+Since resources are opaque, you can't really do anything with them in Erlang/Elixir other than passing them back to other NIFs. They act and look like references. My advice is to wrap resources inside structs. This way, we can limit our public API to only handle structs and handle resources internally. We also get the benefit of being able to implement the `Inspect` protocol for structs, which means we can safely inspect resources, hiding the fact that they look like references.
 
 ```elixir
 defmodule DBConn do
