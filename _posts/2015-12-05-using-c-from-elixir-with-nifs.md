@@ -74,7 +74,7 @@ When executing `fast_compare`, `argc` will be `2` and `argv` will be an array wi
 int enif_get_int(ErlNifEnv *env, ERL_NIF_TERM term, int *ip);
 ```
 
-We have to pass in the environment `env`, the Erlang term we want to "get" (which we'll take from `argv`) and the address of an integer pointer that will be filled with the Erlang integer value.
+We have to pass in the environment `env`, the Erlang term we want to "get" (which we'll take from `argv`) and the address of an integer pointer that will be filled with the Erlang integer value. It will return 0 if `term` is not an integer.
 
 ### Turning C values to Erlang values
 
@@ -93,8 +93,10 @@ static ERL_NIF_TERM
 fast_compare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int a, b;
   // Fill a and b with the values of the first two args
-  enif_get_int(env, argv[0], &a);
-  enif_get_int(env, argv[1], &b);
+  if (!enif_get_int(env, argv[0], &a) ||
+      !enif_get_int(env, argv[1], &b)) {
+      return enif_make_badarg(env);
+  }
 
   // Usual C unreadable code because this way is more true
   int result = a == b ? 0 : (a > b ? 1 : -1);
@@ -125,8 +127,10 @@ We have all the ingredients we need. The complete C file looks like this:
 static ERL_NIF_TERM
 fast_compare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int a, b;
-  enif_get_int(env, argv[0], &a);
-  enif_get_int(env, argv[1], &b);
+  if (!enif_get_int(env, argv[0], &a) ||
+      !enif_get_int(env, argv[1], &b)) {
+      return enif_make_badarg(env);
+  }
 
   int result = a == b ? 0 : (a > b ? 1 : -1);
   return enif_make_int(env, result);
