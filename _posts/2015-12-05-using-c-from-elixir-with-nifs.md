@@ -254,7 +254,8 @@ ErlNifResourceType *DB_RES_TYPE;
 // enif_release_resource is called and Erlang garbage collects the memory)
 void
 db_res_destructor(ErlNifEnv *env, void *res) {
-  db_free_conn((db_conn_t *) res);
+  db_conn_t **conn_res = (db_conn_t**) res;
+  db_free_conn(*conn_res);
 }
 
 int
@@ -275,18 +276,14 @@ db_init_conn_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   // Let's allocate the memory for a db_conn_t * pointer
   db_conn_t **conn_res = enif_alloc_resource(DB_RES_TYPE, sizeof(db_conn_t *));
 
-  // Let's create conn and copy the memory where the pointer is stored
+  // Let's create conn and let the resource point to it
   db_conn_t *conn = db_init_conn();
-  memcpy((void *) conn_res, (void *) &conn, sizeof(db_conn_t *));
+  *conn_res = conn;
 
   // We can now make the Erlang term that holds the resource...
   ERL_NIF_TERM term = enif_make_resource(env, conn_res);
   // ...and release the resource so that it will be freed when Erlang garbage collects
   enif_release_resource(conn_res);
-
-  // We also need to free the memory that's not being used by the VM, otherwise
-  // we got a memory leak on our hands
-  free(conn);
 
   return term;
 }
