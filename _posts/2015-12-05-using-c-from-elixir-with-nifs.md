@@ -74,7 +74,7 @@ When executing `fast_compare`, `argc` will be `2` and `argv` will be an array wi
 int enif_get_int(ErlNifEnv *env, ERL_NIF_TERM term, int *ip);
 ```
 
-We have to pass in the environment `env`, the Erlang term we want to "get" (which we'll take from `argv`) and the address of an integer pointer that will be filled with the Erlang integer value.
+We have to pass in the environment `env`, the Erlang term we want to "get" (which we'll take from `argv`) and the address of an integer pointer that will be filled with the Erlang integer value. It will return 0 if `term` is not an integer.
 
 ### Turning C values to Erlang values
 
@@ -93,8 +93,10 @@ static ERL_NIF_TERM
 fast_compare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int a, b;
   // Fill a and b with the values of the first two args
-  enif_get_int(env, argv[0], &a);
-  enif_get_int(env, argv[1], &b);
+  if (!enif_get_int(env, argv[0], &a) ||
+      !enif_get_int(env, argv[1], &b)) {
+      return enif_make_badarg(env);
+  }
 
   // Usual C unreadable code because this way is more true
   int result = a == b ? 0 : (a > b ? 1 : -1);
@@ -125,8 +127,10 @@ We have all the ingredients we need. The complete C file looks like this:
 static ERL_NIF_TERM
 fast_compare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int a, b;
-  enif_get_int(env, argv[0], &a);
-  enif_get_int(env, argv[1], &b);
+  if (!enif_get_int(env, argv[0], &a) ||
+      !enif_get_int(env, argv[1], &b)) {
+      return enif_make_badarg(env);
+  }
 
   int result = a == b ? 0 : (a > b ? 1 : -1);
   return enif_make_int(env, result);
@@ -250,7 +254,8 @@ ErlNifResourceType *DB_RES_TYPE;
 // enif_release_resource is called and Erlang garbage collects the memory)
 void
 db_res_destructor(ErlNifEnv *env, void *res) {
-  db_free_conn((db_conn_t *) res);
+  db_conn_t **conn_res = (db_conn_t**) res;
+  db_free_conn(*conn_res);
 }
 
 int
@@ -271,18 +276,14 @@ db_init_conn_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   // Let's allocate the memory for a db_conn_t * pointer
   db_conn_t **conn_res = enif_alloc_resource(DB_RES_TYPE, sizeof(db_conn_t *));
 
-  // Let's create conn and copy the memory where the pointer is stored
+  // Let's create conn and let the resource point to it
   db_conn_t *conn = db_init_conn();
-  memcpy((void *) conn_res, (void *) &conn, sizeof(db_conn_t *));
+  *conn_res = conn;
 
   // We can now make the Erlang term that holds the resource...
   ERL_NIF_TERM term = enif_make_resource(env, conn_res);
   // ...and release the resource so that it will be freed when Erlang garbage collects
   enif_release_resource(conn_res);
-
-  // We also need to free the memory that's not being used by the VM, otherwise
-  // we got a memory leak on our hands
-  free(conn);
 
   return term;
 }
@@ -296,7 +297,9 @@ In order to wrap `db_query`, we'll need to retrieve the resource that we returne
 static ERL_NIF_TERM
 db_query_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   db_conn_t **conn_res;
-  enif_get_resource(env, argv[0], DB_RES_TYPE, (void *) &conn_res);
+  if (!enif_get_resource(env, argv[0], DB_RES_TYPE, (void *) &conn_res)) {
+    return enif_make_badarg(env);
+  }
 
   db_conn_t *conn = *conn_res;
 
@@ -309,16 +312,16 @@ db_query_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
 ### Using resources in Elixir
 
-Let's skip the part where we export the NIFs we created to a `DB` module and jump right into IEx, assuming the C code is compiled and loaded by `DB`. As I mentioned above, resources are completely opaque terms when returned to Erlang/Elixir. They're represented as empty binaries:
+Let's skip the part where we export the NIFs we created to a `DB` module and jump right into IEx, assuming the C code is compiled and loaded by `DB`. As I mentioned above, resources are completely opaque terms when returned to Erlang/Elixir. They're represented as references:
 
 ```elixir
 iex> conn_res = DB.db_conn_init()
-""
+#Reference<0.3569050097.3772514305.191818>
 iex> DB.db_query(conn_res, ...)
 ...
 ```
 
-Since resources are opaque, you can't really do anything with them in Erlang/Elixir other than passing them back to other NIFs. They act and look like binaries, and this can even cause problems because they can be mistaken for just binaries. For this reason, my advice is to wrap resources inside structs. This way, we can limit our public API to only handle structs and handle resources internally. We also get the benefit of being able to implement the `Inspect` protocol for structs, which means we can safely inspect resources, hiding the fact that they look like empty binaries.
+Since resources are opaque, you can't really do anything with them in Erlang/Elixir other than passing them back to other NIFs. They act and look like references. My advice is to wrap resources inside structs. This way, we can limit our public API to only handle structs and handle resources internally. We also get the benefit of being able to implement the `Inspect` protocol for structs, which means we can safely inspect resources, hiding the fact that they look like references.
 
 ```elixir
 defmodule DBConn do
