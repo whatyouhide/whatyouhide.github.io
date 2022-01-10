@@ -8,53 +8,75 @@ tags:
   - property-based-testing
 ---
 
-I mostly use property-based testing to test stateless functional code. A technique I love to use is to pair property-based tests together with *example-based tests* (that is, "normal" tests!) in order to have some sanity checks on whether the code behaves as expected on real input. Let's dive deeper into this technique, some contrived blog-post-adequate examples, and links to real-world examples.
+I mostly use property-based testing to test stateless functional code. A technique I love to use is to pair property-based tests together with *example-based tests* (that is, "normal" tests) in order to have some tests that check real input. Let's dive deeper into this technique, some contrived blog-post-adequate examples, and links to real-world examples.
 
 {% include post_img.html alt="Cover image of just a bunch of pencils" name="cover-image.jpg" %}
 
 {% include unsplash_credit.html name="David Pennington" link="https://unsplash.com/@dtpennington?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" %}
 
-I've been a vocal advocate of property-based testing for a while. I wrote stream_data, a property-based testing framework for Elixir, [gave talks about the topic][], and used property-based testing at work and in my open-source software.
+I've been a vocal advocate of property-based testing for a while. I wrote [stream_data][], a property-based testing framework for Elixir, [gave talks about the topic][my-talk], and used property-based testing at work and in my open-source software (such as [Corsica][corsica-properties] or [Redix][redix-properties]).
 
-The most common way I use property-based testing is to test stateless pieces of code. These tend to be the easiest to come up with properties for.
+The most common way I use property-based testing is to test *stateless* pieces of code. These tend to be the easiest to come up with properties for.
 
-In this short post, I want to talk about one of my favorite techniques to use when writing property-based tests: mixing properties with explicit unit tests.
+In this short post, I want to talk about one of my favorite techniques to use when writing property-based tests: mixing properties with explicit "example-based" tests. Example-based tests are the tests you're used to, where you have some predefined inputs and expected respective outputs and assert that your code matches the inputs to the outputs.
 
-The idea behind this is to combine the power of property-based testing to test a wide input of data together with some practical example-based tests that ensure that our code behaves as expected on real inputs.
+The idea behind this technique is to combine the ability of property-based testing to test a wide range of input data together with some practical example-based tests that ensure that our code behaves as expected on real inputs.
 
 ## Diving Into an Example
 
 I use this technique quite often. Recently, I used this when writing tests for some JSON-related code in the [Protobuf library for Elixir][elixir-protobuf] that I help maintain. Let's take this as the main example.
 
-We're writing a function called `parse_nanoseconds/1`. Its job is to take a string, extract the leading digits from it, and parse those into an integer that represents conventional nanoseconds in a timestamp. For example, `123` means 123 *milliseconds*, so `123_000_000` nanoseconds. `000_001` means one microsecond, `000_000_001` means one nanosecond. You get the idea. This function should also return the rest of the string after the digits, like `Integer.parse/2` does.
-
-Thinking about properties for this code, two comes to mind:
-
-  1. for valid strings of nine or less digits, the output of `parse_nanoseconds/1` must be an integer in the range `0..999_999_999`;
-
-  1. for any string of nine or less digits followed by any string `trail`, `trail` should be returned untouched.
-
-I encoded these into a single `property` test in stream_data:
+We're writing a function called `parse_nanoseconds/1` with this spec:
 
 ```elixir
-property "returns a valid nanoseconds integer and the trailing string" do
-  nanos_prefix_gen = string(?0..?9, min_length: 1, max_length: 9)
+@spec parse_nanoseconds(String.t()) :: {0..999_999_999, String.t()}
+```
 
-  check all nanos <- nanos_prefix_gen,
-            rest <- string(:printable),
-            string = nanos <> rest do
-    assert {parsed_nanos, parsed_rest} = parse_nanoseconds(string)
-    assert parsed_nanos in 0..999_999_999
-    assert parse_rest == rest
+Its job is to:
+
+  1. take a string
+  1. extract the leading one to nine digits from it
+  1. parse those digits into an integer that represents conventional nanoseconds in a timestamp
+  1. return the parsed integer alongside whatever's left of the original string (similar to [`Integer.parse/2`][integer-parse])
+
+  For example, `123` means 123 *milliseconds*, so `123_000_000` nanoseconds. `000_001` means one microsecond, `000_000_001` means one nanosecond. You get the idea. By the way, see what I did just now? I just showed you some **examples** of how the function is supposed to behave. These make perfect material for our example-based tests.
+
+### Designing the Properties
+
+Thinking about properties that hold for the output of this function given a valid input, here's what I got.
+
+  1. For valid strings of nine or less digits, the output of `parse_nanoseconds/1` must be an integer in the range `0..999_999_999`.
+
+  1. For any string of nine or less digits followed by any string `trail`, `trail` should be returned untouched.
+
+I encoded these into a single `property` test (this uses stream_data):
+
+```elixir
+defmodule MyTest do
+  use ExUnit.Case
+  use ExUnitProperties
+
+  property "returns valid nanoseconds integer and trailing string" do
+    # Generator that generates strings of 1 to 9 digits.
+    nanos_prefix_gen = string(?0..?9, min_length: 1, max_length: 9)
+
+    check all nanos <- nanos_prefix_gen,
+              rest <- string(:printable),
+              string = nanos <> rest do
+      assert {parsed_nanos, parsed_rest} = parse_nanoseconds(string)
+      assert parsed_nanos in 0..999_999_999
+      assert parse_rest == rest
+    end
   end
 end
 ```
 
-Here's the catch: we can write a bunch of implementations of `parse_nanoseconds/1` that satisfy this property with no issue but that are semantically wrong. A contrived, slightly-weird, but effective example is below.
+Now for the catch: we can write a bunch of implementations of `parse_nanoseconds/1` that satisfy this property with no issue but that are **semantically wrong**. A contrived, slightly-weird, but effective example is below.
 
 ```elixir
+# Sneaky implementation that is wrong but satisfies our properties:
 def parse_nanoseconds(string) do
-  case Regex.split(~r{\d{1,9}}, string, parts: 2) do
+  case Regex.split(~r/\d{1,9}/, string, parts: 2) do
     ["", rest] -> {0, rest}
     _other -> :error
   end
@@ -75,7 +97,7 @@ property "returns a valid nanoseconds integer and the trailing string" do
   assert parse_nanoseconds("123foo") == {123_000_000, "foo"}
   assert parse_nanoseconds("000000001") == {1, ""}
 
-  # Property part:
+  # Property part (unchanged):
   nanos_prefix_gen = string(?0..?9, min_length: 1, max_length: 9)
 
   check all nanos <- nanos_prefix_gen,
@@ -104,5 +126,11 @@ If you are curious about actual examples, go look at the [actual tests in the Pr
 
 I wrote a bit more about this technique and in general about property-based testing [Testing Elixir][testing-elixir], the Pragmatic Programmers book I co-authored with Jeffrey Matthias.
 
+[stream_data]: https://github.com/whatyouhide/stream_data
+[my-talk]: https://www.youtube.com/watch?v=p84DMv8TQuo
+[corsica-properties]: https://github.com/whatyouhide/corsica/blob/a4328f6bae1ccdaeb6d9fed14263c5c5a43540a6/test/properties_test.exs
+[redix-properties]: https://github.com/whatyouhide/redix/blob/53216ab4ba96ceceb3e963faca02e2bf25abdb9a/test/redix/protocol_test.exs
 [elixir-protobuf]: https://github.com/elixir-protobuf/protobuf
+[integer-parse]: https://hexdocs.pm/elixir/Integer.html#parse/1
 [actual-tests]: https://github.com/elixir-protobuf/protobuf/blob/00144b3a08aac7a38e3e9774a438dcc7da3d8bc7/test/protobuf/json/utils_test.exs
+[testing-elixir]: https://pragprog.com/titles/lmelixir/testing-elixir/
