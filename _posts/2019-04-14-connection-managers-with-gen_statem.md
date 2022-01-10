@@ -341,7 +341,7 @@ If you're interested in the whole code for the state machine that we built, you 
 
 [gen_statem]: http://erlang.org/doc/man/gen_statem.html
 [gen_fsm]: http://erlang.org/doc/man/gen_fsm.html
-[redix-article]: /posts/handling-tcp-connections-in-elixir
+[redix-article]: https://andrealeopardi.com/posts/handling-tcp-connections-in-elixir
 [connection]: https://github.com/fishcakez/connection
 [its-about-the-guarantees]: https://ferd.ca/it-s-about-the-guarantees.html
 [transition-system]: https://en.wikipedia.org/wiki/Transition_system
