@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  lint-markdown:
+    name: Lint Markdown
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+    env: {}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Run markdownlint
+        run: |
+          docker run -v $PWD:/md peterdavehello/markdownlint markdownlint _posts

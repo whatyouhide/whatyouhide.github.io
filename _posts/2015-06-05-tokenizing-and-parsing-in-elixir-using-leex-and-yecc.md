@@ -332,9 +332,9 @@ We only covered the basics of these two tools: they can do more complicated thin
 
 I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we?
 
-#### Very small update
+### Very small update
 
-I updated the source code in this blog post to use `String.to_charlist/1` and `to_charlist/1` instead of `String.to_char_list/1` and `to_char_list/1` respectively; the `charlist` spelling has been deprecated in Elixir 1.3.
+I updated the source code in this blog post to use `String.to_charlist/1` and `to_charlist/1` instead of `String.to_char_list/1` and `to_char_list/1` respectively. The `charlist` spelling has been deprecated in Elixir 1.3.
 
 [wiki-lexical-analysis]: https://en.wikipedia.org/wiki/Lexical_analysis
 [wiki-parsing]: https://en.wikipedia.org/wiki/Parsing

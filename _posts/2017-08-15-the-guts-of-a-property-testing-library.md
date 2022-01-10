@@ -33,7 +33,7 @@ property "in/2 returns true for elements taken out of a list" do
             list != [],
             elem <- member_of(list) do
     assert elem in list
-  end     
+  end
 end
 ```
 
