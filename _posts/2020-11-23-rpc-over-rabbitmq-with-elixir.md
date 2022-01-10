@@ -244,7 +244,7 @@ I need to thank my coworker and friend Tom Patterer, who designed and implemente
 [broadway]: https://github.com/dashbitco/broadway
 [broadway_rabbitmq]: https://github.com/dashbitco/broadway_rabbitmq
 [amqp-library]: https://github.com/pma/amqp
-[process-pools-with-registry-post]: /posts/process-pools-with-elixirs-registry
+[process-pools-with-registry-post]: https://andrealeopardi.com/posts/process-pools-with-elixirs-registry
 [wikipedia-rpc]: https://en.wikipedia.org/wiki/Remote_procedure_call
 [rabbitmq-rpc-python-tutorial]: https://www.rabbitmq.com/tutorials/tutorial-six-python.html
 [rabbitmq-direct-reply-to]: https://www.rabbitmq.com/direct-reply-to.html

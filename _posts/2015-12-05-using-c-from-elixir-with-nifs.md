@@ -390,4 +390,4 @@ Thanks for making it this far!
 [devinus-markdown]: https://github.com/devinus/markdown
 [sasa-juric-ports]: https://theerlangelist.com/article/outside_elixir
 [erl-nif-docs]: https://www.erlang.org/doc/man/erl_nif.html
-[mix-compilers-0]: https://elixir-lang.org/docs/stable/mix/Mix.html#compilers/0
+[mix-compilers-0]: https://hexdocs.pm/mix/Mix.html#compilers/0

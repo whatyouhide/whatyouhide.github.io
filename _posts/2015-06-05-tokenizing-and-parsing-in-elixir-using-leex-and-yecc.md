@@ -332,9 +332,9 @@ We only covered the basics of these two tools: they can do more complicated thin
 
 I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we?
 
-#### Very small update
+### Very small update
 
-I updated the source code in this blog post to use `String.to_charlist/1` and `to_charlist/1` instead of `String.to_char_list/1` and `to_char_list/1` respectively; the `charlist` spelling has been deprecated in Elixir 1.3.
+I updated the source code in this blog post to use `String.to_charlist/1` and `to_charlist/1` instead of `String.to_char_list/1` and `to_char_list/1` respectively. The `charlist` spelling has been deprecated in Elixir 1.3.
 
 [wiki-lexical-analysis]: https://en.wikipedia.org/wiki/Lexical_analysis
 [wiki-parsing]: https://en.wikipedia.org/wiki/Parsing
@@ -343,7 +343,7 @@ I updated the source code in this blog post to use `String.to_charlist/1` and `t
 [docs-leex]: https://erlang.org/doc/man/leex.html
 [docs-yecc]: https://erlang.org/doc/man/yecc.html
 [docs-parsetools]: https://www.erlang.org/doc/apps/parsetools/
-[docs-mix-compilers/0]: https://elixir-lang.org/docs/master/mix/Mix.html#compilers/0
+[docs-mix-compilers/0]: https://hexdocs.pm/mix/Mix.html#compilers/0
 [dragon-book]: https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
 [stackoverflow-html-regex]: https://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags
 [po-files]: https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html

@@ -33,7 +33,7 @@ property "in/2 returns true for elements taken out of a list" do
             list != [],
             elem <- member_of(list) do
     assert elem in list
-  end     
+  end
 end
 ```
 
@@ -232,7 +232,7 @@ Most ideas in StreamData are not original and are taken partially from QuickChec
 [quickcheck-paper]: http://www.cs.tufts.edu/~nr/cs257/archive/john-hughes/quick.pdf
 [elixir]: https://elixir-lang.org
 [library-haskell]: https://hackage.haskell.org/package/QuickCheck
-[library-erlang]: https://www.quviq.com/products/
+[library-erlang]: http://www.quviq.com/products/
 [library-clojure]: https://github.com/clojure/test.check
 [library-python]: https://hypothesis.works
 [library-scala]: https://www.scalacheck.org
