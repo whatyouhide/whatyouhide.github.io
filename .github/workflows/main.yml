@@ -20,3 +20,8 @@ jobs:
       - name: Run markdownlint
         run: |
           docker run -v $PWD:/md peterdavehello/markdownlint markdownlint _posts
+
+      - name: Check validity of links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          check-modified-files-only: 'yes'

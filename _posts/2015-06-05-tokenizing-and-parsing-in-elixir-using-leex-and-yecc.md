@@ -343,7 +343,7 @@ I updated the source code in this blog post to use `String.to_charlist/1` and `t
 [docs-leex]: https://erlang.org/doc/man/leex.html
 [docs-yecc]: https://erlang.org/doc/man/yecc.html
 [docs-parsetools]: https://www.erlang.org/doc/apps/parsetools/
-[docs-mix-compilers/0]: https://elixir-lang.org/docs/master/mix/Mix.html#compilers/0
+[docs-mix-compilers/0]: https://hexdocs.pm/mix/Mix.html#compilers/0
 [dragon-book]: https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools
 [stackoverflow-html-regex]: https://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags
 [po-files]: https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html
