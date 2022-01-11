@@ -6,6 +6,7 @@ cover_image: cover-image.jpg
 tags:
   - elixir
   - property-based-testing
+  - community
 ---
 
 I mostly use property-based testing to test stateless functional code. A technique I love to use is to pair property-based tests together with *example-based tests* (that is, "normal" tests) in order to have some tests that check real input. Let's dive deeper into this technique, some contrived blog-post-adequate examples, and links to real-world examples.
