@@ -349,4 +349,4 @@ I updated the source code in this blog post to use `String.to_charlist/1` and `t
 [po-files]: https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html
 [gnu-gettext]: https://www.gnu.org/software/gettext/
 [gettext-for-elixir-parser-code]: https://github.com/elixir-lang/gettext/blob/e2e3d42edd2a8fa5aa2deada2e5779f122594e71/src/gettext_po_parser.yrl
-[elixir-parser-code]: https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_parser.yrl
+[elixir-parser-code]: https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_parser.yrl
