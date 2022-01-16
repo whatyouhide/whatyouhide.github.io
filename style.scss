@@ -6,12 +6,14 @@
 
 html {
   font-size: 100%;
+  height: 100%;
 }
 
 body {
-	background: $white;
+	background: $siteBackground;
   font: 18px/1.4 $helvetica;
-  color: $darkGray;
+  color: $textColor;
+  height: 100%;
 }
 
 .container {
@@ -23,7 +25,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: $helveticaNeue;
-  color: $darkerGray;
+  color: $textColor;
   font-weight: bold;
 
   line-height: 1.7;
@@ -98,7 +100,7 @@ strong, b {
   font-weight: bold;
 }
 
-img {
+#main img {
   max-width: 100%;
 }
 
@@ -134,52 +136,10 @@ img {
     clear: both;
 }
 
-/*********************/
-/* LAYOUT / SECTIONS */
-/*********************/
-
-//
-// .masthead
-//
-
 .wrapper-masthead {
-  margin-bottom: 50px;
-}
-
-.masthead {
-  padding: 20px 0;
-  border-bottom: 1px solid $lightGray;
-
-  @include mobile {
-    text-align: center;
-  }
-}
-
-.site-avatar {
-  float: left;
-  width: 70px;
-  height: 70px;
-  margin-right: 15px;
-
-  @include mobile {
-    float: none;
-    display: block;
-    margin: 0 auto;
-  }
-
-  img {
-    border-radius: 5px;
-  }
-}
-
-.site-info {
-  float: left;
-
-  @include mobile {
-    float: none;
-    display: block;
-    margin: 0 auto;
-  }
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .site-name {
@@ -229,6 +189,20 @@ nav {
   }
 }
 
+
+// aaaaaa
+#main {
+  min-height: 100%;
+  flex: 1;
+
+  display: flex;
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+// aaaaaa
+
 //
 // .main
 //
@@ -270,6 +244,7 @@ nav {
 }
 
 footer {
+  position: relative;
   padding: 20px 0;
   text-align: center;
 }
@@ -289,6 +264,55 @@ footer {
   width: 100%;
   display: block;
   margin-top: -10px;
+}
+
+img.post-img {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+// Header
+
+header {
+  padding: 20px 0;
+}
+
+#header-contents {
+  display: flex;
+  justify-content: center;
+  width: 50%;
+  margin: 0 auto;
+}
+
+.site-avatar > img {
+  height: 100px;
+  border-radius: 50%;
+  margin-right: 20px;
+  border: 3px solid $textColor;
+}
+
+img.site-title {
+  height: 100px;
+}
+
+// Main content on the homepage
+
+#main {
+  margin-top: 40px;
+}
+
+#main h2 {
+  text-align: center;
+  margin: 0;
+}
+
+#blog h2 img {
+  height: 70px;
+}
+
+#talks h2 img {
+  height: 50px;
 }
 
 @import "highlights";

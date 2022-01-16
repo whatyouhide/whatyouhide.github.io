@@ -1,15 +1,67 @@
 ---
-layout: default
+layout: null
 ---
 
-<div class="posts">
-  {% for post in site.posts %}
-  <article class="post">
-    <h1><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h1>
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
 
-    <div class="entry">{{ post.excerpt }}</div>
+<head>
+  <title>{% if page.title %}{{ page.title }} – {% endif %}{{ site.title_name }}</title>
 
-    <a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read more →</a>
-  </article>
-  {% endfor %}
-</div>
+  {% include meta.html %}
+
+  <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+  <link rel="stylesheet" type="text/css" href="{{ site.baseurl }}/style.css" />
+  <link rel="alternate" type="application/rss+xml" title="{{ site.name }} - {{ site.description }}"
+    href="{{ site.baseurl }}/feed.xml" />
+</head>
+
+<body>
+  <div class="wrapper-masthead">
+    {% include header.html %}
+
+    <div id="main" role="main" class="container">
+      <div id="blog" class="container">
+        <a href="{{ site.baseurl }}/blog">
+          <h2>
+            <img src="{{ site.baseurl }}/assets/media/blog-text.png" />
+          </h2>
+          <img class="big-icon" src="{{ site.baseurl }}/assets/media/blog.png" alt="TODO" />
+        </a>
+      </div>
+
+      <div id="testing-elixir" class="container">
+        <a href="https://pragprog.com/titles/lmelixir/testing-elixir/" target="_blank">
+          <h2>
+            <img src="{{ site.baseurl }}/assets/media/testing-elixir-text.png" />
+          </h2>
+          <img class="big-icon" src="{{ site.baseurl }}/assets/media/testing-elixir.png" alt="TODO" />
+        </a>
+      </div>
+
+      <div id="talks" class="container">
+        <a href="https://youtube.com/playlist?list=PLd7I3U4fDsUJfNM-N7Kyss66gmml_OSDq" target="_blank">
+          <h2>
+            <img src="{{ site.baseurl }}/assets/media/talks-text.png" />
+          </h2>
+          <img class="big-icon" src="{{ site.baseurl }}/assets/media/mic.png" alt="TODO" />
+        </a>
+      </div>
+    </div>
+
+    <div class="wrapper-footer">
+      <div class="container">
+        <footer class="footer">
+          {% include svg-icons.html %}
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  {% include analytics.html %}
+</body>
+
+</html>
