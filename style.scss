@@ -236,19 +236,6 @@ nav {
   }
 }
 
-.wrapper-footer {
-  margin-top: 50px;
-  border-top: 1px solid #ddd;
-  border-bottom: 1px solid #ddd;
-  background-color: $lightGray;
-}
-
-footer {
-  position: relative;
-  padding: 20px 0;
-  text-align: center;
-}
-
 :not(pre) > code {
   background-color: $lightGray;
   padding-left: 4px;
@@ -335,5 +322,35 @@ img.site-title {
   height: 50px;
 }
 
+// Footer
+
+$footerIconWidth: 50px;
+
+footer {
+  height: 100px;
+}
+
+footer div.icons {
+  width: 50%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+footer .icons a {
+  display: block;
+}
+
+footer img.footer-icon {
+  width: $footerIconWidth;
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+#icon-rss {
+  width: $footerIconWidth - 10px;
+}
+
 @import "highlights";
-@import "svg-icons";
