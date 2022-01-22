@@ -109,7 +109,8 @@ strong, b {
   max-width: none;
 }
 
-.date {
+article.post time.posted-at {
+  display: block;
   font-style: italic;
   color: $gray;
 }

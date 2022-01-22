@@ -7,7 +7,7 @@ layout: default
 
   <div class="entry">{{ content }}</div>
 
-  <div class="date">Written on {{ page.date | date: "%B %e, %Y" }}</div>
+  <time class="posted-at" datetime="{{ page.date }}">Written on {{ page.date | date: "%B %e, %Y" }}</time>
 
   {% include disqus.html %}
 </article>
