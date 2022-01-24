@@ -29,7 +29,7 @@ Testing relatively-uncommon conditions (such as network failures) requires preci
 
 I call "test double" any piece of code that mimics a dependency of a system but is only used in tests. Folks use terms like test double, mock, or stub interchangeably, but I'm a stickler for this stuff, so I'll use *test double* in this post.
 
-In our case, AWS is a natural point where to define a contract between our system and an external dependency. I always think back to [José Valim][jose-twitter]'s legendary post ["Mocks and Explicit Contracts"][jose-mocks-post] when talking about these things, go give it a read if you haven't read it already.
+In our case, AWS is a natural point where to define a contract between our system and an external dependency. I always think back to [José Valim][jose-twitter]'s legendary post ["Mocks and Explicit Contracts"][jose-mocks-post] when talking about these things. Go give it a read if you haven't read it already.
 
 ### ExAws and Its Behaviour (With a "U")
 
