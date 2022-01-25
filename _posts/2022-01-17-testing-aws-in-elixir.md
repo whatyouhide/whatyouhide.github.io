@@ -97,6 +97,8 @@ Using test doubles works well in many cases, but it has one drawback that I can'
 
 Luckily, for this particular use case there's a pretty fantastic tool called [Localstack][localstack]. Localstack provides a faithful replica of AWS itself, but running locally. It fits this use case perfectly (it was kind of built for local integration testing, you could say).
 
+Just a note here: before Localstack, we sometimes used to use [ExVCR][] to perform this sort of more integration tests. ExVCR lets you *record HTTP requests* and make sure that your requests conform to the recorded real requests. It can work well in some cases, but for AWS it didn't give us the flexibility of quickly changing the way we interface with AWS itself. On top of that, ExVCR is ultimately still defining test doubles under the hood, so we are still not exercising the real ExAws HTTP code.
+
 ### Running Localstack
 
 We use [Docker][docker] for running our production application so we are heavily invested in the Docker ecosystem on our local machines too. We already use Docker and [Docker Compose][docker-compose] locally to spin up infrastructure needed by the services we work on. A typical `docker-compose.yml` file in one of our services looks like this:
@@ -199,6 +201,47 @@ defmodule MyTest do
 end
 ```
 
+### Data Setup and Teardown
+
+One missing piece of the puzzle here is that, when using Localstack, we need to manually perform some test setup and teardown. When using test doubles, we can decide "on the fly" what to return from the stub or mock functions, without having to *prepare* the test doubles in any way. With Localstack, we need to perform all the necessary AWS setup and data setup (and teardown) in order for our tests to test something.
+
+For example, imagine you want to test how your code retrieves a file from AWS S3 and writes its contents to a local file. To do that, you'll have to:
+
+  1. Create a bucket in Localstack's S3
+  1. Write a file to that bucket
+  1. Exercise your code and run assertions
+  1. Likely, delete the bucket to clean up for other tests to run
+
+These steps vary for different configurations and test architectures, but you get the idea. To do the setup and teardown, we just use ExAws directly and manually create the topology we want in the AWS services. For the S3 example above, we would do something like this:
+
+```elixir
+test "reading a file and writing it out" do
+  # Create some random bytes to store in the file.
+  contents = :crypto.strong_rand_bytes(100)
+
+  # We set up an on_exit callback to empty and then delete the bucket
+  # when the test exit, so that the next test has a clean slate.
+  on_exit(fn ->
+      "test-bucket"
+      |> ExAws.S3.list_objects()
+      |> ExAws.stream!()
+      |> Enum.each(&ExAws.request!(ExAws.S3.delete_object("test-bucket", &1.key)))
+
+      ExAws.request!(ExAws.S3.delete_bucket("test-bucket"))
+  end)
+
+  # Create bucket.
+  ExAws.request!(ExAws.S3.put_bucket("test-bucket", "us-west-2"))
+
+  # Upload a file.
+  ExAws.request!(ExAws.S3.put_object("test-bucket", "my/random/file", contents))
+
+  # Now, we run our code and assert on its behavior.
+  MyApp.download_s3_file!("test-bucket", "my/random/file", to: "localfile")
+  assert File.read!("localfile") == contents
+end
+```
+
 ## Conclusion
 
 In this post we saw how ExAws provides the perfect functionality for easily writing integration tests using Localstack as well as defining test doubles for precise controls of behavior in testing. If you want to dig deeper into integration testing with Elixir, test doubles, end-to-end tests, and more, check out [Testing Elixir][testing-elixir], the book I co-wrote with [Jeffrey Matthias][jeffrey].
@@ -208,6 +251,7 @@ In this post we saw how ExAws provides the perfect functionality for easily writ
 [ex_aws]: https://github.com/ex-aws/ex_aws
 [ex_aws_s3]: https://github.com/ex-aws/ex_aws_s3
 [mox]: https://github.com/dashbitco/mox
+[ExVCR]: https://github.com/parroty/exvcr
 [localstack]: https://localstack.cloud/
 [docker]: https://www.docker.com/
 [docker-compose]: https://docs.docker.com/compose/
