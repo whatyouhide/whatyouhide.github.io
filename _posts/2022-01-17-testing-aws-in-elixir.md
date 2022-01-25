@@ -21,7 +21,7 @@ When I work with external systems like AWS, I want to test two aspects:
 
   1. What happens when interacting with the actual service — I want the application's code to have some tests where the whole code that interacts with the external service is executed end-to-end, without mocks in the middle.
 
-Let's take a look at these below.
+Let's take a look at these below. I set up [a repository][accompanying-repo] with most of the code discussed here, so you can see it pieced together and working.
 
 ## Testing Uncommon Conditions
 
@@ -144,7 +144,7 @@ To do that, we add some configuration to `config/test.exs` that only takes affec
 
 ```elixir
 # In config/test.exs
-aws_url =
+aws_uri =
   System.get_env("AWS_ENDPOINT_URL", "http://localhost:4566")
   |> URI.parse()
 
@@ -246,6 +246,8 @@ end
 
 In this post we saw how ExAws provides the perfect functionality for easily writing integration tests using Localstack as well as defining test doubles for precise controls of behavior in testing. If you want to dig deeper into integration testing with Elixir, test doubles, end-to-end tests, and more, check out [Testing Elixir][testing-elixir], the book I co-wrote with [Jeffrey Matthias][jeffrey].
 
+Remember to check out the [repository][accompanying-repo] that contains all the code and techniques discussed in this post if you want to see it all in action.
+
 [jose-mocks-post]: http://blog.plataformatec.com.br/2015/10/mocks-and-explicit-contracts/
 [jose-twitter]: https://twitter.com/josevalim
 [ex_aws]: https://github.com/ex-aws/ex_aws
@@ -260,3 +262,4 @@ In this post we saw how ExAws provides the perfect functionality for easily writ
 [docs-mox-stub_with]: https://hexdocs.pm/mox/Mox.html#stub_with/2
 [testing-elixir]: https://pragprog.com/titles/lmelixir/testing-elixir/
 [jeffrey]: https://twitter.com/idlehands
+[accompanying-repo]: https://github.com/whatyouhide/testing_aws_in_elixir
