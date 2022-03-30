@@ -6,7 +6,7 @@ google_analytics: UA-41860599-4
 disqus: blog-andrealeopardi
 
 footer-links:
-  email: an.leopardi@gmail.com
+  email: hi@andrealeopardi.com
   github: whatyouhide
   twitter: whatyouhide
   rss: true
@@ -25,7 +25,7 @@ baseurl: ""
 # Owner information.
 owner:
   name: Andrea Leopardi
-  email: an.leopardi@gmail.com
+  email: hi@andrealeopardi.com
 
 ## Build configuration.
 
@@ -43,8 +43,8 @@ plugins:
 
 # Exclude these files from your production _site
 exclude:
-    - Gemfile
-    - Gemfile.lock
-    - LICENSE
-    - README.md
-    - CNAME
+  - Gemfile
+  - Gemfile.lock
+  - LICENSE
+  - README.md
+  - CNAME
