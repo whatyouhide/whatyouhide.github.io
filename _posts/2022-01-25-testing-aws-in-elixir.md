@@ -41,7 +41,7 @@ To interact with AWS in our Elixir services we use [ExAws][ex_aws] and its pleth
 
 ExAws's architecture is essentially made of a main ExAws library which contains code to make generic HTTP requests to various AWS services. On top of that, there are many service-specific libraries (such as [ex_aws_s3][]). These libraries usually define **operations** that implement the [`ExAws.Operation`][docs-ex_aws-operation] behaviour. Operations are just data structures. The way you use ExAws is that you create operations (that is, data structures) using the service-specific libraries and execute them against AWS using the main ExAws library.
 
-This is where the cool things begin. ExAws also ships with the [`ExAws.Behaviour`](docs-ex_aws-behaviour) behaviour, which defines the core functionality provided by the library. Well, wouldn't you know, that core functionality is exactly the set of functions that take operations and execute them against AWS. This is the perfect architecture for test doubles.
+This is where the cool things begin. ExAws also ships with the [`ExAws.Behaviour`][docs-ex_aws-behaviour] behaviour, which defines the core functionality provided by the library. Well, wouldn't you know, that core functionality is exactly the set of functions that take operations and execute them against AWS. This is the perfect architecture for test doubles.
 
 ### Test Doubles for ExAws
 
