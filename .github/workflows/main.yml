@@ -24,5 +24,6 @@ jobs:
       - name: Check validity of links
         uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
-          check-modified-files-only: 'yes'
-          use-verbose-mode: 'yes'
+          check-modified-files-only: "yes"
+          use-verbose-mode: "yes"
+          config-file: link_check_config.json
