@@ -10,6 +10,7 @@ footer-links:
   github: whatyouhide
   twitter: whatyouhide
   rss: true
+  mastodon: https://mas.to/@whatyouhide
 
 # Name of your site (displayed in the header)
 title_name: Andrea Leopardi
