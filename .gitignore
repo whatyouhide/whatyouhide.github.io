@@ -1,5 +1,1 @@
-_site
-.jekyll
-.bundle
-.sass-cache
-.jekyll-cache
+public

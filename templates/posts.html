@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+  <title>{% if page.title %}{{ page.title }} – {% endif %}Andrea Leopardi</title>
+
+  {% include "meta.html" %}
+
+  <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+  <link rel="stylesheet" type="text/css" href="/style.css" />
+  <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+</head>
+
+<body>
+  <div class="wrapper-masthead">
+    {% include "header.html" %}
+
+    <div id="main" role="main" class="container">
+      <div class="posts">
+        {% set section = get_section(path="posts/_index.md") %}
+
+        {% for post in section.pages | sort(attribute="date") | reverse %}
+        <article class="post">
+
+          <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+
+          <div class="entry">{{ post.summary | safe }}</div>
+          <a href="{{ post.permalink }}" class="read-more">Read more →</a>
+        </article>
+        {% endfor %}
+      </div>
+
+    </div>
+
+    {% include "footer.html" %}
+  </div>
+
+  {% include "analytics.html" %}
+</body>
+
+</html>

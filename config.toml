@@ -1,0 +1,22 @@
+# The URL the site will be built for
+base_url = "https://andrealeopardi.com"
+
+# Whether to automatically compile all Sass files in the sass directory
+compile_sass = true
+
+# Whether to build a search index to be used later on by a JavaScript library
+build_search_index = false
+
+# The site title and description; used in feeds by default.
+title = "Andrea Leopardi"
+description = ""
+
+[markdown]
+# Whether to do syntax highlighting
+# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
+highlight_code = true
+
+[extra]
+google_analytics = "UA-41860599-4"
+disqus_shortname = "blog-andrealeopardi" # Shortname, not username
+avatar_url = "https://www.gravatar.com/avatar/faafc04d9e69b73b9f49995fd4c94d4d?s=500"
