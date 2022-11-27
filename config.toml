@@ -11,15 +11,19 @@ build_search_index = false
 title = "Andrea Leopardi"
 description = "Andrea Leopardi's personal website"
 
+## Feeds
+
+# Generate main feed for pages with a date.
 generate_feed = true
+
 # The filename to use for the feed. Used as the template filename, too.
-# Defaults to "atom.xml", which has a built-in template that renders an Atom 1.0 feed.
-# There is also a built-in template "rss.xml" that renders an RSS 2.0 feed.
 feed_filename = "feed.xml"
 
 # The number of articles to include in the feed. All items are included if
 # this limit is not set (the default).
-# feed_limit = 20
+feed_limit = 10
+
+## Taxonomies
 
 taxonomies = [
     { name = "tags", feed = true }
