@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="posts">
+  {% set section = get_section(path="posts/_index.md") %}
+
+  {% for post in section.pages | sort(attribute="date") | reverse %}
+  <article class="post">
+
+    <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+
+    <div class="entry">{{ post.summary | safe }}</div>
+    <a href="{{ post.permalink }}" class="read-more">Read more →</a>
+  </article>
+  {% endfor %}
+</div>
+
+{% endblock content %}

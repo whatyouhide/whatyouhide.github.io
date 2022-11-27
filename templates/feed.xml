@@ -1,0 +1,58 @@
+{# This first one is a special feed for Community's federated blog. #}
+{% if taxonomy is defined and taxonomy.name == "tags" and term.name == "community" %}
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <title type="text">{{ config.title }} - Community</title>
+  <generator uri="https://www.getzola.org">Zola</generator>
+  <link rel="self" type="application/rss+xml" href="{{ feed_url }}" />
+  <link rel="alternate" type="text/html" href="{{ config.base_url }}" />
+  <updated>{{ now() | date(format="%+") }}</updated>{# Needs to be ISO8601, https://docs.rs/chrono/0.4.23/chrono/format/strftime/index.html #}
+  <id>{{ config.base_url }}</id>
+
+  <author>
+    <name>{{ config.extra.full_name }}</name>
+    <uri>{{ config.base_url }}</uri>
+    <email>{{ config.extra.email }}</email>
+  </author>
+
+  {% for post in pages %}
+    {{ post }}
+    <entry>
+      <title type="html"><![CDATA[{{ post.title | escape_xml }}]]></title>
+      <link rel="alternate" type="text/html" href="{{ post.permalink }}" />
+      <id>{{ post.permalink }}</id>
+
+      <published>{{ post.date | date(format="%+")}}</published>
+      <updated>{{ post.date | date(format="%+")}}</updated>
+
+      <author>
+        <name>{{ config.extra.full_name }}</name>
+        <uri>{{ config.base_url }}</uri>
+        <email>{{ config.extra.email }}</email>
+      </author>
+
+      <content type="html">{{ post.content | escape_xml }}
+      &lt;p&gt;&lt;a href=&quot;{{ post.permalink }}&quot;&gt;{{ post.title }}&lt;/a&gt; was originally published by {{ config.extra.full_name }} at &lt;a href=&quot;{{ config.base_url }}&quot;&gt;{{ config.title }}&lt;/a&gt; on {{ post.date | date(format="%B %d, %Y") }}.&lt;/p&gt;</content>
+    </entry>
+  {% endfor %}
+</feed>
+{% else %}
+{# Normal RSS feed of all posts in my blog. #}
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="https://www.w3.org/2005/Atom">
+  <channel>
+    <title>{{ config.title }}</title>
+    <description>{{ config.description }}</description>
+    <link>{{ config.base_url }}</link>
+    <atom:link href="{{ feed_url }}" rel="self" type="application/rss+xml" />
+    {% for post in pages %}
+      <item>
+        <title>{{ post.title | escape_xml }}</title>
+        <description>{{ post.summary | escape_xml }}</description>
+        <pubDate>{{ post.date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
+        <link>{{ post.permalink }}</link>
+        <guid isPermaLink="true">{{ post.permalink }}</guid>
+      </item>
+    {% endfor %}
+  </channel>
+</rss>
+{% endif %}

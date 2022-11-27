@@ -1,0 +1,39 @@
+# The URL the site will be built for
+base_url = "https://andrealeopardi.com"
+
+# Whether to automatically compile all Sass files in the sass directory
+compile_sass = true
+
+# Whether to build a search index to be used later on by a JavaScript library
+build_search_index = false
+
+# The site title and description; used in feeds by default.
+title = "Andrea Leopardi"
+description = "Andrea Leopardi's personal website"
+
+generate_feed = true
+# The filename to use for the feed. Used as the template filename, too.
+# Defaults to "atom.xml", which has a built-in template that renders an Atom 1.0 feed.
+# There is also a built-in template "rss.xml" that renders an RSS 2.0 feed.
+feed_filename = "feed.xml"
+
+# The number of articles to include in the feed. All items are included if
+# this limit is not set (the default).
+# feed_limit = 20
+
+taxonomies = [
+    { name = "tags", feed = true }
+]
+
+[markdown]
+# Whether to do syntax highlighting
+# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
+highlight_code = true
+
+[extra]
+full_name = "Andrea Leopardi"
+google_analytics = "UA-41860599-4"
+disqus_shortname = "blog-andrealeopardi" # Shortname, not username
+avatar_url = "https://www.gravatar.com/avatar/faafc04d9e69b73b9f49995fd4c94d4d?s=500"
+email = "hi@andrealeopardi.com"
+twitter_username = "whatyouhide"
