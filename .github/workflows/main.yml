@@ -11,7 +11,7 @@ jobs:
     name: Lint Markdown
     runs-on: ubuntu-18.04
     strategy:
-      fail-fast: false
+      fail-fast: true
     env: {}
     steps:
       - name: Check out repository
@@ -28,3 +28,17 @@ jobs:
           check-modified-files-only: "yes"
           use-verbose-mode: "yes"
           config-file: link_check_config.json
+
+  # Following https://www.getzola.org/documentation/deployment/github-pages/
+  build:
+    name: Build and deploy GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v3.0.0
+
+      - name: Build with Zola and push to GitHub Pages
+        uses: shalzz/zola-deploy-action@v0.16.1
+        env:
+          PAGES_BRANCH: gh-pages
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
