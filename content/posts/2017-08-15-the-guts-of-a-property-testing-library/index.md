@@ -7,7 +7,7 @@ taxonomies:
     - elixir
 ---
 
-Property-based testing is a common tool to improve testing by testing properties of a piece of software over many values drawn at random from a large space of valid values. This methodology was first introduced in the paper [QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs][quickcheck-paper], which describes the basic idea and shows a possible implementation in Haskell. Since then, many tools to aid in property based testing appeared for many programming languages: as of the time of writing, there's libraries for [Haskell][library-haskell], [Erlang][library-erlang], [Clojure][library-clojure], [Python][library-python], [Scala][library-scala], and many others. A few days ago I released the first version of [StreamData][streamdata], a property testing (and data generation) library for [Elixir][elixir] (that is a candidate for inclusion in Elixir itself in the future). This post is not an introduction to property-based testing nor a tutorial on how to use StreamData: what I want to do is dig into the mechanics of how StreamData works, its design, and how it compares to some of the other property-based testing libraries mentioned above.
+Property-based testing is a common tool to improve testing by testing properties of a piece of software over many values drawn at random from a large space of valid values. This methodology was first introduced in the paper [QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs][quickcheck-paper], which describes the basic idea and shows a possible implementation in Haskell. Since then, many tools to aid in property based testing appeared for many programming languages: as of the time of writing, there are libraries for [Haskell][library-haskell], [Erlang][library-erlang], [Clojure][library-clojure], [Python][library-python], [Scala][library-scala], and many others. A few days ago I released the first version of [StreamData][streamdata], a property testing (and data generation) library for [Elixir][elixir] (that is a candidate for inclusion in Elixir itself in the future). This post is not an introduction to property-based testing nor a tutorial on how to use StreamData: what I want to do is dig into the mechanics of how StreamData works, its design, and how it compares to some of the other property-based testing libraries mentioned above.
 
 <!-- more -->
 
@@ -60,9 +60,9 @@ After reading the paper and doing some more research on Haskell's implementation
 
   * they have to be able to generate random values indefinitely (without running out of values);
   * they have to be *reproducible*, that is, they should explicitly "take in" the randomness in order to be able to deterministically "replay" the generated values;
-  * we have to be able to use a "size" to control the space of generated values so as to be able to start a test run with smaller values and grow the generated values over time.
+  * we have to be able to use a "size" to control the space of generated values to be able to start a test run with smaller values and grow the generated values over time.
 
-The requirements above already got me going and I implemented the first version of generators. Back then, a generator was a struct (so as to be able to distinguish it from any other term) with just one field, `:generator`, which was a function that took a random seed and a size.
+The requirements above already got me going and I implemented the first version of generators. Back then, a generator was a struct (in order to be able to distinguish it from any other term) with just one field, `:generator`, which was a function that took a random seed and a size.
 
 ```elixir
 defmodule StreamData do
@@ -95,7 +95,7 @@ seed0 = :rand.seed_s(:exs1024)
 
 #### Random splitting
 
-This worked fairly well, but when reading the QuickCheck paper again I noticed something I had missed the first time: the seed was never returned alongside the value. What QuickCheck does, instead, is they "split" the seed. Splitting the seed is a way to take one random seed and deterministically return two random seeds. This can be used when we need to use the random seed twice (or more): instead of using something like `:rand.uniform_s/2` above, we can split the seed into `seed1` and `seed2` and use `seed1` just once to generated an integer and then throw it away, since we still have `seed2` if we need a seed for something else. `seed2` can be further split, effectively making us able to use as many seeds as we want to generate values.
+This worked fairly well, but when reading the QuickCheck paper again I noticed something I had missed the first time: the seed was never returned alongside the value. What QuickCheck does, instead, is they "split" the seed. Splitting the seed is a way to take one random seed and deterministically return two random seeds. This can be used when we need to use the random seed twice (or more): instead of using something like `:rand.uniform_s/2` above, we can split the seed into `seed1` and `seed2` and use `seed1` just once to generate an integer and then throw it away, since we still have `seed2` if we need a seed for something else. `seed2` can be further split, effectively making us able to use as many seeds as we want to generate values.
 
 With this in mind, I changed the generator function to take a seed and a size but only return a value. If I needed to call a generator twice, I would just split the seed and use the two resulting seeds to call it twice. It now looked like this:
 
@@ -123,7 +123,7 @@ This approach is used by Haskell's QuickCheck but also, for example, by [Clojure
 
 ### Haskell's approach
 
-Haskell takes a similar approach to what we have in StreamData (or rather, the other way around) but with a big difference: Haskell is able to use its type system to infer what values to generate just based on the type. So in Haskell, while the generation of integers is done similarly to what we do in `int/0` above, there's no need to define `int/0` in the first place but only to define how to generate integers for the `Int` type. This makes a noticeable difference since you can give Haskell's QuickCheck a function and it will be able to test it on the right randomly generated values just by looking at its type signature. However, the "typed approach" has a drawback, as we'll see in the "Shrinking" section below.
+Haskell takes a similar approach to what we have in StreamData (or rather, the other way around) but with a big difference: Haskell is able to use its type system to infer what values to generate just based on the type. So in Haskell, while the generation of integers is done similarly to what we do in `int/0` above, there's no need to define `int/0` in the first place but only to define how to generate integers for the `Int` type. This makes a noticeable difference, since you can give Haskell's QuickCheck a function and it will be able to test it on the right randomly generated values just by looking at its type signature. However, the "typed approach" has a drawback, as we'll see in the "Shrinking" section below.
 
 ### Shrinking
 
@@ -176,7 +176,7 @@ The solution to this problem is to couple generation and shrinking,
 
 #### Lazy trees
 
-The approach I went with (which was taken straight out of test.check) keeps in mind the idea of a *shrink tree* mentioned above. Basically, a generator now returns a `StreamData.LazyTree` struct instead of a simple value. A "lazy tree" is a tree that has a realized (that is, not eager) root and a lazy stream of children, each children being a lazy tree itself.
+The approach I went with (which was taken straight out of `test.check`) keeps in mind the idea of a *shrink tree* mentioned above. Basically, a generator now returns a `StreamData.LazyTree` struct instead of a simple value. A "lazy tree" is a tree that has a realized (that is, not eager) root and a lazy stream of children, each child being a lazy tree itself.
 
 ```elixir
 defmodule StreamData.LazyTree do
@@ -220,7 +220,7 @@ With lazy trees in place, shrinking becomes straightforward: it's now just a fan
 
 #### Random byte stream approach (to shrinking this time)
 
-I briefly mentioned above that Hypothesis, Python's library for property-based testing, uses an infinite stream of random bytes that generators can use to generate values. This stream is the foundation of shrinking as well: when we need to shrink a value, we can remove bytes from the original stream and also shrink bytes of the original stream (towards 0). Generators are expected to be written so that they are somehow "proportional" to the byte stream so that shrinking the byte stream also shrinks the generated value. By using a deterministic way to generate values from the byte stream, shrinking is also deterministic. Hypothesis' approach is really interesting and I am doing some research to see how it compares practically to our approach and our platform, to evaluate a potential switch to this architecture.
+I briefly mentioned above that Hypothesis, Python's library for property-based testing, uses an infinite stream of random bytes that generators can use to generate values. This stream is the foundation of shrinking as well: when we need to shrink a value, we can remove bytes from the original stream and also shrink bytes of the original stream (towards 0). Generators are expected to be written so that they are somehow "proportional" to the byte stream so that shrinking the byte stream also shrinks the generated value. By using a deterministic way to generate values from the byte stream, shrinking is also deterministic. Hypothesis' approach is fascinating, and I am doing some research to see how it compares practically to our approach and our platform, to evaluate a potential switch to this architecture.
 
 ## Conclusion
 
@@ -228,7 +228,7 @@ I had tons of fun writing this library and learned a lot of things. This post wa
 
 ### Credit
 
-Most ideas in StreamData are not original and are taken partially from QuickCheck but mostly from test.check, so a big thank you goes to everyone that helped with those projects. This blog post was also influenced by [this great article][hypothesis-article] by the author of Hypothesis, so thank you David as well!
+Most ideas in StreamData are not original and are taken partially from QuickCheck but mostly from `test.check`, so a big thank you goes to everyone that helped with those projects. This blog post was also influenced by [this great article][hypothesis-article] by the author of Hypothesis, so thank you as well, David!
 
 
 [quickcheck-paper]: http://www.cs.tufts.edu/~nr/cs257/archive/john-hughes/quick.pdf

@@ -17,7 +17,7 @@ Our applications often interact with external systems. In many cases, we need a 
 
 This article is an evolution of a previous article posted on this blog, ["Handling TCP connections in Elixir"][redix-article]. In that article, I describe how to build a connection process that talks to a Redis server over TCP. Instead of `gen_statem` (which wasn't available at that time), I use the [connection][connection] library by James Fish, but the concepts are similar. If you're interested in the TCP interactions more than you are in `gen_statem`, read that article first. What I describe here is an evolution of the old implementation that doesn't require external dependencies and that nicely shows a practical use case for many of the features that `gen_statem` provides.
 
-*Note*: I'm more used to Elixir and its syntax, so that's what I'm going to use here. However, I won't use almost any Elixir-specific features so the article should also be readable for folks that are more comfortable with Erlang. If you want to follow along with the finished Erlang code for the state machine we'll build, look at [the Gist][state-machine-gist] containing the final implementation in Elixir and Erlang.
+*Note*: I'm more used to Elixir and its syntax, so that's what I'm going to use here. However, I won't use almost any Elixir-specific features, so the article should also be readable for folks that are more comfortable with Erlang. If you want to follow along with the finished Erlang code for the state machine we'll build, look at [the Gist][state-machine-gist] containing the final implementation in Elixir and Erlang.
 
 ## The connection "manager"
 
@@ -55,9 +55,9 @@ We're going to use TCP with `:gen_tcp` to connect to the database. We'll send re
 
 Let's start with designing the states of our connection. We already figured out that there's going to be a `disconnected` state for when the TCP connection is down. This will also be the starting state since we'll start as `disconnected` and then try to connect the first time as mentioned at the beginning of the article. We only need one more state, the `connected` state, for when the TCP connection is alive and well. The next step when designing the state machine is figuring out what events cause the state machine to transition from one state to another. In our case, we can think of these events causing state transitions:
 
-  * the TCP connection goes down - this makes the state machine transition from the `connected` state to the `disconnected` state.
+  * The TCP connection goes down — this makes the state machine transition from the `connected` state to the `disconnected` state.
 
-  * the TCP connection is established successfully - this makes the state machine from from `disconnected` to `connected`.
+  * The TCP connection is established successfully — this makes the state machine from `disconnected` to `connected`.
 
 Then, we have events that don't cause state transition. In our case, that's only requests from clients.
 
@@ -124,7 +124,7 @@ def disconnected(:internal, :connect, data) do
 end
 ```
 
-If the connection is established successfully, we store the socket in the data and move to the `:connected` state. If there's an error connecting, we stay in the `:disconnected` state with the same data and fire the internal `:connect` event again. This means that we'll try to reconnect right away and might end up in a failed connection loop. We'll fix this later on by introducing backoffs.
+If the connection is established successfully, we store the socket in the data and move to the `:connected` state. If there's an error connecting, we stay in the `:disconnected` state with the same data and fire the internal `:connect` event again. This means that we'll try to reconnect right away and might end up in a failed connection loop. We'll fix this later on by introducing back-offs.
 
 Now that we're in the `:connected` state, let's handle the connection going down so that we'll have all the state *transitions*. Since our TCP socket is in active mode, we'll get a `{:tcp_closed, socket}` message when the connection goes down (let's ignore `{:tcp_error, socket, reason}` for now).
 
@@ -165,7 +165,7 @@ def disconnected({:call, from}, {:request, request}, data) do
 end
 ```
 
-When a request comes in the `:connected` state, we issue the request to the database and store the caller under the request ID in our request map. `request` here could be anything, but let's imagine it's a map that contains an `:id` key holding the ID of the request. If there's an error sending, we close the socket and go back to the disconnected state.
+When a request comes in the `:connected` state, we issue the request to the database and store the caller under the request ID in our request map. `request` here could be anything, but let's imagine it's a map that contains a `:id` key holding the ID of the request. If there's an error sending, we close the socket and go back to the disconnected state.
 
 ```elixir
 def connected({:call, from}, {:request, request}, data) do
@@ -241,7 +241,7 @@ def disconnected(:enter, :connected, data) do
 end
 ```
 
-This allows us to just move to the disconnected state when we want to disconnected, and the state enter clause will take care of replying to waiting clients and cleaning the data up. Note that since `:disconnected` is our first state, the `:enter` event will fire the first time with the old state being `:disconnected` as well. We can just do nothing in that case.
+This allows us to just move to the disconnected state when we want to disconnect, and the state enter clause will take care of replying to waiting clients and cleaning the data up. Note that since `:disconnected` is our first state, the `:enter` event will fire the first time with the old state being `:disconnected` as well. We can just do nothing in that case.
 
 ```elixir
 def disconnected(:enter, :disconnected, _data) do
@@ -249,7 +249,7 @@ def disconnected(:enter, :disconnected, _data) do
 end
 ```
 
-The enter callback is called for for every state transition, so we need to handle it in the `:connected` state as well. We don't want to do anything when entering that state.
+The enter callback is called for every state transition, so we need to handle it in the `:connected` state as well. We don't want to do anything when entering that state.
 
 ```elixir
 def connected(:enter, _old_state, _data) do
@@ -257,9 +257,9 @@ def connected(:enter, _old_state, _data) do
 end
 ```
 
-## Timeouts for backoffs
+## Timeouts for back-offs
 
-We've now got a pretty neat connection process that holds the TCP connection to our database and is able to reply to clients regardless of the state of such connection. However, in the code we built we try to reconnect as soon as the connection goes down or we fail to connect. This is usually a terrible idea, because if a connection goes down there's a good chance it won't be up right away, especially if we also fail to reconnect. A common technique to avoid frequent connection attempts is to wait a **backoff period** before attempting reconnections. When the connection goes down or we fail to connect, we'll wait a few hundred milliseconds before trying again.
+We've now got a pretty neat connection process that holds the TCP connection to our database and is able to reply to clients regardless of the state of such connection. However, in the code we built we try to reconnect as soon as the connection goes down or we fail to connect. This is usually a terrible idea, because if a connection goes down there's a good chance it won't be up right away, especially if we also fail to reconnect. A common technique to avoid frequent connection attempts is to wait a **back-off period** before attempting reconnections. When the connection goes down or we fail to connect, we'll wait a few hundred milliseconds before trying again.
 
 `:gen_statem` has the perfect tool to implement this: **timeouts**. One of the possible actions you can return from state functions is `{:timeout, timeout_name}`, which you can use to set a timeout with some term attached to it after a given amount of time. When the timeout expires, an event of type `{:timeout, timeout_name}` is fired.
 
@@ -288,9 +288,9 @@ end
 
 When the `:reconnect` timeout is fired, we just fire the internal `:connect` event so that we end up trying to reconnect. This removes repetition in the code and hides the plumbing of setting up timeouts manually.
 
-### Exponential and random backoff
+### Exponential and random back-off
 
-Without going too much into detail, a fixed backoff time might not be the best idea. Imagine you have one hundred TCP connections established with the database. If the database goes down, all those connections will go down at the same time and will try to reconnect every 500 milliseconds, all at the *same time*. Part of the fix is to increase the backoff exponentially so that we can avoid situations where the database is down for a while and all connections try to reconnect very often. Then, we can add some random interval of time before reconnecting for each connection so that we avoid all the connections trying to reconnect at the same time. In code, the formula for the next backoff (given the previous backoff) can be something like:
+Without going too much into detail, a fixed back-off time might not be the best idea. Imagine you have one hundred TCP connections established with the database. If the database goes down, all those connections will go down at the same time and will try to reconnect every 500 milliseconds, all at the *same time*. Part of the fix is to increase the back-off exponentially so that we can avoid situations where the database is down for a while and all connections try to reconnect very often. Then, we can add some random interval of time before reconnecting for each connection so that we avoid all the connections trying to reconnect at the same time. In code, the formula for the next back-off (given the previous back-off) can be something like:
 
 ```elixir
 next_backoff = round(previous_backoff * 2)
@@ -299,7 +299,7 @@ next_backoff + Enum.random(-1000..1000)
 
 ## Dynamic state
 
-The last feature of `:gen_statem` that I want to explore is **dynamic state**. Let's see how that could be needed in our state machine. Right now, the `:socket` field in the data is only present in the `:connected` state and `nil` the rest of the time. This information perfectly mirrors the state but it's encoded in the data and has to be managed side by side with the state and state transitions. It would be nice if we could stick the socket alongside the `:connected` state, wouldn't it? Well, we can do exactly that with "handle event" functions instead of state functions. With "handle event" functions, the state is not a simple atom (like `:connected` or `:disconnected`) any more, but it can be any term. However, this means we can't use functions to represent the state: we'll have to use a common `handle_event/4` callback to handle all events in all state. We'll pattern match on the state to mimic what we were essentially doing with the names of the functions.
+The last feature of `:gen_statem` that I want to explore is **dynamic state**. Let's see how that could be needed in our state machine. Right now, the `:socket` field in the data is only present in the `:connected` state and `nil` the rest of the time. This information perfectly mirrors the state but it's encoded in the data and has to be managed side by side with the state and state transitions. It would be nice if we could stick the socket alongside the `:connected` state, wouldn't it? Well, we can do exactly that with "handle event" functions instead of state functions. With "handle event" functions, the state is not a simple atom (like `:connected` or `:disconnected`) anymore, but it can be any term. However, this means we can't use functions to represent the state: we'll have to use a common `handle_event/4` callback to handle all events in all state. We'll pattern match on the state to mimic what we were essentially doing with the names of the functions.
 
 The first thing to do to use "handle event" functions is change `:state_functions` to `:handle_event_function` in `callback_mode/0`:
 
@@ -330,7 +330,7 @@ end
 
 Now, instead of moving to the `:connected` state in case of successful connection, we move to the `{:connected, socket}` state. This means that the socket is tied to the "connected" state and doesn't exist in the `:disconnected` state.
 
-"Handle event" functions are powerful and they set `:gen_statem` aside from its previous version, [`:gen_fsm`][gen_fsm] (which is now deprecated). `:gen_fsm` would only let users implement **finite state machines** (hence the "fsm" in the module name), but `:gen_statem` with "handle event" functions lets users implement a generic [transition system][transition-system].
+"Handle event" functions are powerful. They set `:gen_statem` aside from its previous version, [`:gen_fsm`][gen_fsm] (which is now deprecated). `:gen_fsm` would only let users implement **finite-state machines** (hence the `fsm` in the module name), but `:gen_statem` with "handle event" functions lets users implement a generic [transition system][transition-system].
 
 ## Conclusion
 

@@ -8,7 +8,7 @@ taxonomies:
     - community
 ---
 
-At Community we run most of our infrastructure and services on AWS. We use several different AWS services. Many of our own services interact with AWS directly, such as by uploading and downloading files from S3, querying Athena, and more. Lately, I've been trying to improve how we *test* the interaction between our services and AWS, testing error conditions and edge cases as well as running reproducible integration tests. In this post, I'll talk about Localstack, mocks, ex_aws, and more.
+At Community, we run most of our infrastructure and services on AWS. We use several AWS services. Many of our own services interact with AWS directly, such as by uploading and downloading files from S3, querying Athena, and more. Lately, I've been trying to improve how we *test* the interaction between our services and AWS, testing error conditions and edge cases as well as running reproducible integration tests. In this post, I'll talk about Localstack, mocks, ExAws, and more.
 
 <!-- more -->
 
@@ -16,13 +16,13 @@ At Community we run most of our infrastructure and services on AWS. We use sever
 
 {{ unsplash_credit(name="Ian Battaglia", link="https://unsplash.com/@ianjbattaglia?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText") }}
 
-AWS is an external system that our system has limited control over. First of all, it operates over the network, which makes it vulnerable to all sorts of network issues and failures. Furthermore, I can't control how an AWS service operates or its business logic. However, as external services go, it's a stable one when it comes to its APIs.
+AWS is an external system that our system has limited control over. First, it operates over the network, which makes it vulnerable to all sorts of network issues and failures. Furthermore, I can't control how an AWS service operates or its business logic. However, as external services go, it's a stable one when it comes to its APIs.
 
 When I work with external systems like AWS, I want to test two aspects:
 
   1. What happens on the uncommon code branches — network failures, services unavailable, all sorts of things that we know can (and will) happen.
 
-  1. What happens when interacting with the actual service — I want the application's code to have some tests where the whole code that interacts with the external service is executed end-to-end, without mocks in the middle.
+  1. What happens when interacting with the actual service — I want the application's code to have some tests that execute the whole code that interacts with the external service end-to-end, without mocks in the middle.
 
 Let's take a look at these below. I set up [a repository][accompanying-repo] with most of the code discussed here, so you can see it pieced together and working.
 
@@ -50,7 +50,7 @@ We use [Mox][mox] for test doubles (well, "mocks" as the library calls them). In
 Mox.defmock(ExAwsMock, for: ExAws.Behaviour)
 ```
 
-In any code that executes AWS requests, we don't use `ExAws.request/1` or `ExAws.stream/1`. Instaed, we read the module to use at compile time from our application configuration (still defaulting to `ExAws`).
+In any code that executes AWS requests, we don't use `ExAws.request/1` or `ExAws.stream/1`. Instead, we read the module to use at compile time from our application configuration (still defaulting to `ExAws`).
 
 ```elixir
 defmodule MyApp do
@@ -96,15 +96,15 @@ We need little code to achieve all this. The operation data structure combined w
 
 ## Integration Tests
 
-Using test doubles works well in many cases, but it has one drawback that I can't get over. By using test doubles, we are *not exercising* parts of our application code when running tests. Achieving 100% code coverage and exercising every single production code line when testing is not easy and often not worth it either, but testing the interactions with AWS only in the running production code seems like a bit too far on the other end.
+Using test doubles works well in many cases, but it has one drawback that I can't get over. By using test doubles, we are *not exercising* parts of our application code when running tests. Achieving 100% code coverage and exercising every single production code line when testing is not easy. Often, it's not worth it either. However, testing the interactions with AWS only in the running production code seems a bit too far on the other end.
 
 Luckily, for this particular use case there's a pretty fantastic tool called [Localstack][localstack]. Localstack provides a faithful replica of AWS itself, but running locally. It fits this use case perfectly (it was kind of built for local integration testing, you could say).
 
-Just a note here: before Localstack, we sometimes used to use [ExVCR][] to perform this sort of more integration tests. ExVCR lets you *record HTTP requests* and make sure that your requests conform to the recorded real requests. It can work well in some cases, but for AWS it didn't give us the flexibility of quickly changing the way we interface with AWS itself. On top of that, ExVCR is ultimately still defining test doubles under the hood, so we are still not exercising the real ExAws HTTP code.
+Just a note here: before Localstack, we sometimes used to use [ExVCR] to perform this sort of more integration tests. ExVCR lets you *record HTTP requests* and make sure that your requests conform to the recorded real requests. It can work well in some cases, but for AWS it didn't give us the flexibility of quickly changing the way we interface with AWS itself. On top of that, ExVCR is ultimately still defining test doubles under the hood, so we are still not exercising the real ExAws HTTP code.
 
 ### Running Localstack
 
-We use [Docker][docker] for running our production application so we are heavily invested in the Docker ecosystem on our local machines too. We already use Docker and [Docker Compose][docker-compose] locally to spin up infrastructure needed by the services we work on. A typical `docker-compose.yml` file in one of our services looks like this:
+We use [Docker][docker] for running our production application, so we are heavily invested in the Docker ecosystem on our local machines too. We already use Docker and [Docker Compose][docker-compose] locally to spin up infrastructure needed by the services we work on. A typical `docker-compose.yml` file in one of our services looks like this:
 
 ```yaml
 version: "3"
@@ -135,7 +135,7 @@ You can run Localstack in a few different ways, but for us the natural fit is to
       - "4566:4566"
 ```
 
-As you can see, the `SERVICES` environment variable is used to configure which services you want available. In this case, we specified AWS S3 and AWS SQS.
+As you can see, Localstack uses the `SERVICES` environment variable configure which services to make available. In this case, we specified AWS S3 and AWS SQS.
 
 We can now spin up local infrastructure the same way we did before, with `docker compose up`. AWS S3 and AWS SQS are running locally, which is pretty cool.
 
@@ -143,7 +143,7 @@ We can now spin up local infrastructure the same way we did before, with `docker
 
 Next step is configuring ExAws to talk to the local Localstack running instance.
 
-To do that, we add some configuration to `config/test.exs` that only takes affect in the `:test` Mix environment. You could easily adapt this to work similarly in the `:dev` environment if you wante to.
+To do that, we add some configuration to `config/test.exs` that only takes affect in the `:test` Mix environment. You could easily adapt this to work similarly in the `:dev` environment if you wanted to.
 
 ```elixir
 # In config/test.exs

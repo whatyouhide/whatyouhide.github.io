@@ -12,7 +12,7 @@ could): there's the [Macro chapter][macro-chapter-elixir-website] from the
 "Getting Started" guide on Elixir's website, an awesome
 [series of articles][understanding-macros-sasa-juric] by Saša Jurić, and even a
 book ([Metaprogramming Elixir][metaprogramming-elixir]) by Chris McCord. In this
-article, I'll assume you are familiar with macros and how they work and I'll
+article, I'll assume you are familiar with macros and how they work, and I'll
 talk about another use case of macros that is rarely examined: doing
 compile-time things in macros.
 
@@ -36,7 +36,7 @@ end
 ```
 
 `if` just *expands* to a `case` statement that checks whether the condition is
-falsey (`nil` or `false`) or truthy (anything else), executing the correct block
+false-y (`nil` or `false`) or truthy (anything else), executing the correct block
 of code.
 
 The key concept here is **expansion**: a macro call just gets transformed to
@@ -202,7 +202,7 @@ runtime.
 ## Conclusion
 
 Deeply understanding macros and how they work is fundamental in order to be able
-to metaprogram, optimize, and understand Elixir code. In this article, we
+to meta-program, optimize, and understand Elixir code. In this article, we
 experimented with using macros to do compile-time work. We saw a non-real-world
 example and then a real-world example taken from the gettext Elixir library.
 

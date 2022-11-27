@@ -17,7 +17,7 @@ I mostly use property-based testing to test stateless functional code. A techniq
 
 {{ unsplash_credit(name="David Pennington", link="https://unsplash.com/@dtpennington?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText") }}
 
-I've been a vocal advocate of property-based testing for a while. I wrote [stream_data][], a property-based testing framework for Elixir, [gave talks about the topic][my-talk], and used property-based testing at work and in my open-source software (such as [Corsica][corsica-properties] or [Redix][redix-properties]).
+I've been a vocal advocate of property-based testing for a while. I wrote [`stream_data`][stream_data], a property-based testing framework for Elixir, [gave talks about the topic][my-talk], and used property-based testing at work and in my open-source software (such as [Corsica][corsica-properties] or [Redix][redix-properties]).
 
 The most common way I use property-based testing is to test *stateless* pieces of code. These tend to be the easiest to come up with properties for.
 
@@ -42,17 +42,17 @@ Its job is to:
   1. parse those digits into an integer that represents conventional nanoseconds in a timestamp
   1. return the parsed integer alongside whatever's left of the original string (similar to [`Integer.parse/2`][integer-parse])
 
-  For example, `123` means 123 *milliseconds*, so `123_000_000` nanoseconds. `000_001` means one microsecond, `000_000_001` means one nanosecond. You get the idea. By the way, see what I did just now? I just showed you some **examples** of how the function is supposed to behave. These make perfect material for our example-based tests.
+  For example, `123` means 123 *milliseconds*, so `123_000_000` nanoseconds. `000_001` means one microsecond, `000_000_001` means one nanosecond. You get the idea. By the way, see what I did just now? I just showed you some **examples** of how the function should behave. These make perfect material for our example-based tests.
 
 ### Designing the Properties
 
 Thinking about properties that hold for the output of this function given a valid input, here's what I got.
 
-  1. For valid strings of nine or less digits, the output of `parse_nanoseconds/1` must be an integer in the range `0..999_999_999`.
+  1. For valid strings of nine or fewer digits, the output of `parse_nanoseconds/1` must be an integer in the range `0..999_999_999`.
 
-  1. For any string of nine or less digits followed by any string `trail`, `trail` should be returned untouched.
+  1. For any string of nine or fewer digits followed by any string `trail`, `trail` should be returned untouched.
 
-I encoded these into a single `property` test (this uses stream_data):
+I encoded these into a single `property` test (this uses `stream_data`):
 
 ```elixir
 defmodule MyTest do
@@ -74,7 +74,7 @@ defmodule MyTest do
 end
 ```
 
-Now for the catch: we can write a bunch of implementations of `parse_nanoseconds/1` that satisfy this property with no issue but that are **semantically wrong**. A contrived, slightly-weird, but effective example is below.
+Now for the catch: we can write a bunch of implementations of `parse_nanoseconds/1` that satisfy this property with no issue, but that are **semantically wrong**. A contrived, slightly-weird, but effective example is below.
 
 ```elixir
 # Sneaky implementation that is wrong but satisfies our properties:
@@ -119,7 +119,7 @@ I sometimes keep the example-based assertions in the `property` itself and other
 
 ### Regressions
 
-Another fantastic use case for using example-based tests together with property-based tests is testing **regressions**. stream_data (and I'm sure other property-based testing frameworks) often gets feature requests to specify some explicit values in generators. This way, users can be sure that the property they're encoding will go through some known values that are likely to create issues because of the domain or that caused regressions in the past. My answer is always that this is exactly where the technique described in this blog post comes in handy. You can write your property and pair it up with example-based tests that test your explicit values.
+Another fantastic use case for using example-based tests together with property-based tests is testing **regressions**. `stream_data` (and I'm sure other property-based testing frameworks) often gets feature requests to specify some explicit values in generators. This way, users can be sure that the property they're encoding will go through some known values that are likely to create issues because of the domain or that caused regressions in the past. My answer is always that this is exactly where the technique described in this blog post comes in handy. You can write your property and pair it up with example-based tests that test your explicit values.
 
 ## Conclusion
 
@@ -127,7 +127,7 @@ This technique is simple, but I find it effective and practical. You get the ben
 
 If you are curious about actual examples, go look at the [actual tests in the Protobuf library][actual-tests].
 
-I wrote a bit more about this technique and in general about property-based testing [Testing Elixir][testing-elixir], the Pragmatic Programmers book I co-authored with Jeffrey Matthias.
+I wrote a bit more about this technique and in general about property-based testing in [Testing Elixir][testing-elixir], the Pragmatic Programmers book I co-authored with Jeffrey Matthias.
 
 [stream_data]: https://github.com/whatyouhide/stream_data
 [my-talk]: https://www.youtube.com/watch?v=p84DMv8TQuo

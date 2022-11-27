@@ -10,7 +10,7 @@ Elixir is frequently used in network-aware applications because of the core desi
 
 <!-- more -->
 
-Many times, the connection with the network service will be transparent to the programmer thanks to external libraries (e.g., database drivers), but I think it's interesting to know how to handle such connections by hand. This turns out to be useful if there are no external libraries for a particular service but also if we want to understand how these libraries work.
+Many times, the connection with the network service will be transparent to the programmer thanks to external libraries (for example, database drivers), but I think it's interesting to know how to handle such connections by hand. This turns out to be useful if there are no external libraries for a particular service but also if we want to understand how these libraries work.
 
 In this article we will only talk about TCP connections since TCP is probably the most common protocol used in network applications. The principles we describe, however, are very similar for any other type of connection (for example, connections that use the UDP protocol).
 
@@ -34,7 +34,7 @@ That's all we need to know about TCP connections for now, let's move on.
 
 ## First implementation
 
-We'll use a `GenServer` as the only interface with the TCP connection. We need a GenServer so that we will be able to keep the TCP socket in the GenServer's state and reuse that socket for all commication.
+We'll use a `GenServer` as the only interface with the TCP connection. We need a GenServer so that we will be able to keep the TCP socket in the GenServer's state and reuse that socket for all communication.
 
 ### Establishing the connection
 
@@ -134,9 +134,9 @@ Can you spot the problem? The GenServer is blocked when it waits for the Redis s
 
 As you probably know, the `handle_call/3` callback in a GenServer doesn't have to return a result to the client right away: it can return a `{:noreply, state}` tuple and then reply to the client using [`GenServer.reply/2`][docs-genserver-reply/2].
 
-This is exacly what we need here: a way for clients to call a function on the GenServer and block waiting for the response, but at the same time a way for the GenServer to keep doing work until it has a response **for that specific client**.
+This is exactly what we need here: a way for clients to call a function on the GenServer and block waiting for the response, but at the same time a way for the GenServer to keep doing work until it has a response **for that specific client**.
 
-In order continue with this strategy, however, we need to ditch `:gen_tcp.recv/2` in favour of receiving TCP messages as Erlang messages. We can do that using the `active: true` instead of `active: false` when connecting to the Redis server: when `:active` is `true`, all messages from a TCP socket are delivered as Erlang messages in the form of `{:tcp, socket, message}`.
+In order continue with this strategy, however, we need to ditch `:gen_tcp.recv/2` in favor of receiving TCP messages as Erlang messages. We can do that using the `active: true` instead of `active: false` when connecting to the Redis server: when `:active` is `true`, all messages from a TCP socket are delivered as Erlang messages in the form of `{:tcp, socket, message}`.
 
 What will happen is this:
 
@@ -147,7 +147,7 @@ What will happen is this:
 
 As you can see, the main difference is that from the moment the GenServer sends a command to the Redis server to the moment it receives a response, the GenServer is not blocked and it can send other commands to the server. This is great!
 
-The last thing we need to deal with is how the GenServer is supposed to respond to the **right** request: when it receives a `{:tcp, ...}` message, how does it know who to send it back with `GenServer.reply/2`? Since we're sure Redis responds to requests *sequentially* (first in, first out), we can use a simple queue to keep a list of Elixir processes waiting for a response. We'll keep this queue in the GenServer's state, enqueueing clients when they make a request and dequeueing them when a response is delivered.
+The last thing we need to deal with is how the GenServer is supposed to respond to the **right** request: when it receives a `{:tcp, ...}` message, how does it know who to send it back with `GenServer.reply/2`? Since we're sure Redis responds to requests *sequentially* (first in, first out), we can use a simple queue to keep a list of Elixir processes waiting for a response. We'll keep this queue in the GenServer's state, enqueuing clients when they make a request and dequeuing them when a response is delivered.
 
 {% raw %}
 ```elixir
@@ -181,7 +181,7 @@ end
 
 ## Messages on demand
 
-In the sections above, we moved from an `active: false` socket to an `active: true` socket in order to receive TCP data as Erlang messages. This works fine, but can lead to problems if the TCP server sends the GenServer *a lot* of data: since Erlang has no limit on the message queue of a process, the GenServer can be easily flooded with messages; after all, we chose to use `active: false` for this reason in the first place. To avoid that, we can change `active: true` to the more conservative `active: :once`: this way, only one TCP messages is delivered as an Erlang message, and then the socket goes back to `active: false`. We can set `active: :once` again to receive the next message, and so on. We can process TCP data as Erlang messages but one at the time, so that we're sure we're able to process them.
+In the sections above, we moved from a `active: false` socket to a `active: true` socket in order to receive TCP data as Erlang messages. This works fine, but can lead to problems if the TCP server sends the GenServer *a lot* of data: since Erlang has no limit on the message queue of a process, the GenServer can be easily flooded with messages; after all, we chose to use `active: false` for this reason in the first place. To avoid that, we can change `active: true` to the more conservative `active: :once`: this way, only one TCP messages is delivered as an Erlang message, and then the socket goes back to `active: false`. We can set `active: :once` again to receive the next message, and so on. We can process TCP data as Erlang messages but one at the time, so that we're sure we're able to process them.
 
 We just have to remember to reactivate the socket when we receive a `{:tcp, ...}` message in the `handle_info/2` callback. We can do that using [`:inet.setopts/2`][docs-inet-setopts/2].
 
@@ -202,15 +202,15 @@ end
 
 I didn't think of the pattern I wrote about. That's a shocker, right? The pattern I described here is very common and is shared by a number of Erlang and Elixir applications. This pattern applies nicely to any connection with a TCP server (or with anything similar for that matter), and it's often used in drivers for databases: that's why I went with Redis in the example.
 
-Lots of real-world libraries use the pattern I talked about: for example, [eredis][eredis] (one of the most used Redis drivers for Erlang) is built very similarly to our example: just look at [this comment][eredis-comment] in the eredis source, which is basically a summary of this article (or is this article an expanded version of that comment? Who knows!). Other examples of libraries that roughly follow this pattern are the Elixir drivers for PostgreSQL ([postgrex][postgrex]) and MongoDB ([mongodb][mongodb]). Currently I'm working on an Elixir driver for [OrientDB][orientdb] (still not public) which uses this pattern as well. So, it must work right?
+Lots of real-world libraries use the pattern I talked about: for example, [eredis][eredis] (one of the most used Redis drivers for Erlang) is built very similarly to our example: just look at [this comment][eredis-comment] in the eredis source, which is basically a summary of this article (or is this article an expanded version of that comment? Who knows!). Other examples of libraries that roughly follow this pattern are the Elixir drivers for PostgreSQL ([Postgrex][postgrex]) and MongoDB ([mongodb][mongodb]). Currently I'm working on an Elixir driver for [OrientDB][orientdb] (still not public) which uses this pattern as well. So, it must work right?
 
 ## Better handling of the TCP connection
 
 We happily ignored an annoying thing to deal with throughout this article: error handling!
 
-We'll keep happily ignoring a subset of the errors that can happen, e.g., an empty client queue (which fails the {% raw %}`{{:value, val}, new_queue}`{% endraw %} pattern match) or an incomplete message from the TCP socket. However, a common set of errors that can happen when dealing with TCP connections are, well, TCP errors like dropped connections or timeouts.
+We'll keep happily ignoring a subset of the errors that can happen, for example, an empty client queue (which fails the {% raw %}`{{:value, val}, new_queue}`{% endraw %} pattern match) or an incomplete message from the TCP socket. However, a common set of errors that can happen when dealing with TCP connections are, well, TCP errors like dropped connections or timeouts.
 
-We could try to handle this kind of errors ourselves, but, luckily for us, Elixir core team member James Fish (aka [fishcakez][fishcakez]) did most of the work in its awesome library [connection][connection]. While this library is quite young at the time of writing, it's already being used in the [MongoDB driver][mongodb] I mentioned before and in the OrientDB driver I'm working on.
+We could try to handle this kind of errors ourselves, but, luckily for us, Elixir core team member James Fish (a.k.a. [fishcakez][fishcakez]) did most of the work in its awesome library [connection][connection]. While this library is quite young at the time of writing, it's already being used in the [MongoDB driver][mongodb] I mentioned before and in the OrientDB driver I'm working on.
 
 ### Handling connections with... Connection
 
@@ -255,7 +255,7 @@ end
 
 This is a big improvement over what we had before, but `Connection` allows us to make our library even better.
 
-### Backoff!
+### Back off!
 
 The line where we connect to the Redis server using `:gen_tcp.connect/3` should raise a loud alarm bell in your head: `{:ok, socket} = ...` is not very responsible. In case the connection fails for any reason, the pattern match will fail and, instead of handling the error, the whole GenServer blows up. The obvious thing to do is to handle the result of `:gen_tcp.connect/3` with a case statement:
 
@@ -289,13 +289,13 @@ end
 
 The great thing about `Connection` is that you can return `{:backoff, timeout, state}` from almost every callback function, so handling connection failures become straightforward.
 
-When `{:backoff, timeout, state}` is returned, `connect/2` is called with `:backoff` as its first argument: this lets us easily detect **re**-connections (instead of first connections) and deal with them appropriately. For example, we may want to implement exponential backoff, i.e., we retry after one second, then after two seconds, then after four seconds and so on, possibly with a maximum number of retries.
+When `{:backoff, timeout, state}` is returned, `connect/2` is called with `:backoff` as its first argument: this lets us easily detect **re**-connections (instead of first connections) and deal with them appropriately. For example, we may want to implement exponential back-off, that is, we retry after one second, then after two seconds, then after four seconds and so on, possibly with a maximum number of retries.
 
 ## Pooling
 
-Just one last tip: the GenServer we built can be used smoothly with pooling libraries like the famous [poolboy][poolboy]. There's plenty of literature about poolboy around the web, so I'm not going to describe how it works here. I will just show you a small example.
+Just one last tip: the GenServer we built can be used smoothly with pooling libraries like the famous [poolboy]. There's plenty of literature about poolboy around the web, so I'm not going to describe how it works here. I will just show you a small example.
 
-First, we can can create a pool of a given number of our GenServers using `:poolboy.start_link/2`.
+First, we can create a pool of a given number of our GenServers using `:poolboy.start_link/2`.
 
 ```elixir
 poolboy_opts = [worker_module: Redis, size: 50]
@@ -303,7 +303,7 @@ redis_opts = []
 {:ok, pool} = :poolboy.start_link(poolboy_opts, redis_opts)
 ```
 
-Then, we can just checkout worker processes (which are our `Redis` GenServers) out of the pool, perform operations on Redis through them, and then check them back in the pool.
+Then, we can just check out worker processes (which are our `Redis` GenServers) out of the pool, perform operations on Redis through them, and then check them back in the pool.
 
 ```elixir
 worker = :poolboy.checkout(pool)
@@ -315,7 +315,7 @@ Nothing smoother than that!
 
 ## Conclusion
 
-We saw how to implement a GenServer that works as an interface to a TCP server. We built a non-blocking GenServer that queues clients in order to send multiple commands to the TCP server while waiting for responses from the server. We used the [connection][connection] library to deal with TCP errors (e.g., the server being temporarely unavailable) by implementing a backoff strategy. Finally, we briefly looked at how [poolboy][poolboy] can be used to make a pool of our GenServers.
+We saw how to implement a GenServer that works as an interface to a TCP server. We built a non-blocking GenServer that queues clients in order to send multiple commands to the TCP server while waiting for responses from the server. We used the [connection][connection] library to deal with TCP errors (for example, the server being temporarily unavailable) by implementing a back-off strategy. Finally, we briefly looked at how [poolboy][poolboy] can be used to make a pool of our GenServers.
 
 Thanks for reading!
 

@@ -9,13 +9,13 @@ Erlang supports a way to implement functions in C and use them transparently fro
 
 <!-- more -->
 
-Note that if we want to use C bindings (i.e., we want to interface with an existing C program), then NIFs are not our only choice. Erlang has other ways to do foreign-function interface in order to talk to other languages. One example is ports; Sasa Juric wrote an excellent [blog post][sasa-juric-ports] about ports if you want to know more about them.
+Note that if we want to use C bindings (i.e., we want to interface with an existing C program), then NIFs are not our only choice. Erlang has other ways to do foreign-function interface in order to talk to other languages. One example is ports; Saša Jurić wrote an excellent [blog post][sasa-juric-ports] about ports if you want to know more about them.
 
 Here, we'll take a look at all-things-NIFs. First, we'll see how to write simple NIFs that perform calculations; then, we'll see how to use those NIFs from Elixir. Later on, we will see how to interface with existing C bindings from NIFs. Finally, we'll see how to integrate the C compilation step into the compilation of our Elixir code.
 
 Most of the things I'll talk about here can be read in more detail in the Erlang [documentation for the `erl_nif` C library][erl-nif-docs].
 
-The things discussed in this article apply both to Erlang as well as Elixir with minimal tweaking. I'll show all my examples in Elixir, but I'll refer to Erlang and Elixir indifferently.
+The things discussed in this article apply both to Erlang and Elixir with minimal tweaking. I'll show all my examples in Elixir, but I'll refer to Erlang and Elixir indifferently.
 
 ## Canonical NIF warning
 
@@ -52,7 +52,7 @@ fast_compare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 ```
 
-There are two NIF-specific types here: `ERL_NIF_TERM` and `ErlNifEnv`. `ERL_NIF_TERM` is a "wrapper" type that represents all Erlang types (like binary, list, tuple, and so on) in C. We'll have to use functions provided by `erl_nif.h` in order to convert an `ERL_NIF_TERM` to a C value (or multiple C values) and viceversa. `ErlNifEnv` is just the Erlang environment the NIF is executed in, and we'll mostly just pass this around without actually doing anything with it.
+There are two NIF-specific types here: `ERL_NIF_TERM` and `ErlNifEnv`. `ERL_NIF_TERM` is a "wrapper" type that represents all Erlang types (like binary, list, tuple, and so on) in C. We'll have to use functions provided by `erl_nif.h` in order to convert a `ERL_NIF_TERM` to a C value (or multiple C values) and vice versa. `ErlNifEnv` is just the Erlang environment the NIF is executed in, and we'll mostly just pass this around without actually doing anything with it.
 
 Let's take a look at the arguments for `fast_compare` (which are the same for all NIFs):
 
@@ -69,7 +69,7 @@ fast_compare(99, 100)
 #=> -1
 ```
 
-When executing `fast_compare`, `argc` will be `2` and `argv` will be an array with the `99` and `100`  values. These arguments however are of type `ERL_NIF_TERM`, so we have to "convert" them to C terms before being able to manipulate them. `erl_nif.h` provides functions to "get" Erlang terms into C terms; in this case, we need `enif_get_int`. The signature for `enif_get_int` is this:
+When executing `fast_compare`, `argc` will be `2` and `argv` will be an array with the `99` and `100` values. These arguments however are of type `ERL_NIF_TERM`, so we have to "convert" them to C terms before being able to manipulate them. `erl_nif.h` provides functions to "get" Erlang terms into C terms; in this case, we need `enif_get_int`. The signature for `enif_get_int` is this:
 
 ```c
 int enif_get_int(ErlNifEnv *env, ERL_NIF_TERM term, int *ip);
@@ -116,7 +116,7 @@ ERL_NIF_INIT(erl_module, functions, load, upgrade, unload, reload)
 
 where:
 
-* `erl_module` is the Erlang module where the NIFs we export will be defined; it shouldn't be surrounded by quotes as it will be stringified by the `ERL_NIF_INIT` macro (e.g., `my_module` instead of `"my_module"`);
+* `erl_module` is the Erlang module where the NIFs we export will be defined; it shouldn't be surrounded by quotes as it will be string-ified by the `ERL_NIF_INIT` macro (for example, `my_module` instead of `"my_module"`);
 * `functions` is an array of `ErlNifFunc` structs that defines which NIFs will be exported, along with the name to use as their Erlang counterpart and the arity;
 * `load`, `upgrade`, `unload`, and `reload` are function pointers that point to hook functions that will be called when the NIF module is loaded, unloaded, and so on; we won't pay too much attention to these hooks right now, setting all of them to `NULL`.
 
@@ -158,13 +158,13 @@ $ cc -fPIC -I$(ERL_INCLUDE_PATH) \
      -o fast_compare.so fast_compare.c
 ```
 
-With this command, we're compiling `fast_compare.c` into `fast_compare.so` (`-o fast_compare.so`), using some flags for dynamic code along the way. Note how we're including `$(ERL_INCLUDE_PATH)` in the include paths: this is the directory that contains the `erl_nif.h` header file. This path is usually in the Erlang's installation directory, under `lib/erts-VERSION/include`.
+With this command, we're compiling `fast_compare.c` into `fast_compare.so` (`-o fast_compare.so`), using some flags for dynamic code along the way. Note how we're including `$(ERL_INCLUDE_PATH)` in the "include paths": this is the directory that contains the `erl_nif.h` header file. This path is usually in the Erlang's installation directory, under `lib/erts-VERSION/include`.
 
 ### Loading NIFs in Elixir
 
 The only thing we have left to do is load the NIF we defined in the Elixir `FastCompare` module. As the Erlang documentation for NIFs suggests, the `@on_load` hook is a great place to do this.
 
-Note that for each NIF we want to define, we need to define the corresponding Erlang/Elixir function in the loading module as well. This can be taken advantage of in order to define, e.g., fallback code in case NIFs aren't available.
+Note that for each NIF we want to define, we need to define the corresponding Erlang/Elixir function in the loading module as well. This can be taken advantage of in order to define, for example, fallback code in case NIFs aren't available.
 
 ```elixir
 # fast_compare.ex
@@ -193,7 +193,7 @@ iex> FastCompare.fast_compare(99, 100)
 
 ### Examples in the wild
 
-Writing "pure" NIFs (with no side effects, just transformations) is extremely useful. One example of this that I like a lot is the [devinus/markdown][devinus-markdown] Elixir library: this library wraps a C markdown parser in a bunch of NIFs. This use case is perfect as turning Markdown into HTML can be an expensive task, and a lot can be gained by delegating that work to C.
+Writing "pure" NIFs (with no side effects, just transformations) is extremely useful. One example of this that I like a lot is the [devinus/markdown][devinus-markdown] Elixir library: this library wraps a C Markdown parser in a bunch of NIFs. This use case is perfect as turning Markdown into HTML can be an expensive task, and a lot can be gained by delegating that work to C.
 
 ## Something useful: resources
 
@@ -215,7 +215,7 @@ void db_free_conn(db_conn_t *conn);
 
 It would be useful if we were able to handle `db_conn_t` values in Erlang/Elixir and pass them around between NIF calls. The NIF API has something just like that: **resources**. No better way to quickly explain what resources do than the Erlang documentation:
 
-> The use of resource objects is a safe way to return pointers to native data structures from a NIF. A resource object is just a block of memory [...].
+> The use of resource objects is a safe way to return pointers to native data structures from a NIF. A resource object is just a block of memory \[…\].
 
 Resources are blocks of memory, and we can build and return safe pointers to that memory *as Erlang terms*.
 
@@ -338,7 +338,7 @@ end
 
 Mix provides a feature called [Mix compilers][mix-compilers-0]. Each Mix project can specify a list of compilers to run when the project is compiled. A new Mix compiler the perfect place to automate the compilation of our C source code. For the scope of this section, let's say we're building a `:my_nifs` Elixir application that will use NIFs from the `my_nifs.c` C source file.
 
-First, let's create a `Makefile` to compile the C source (as we would probably do anyways).
+First, let's create a `Makefile` to compile the C source (as we would probably do anyway).
 
 ```make
 ERL_INCLUDE_PATH=$(...)
