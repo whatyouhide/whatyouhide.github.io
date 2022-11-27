@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>{% if page.title %}{{ page.title }} – {% endif %}{{ config.title }}</title>
+    {% block meta %}{% include "snippets/meta.html" %}{% endblock meta %}
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="alternate" type="application/rss+xml" title="{{ config.title }}" href="/feed.xml" />
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        {% include "snippets/header.html" %}
+        <div id="main" role="main" class="container">
+            {% block content %}{% endblock content %}
+        </div>
+        {% include "snippets/footer.html" %}
+    </div>
+
+    {% include "snippets/analytics.html" %}
+</body>
+
+</html>

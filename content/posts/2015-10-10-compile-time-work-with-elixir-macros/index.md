@@ -1,8 +1,9 @@
 ---
 title: Compile-time work with Elixir macros
 description: An overview of possible things to do through Elixir macros at compile time.
-tags:
-  - elixir
+taxonomies:
+  tags:
+    - elixir
 ---
 
 Macros are a very common way to do metaprogramming in Elixir. There are many

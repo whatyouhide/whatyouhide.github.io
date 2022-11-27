@@ -2,8 +2,9 @@
 title: The guts of a property testing library
 description: A look at the design and mechanics of StreamData, a data generation and property testing library for Elixir.
 cover_image: cover-image.jpg
-tags:
-  - elixir
+taxonomies:
+  tags:
+    - elixir
 ---
 
 Property-based testing is a common tool to improve testing by testing properties of a piece of software over many values drawn at random from a large space of valid values. This methodology was first introduced in the paper [QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs][quickcheck-paper], which describes the basic idea and shows a possible implementation in Haskell. Since then, many tools to aid in property based testing appeared for many programming languages: as of the time of writing, there's libraries for [Haskell][library-haskell], [Erlang][library-erlang], [Clojure][library-clojure], [Python][library-python], [Scala][library-scala], and many others. A few days ago I released the first version of [StreamData][streamdata], a property testing (and data generation) library for [Elixir][elixir] (that is a candidate for inclusion in Elixir itself in the future). This post is not an introduction to property-based testing nor a tutorial on how to use StreamData: what I want to do is dig into the mechanics of how StreamData works, its design, and how it compares to some of the other property-based testing libraries mentioned above.

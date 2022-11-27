@@ -2,10 +2,9 @@
 title: Persistent connections with gen_statem
 description: How we can use the gen_statem behaviour to implement a resilient state machine that holds a connection to an external service.
 cover_image: cover-image.jpg
-tags:
-  - elixir
-  - erlang
-  - gen_statem
+taxonomies:
+  tags:
+    - elixir
 ---
 
 Our applications often interact with external systems. In many cases, we need a *persistent* connection to one or more of these external services. For example, if your application makes continuous use of a database, you'll likely want to stay connected to such database so that you can avoid spending time and resources connecting and disconnecting each time you perform a request. With Erlang and Elixir, the natural abstraction to maintain a persistent connection is a process. In this post, we'll have a look at how we can take advantage of the `gen_statem` behaviour to write state machine processes that act as persistent connections to external systems.

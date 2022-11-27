@@ -1,0 +1,38 @@
+{% set title = page.title | default(value=config.title) %}
+{% set description = page.description | default(value=config.description) %}
+
+{% if page.extra.cover_image %}
+  {% set assets_prefix_path = page.relative_path | split(pat="/") | slice(end=-1) | join(sep="/") %}
+  {% set_global cover_image_url = get_url(path=assets_prefix_path) ~ "/" ~ page.extra.cover_image %}
+{% endif %}
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="{{ description }}" />
+<meta name="author" content="{{ config.extra.full_name }}" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True" />
+<meta name="MobileOptimized" content="320" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="{{ title }}" />
+<meta property="og:description" content="{{ description }}" />
+<meta property="og:url" content="{{ current_url | safe }}" />
+{% if page.components is defined and page.components[0] == "posts" %}
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="{{ page.date | date(format="%+") }}" />
+{% else %}
+<meta property="og:type" content="website" />
+{% endif %}
+{% if cover_image_url %}<meta property="og:image" content="{{ cover_image_url | safe }}" />{% endif %}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content="@{{ config.extra.twitter_username }}" />
+<meta name="twitter:title" content="{{ title }}" />
+<meta name="twitter:description" content="{{ description }}" />
+{% if cover_image_url %}<meta name="twitter:image" content="{{ cover_image_url | safe }}" />{% endif %}
+

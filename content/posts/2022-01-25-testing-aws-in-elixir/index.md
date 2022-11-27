@@ -2,12 +2,10 @@
 title: Testing AWS in Elixir
 description: An overview of how we test Elixir applications that interact with AWS.
 cover_image: cover-image.jpg
-tags:
-  - elixir
-  - community
-  - testing
-  - tooling
-  - ci
+taxonomies:
+  tags:
+    - elixir
+    - community
 ---
 
 At Community we run most of our infrastructure and services on AWS. We use several different AWS services. Many of our own services interact with AWS directly, such as by uploading and downloading files from S3, querying Athena, and more. Lately, I've been trying to improve how we *test* the interaction between our services and AWS, testing error conditions and edge cases as well as running reproducible integration tests. In this post, I'll talk about Localstack, mocks, ex_aws, and more.

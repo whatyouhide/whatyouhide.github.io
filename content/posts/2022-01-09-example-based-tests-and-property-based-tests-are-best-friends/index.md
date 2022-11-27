@@ -1,11 +1,12 @@
 ---
 title: Example-based Tests And Property-based Tests Are Good Friends
 description: A short look at mixing property-based tests and example-based tests to get the best of both worlds.
-cover_image: cover-image.jpg
-tags:
-  - elixir
-  - property-based-testing
-  - community
+extra:
+  cover_image: cover-image.jpg
+taxonomies:
+  tags:
+    - elixir
+    - community
 ---
 
 I mostly use property-based testing to test stateless functional code. A technique I love to use is to pair property-based tests together with *example-based tests* (that is, "normal" tests) in order to have some tests that check real input. Let's dive deeper into this technique, some contrived blog-post-adequate examples, and links to real-world examples.

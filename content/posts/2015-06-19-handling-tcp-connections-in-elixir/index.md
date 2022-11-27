@@ -1,8 +1,9 @@
 ---
 title: Handling TCP connections in Elixir
 description: A look at some strategies to handle TCP connections and data flowing through them.
-tags:
-  - elixir
+taxonomies:
+  tags:
+    - elixir
 ---
 
 Elixir is frequently used in network-aware applications because of the core design of Erlang and the Erlang VM. In this context, there's often the need to connect to external services through the network: for example, a classic web application could connect to a relational database and a key-value store, while an application that runs on embedded systems could connect to other nodes on the network.
