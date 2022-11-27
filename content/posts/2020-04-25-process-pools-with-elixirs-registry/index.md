@@ -1,7 +1,8 @@
 ---
 title: Process pools with Elixir's Registry
 description: A look at process pools and how to build routing pools (as opposed to checkout pools) using Elixir's built-in Registry.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir

@@ -1,7 +1,8 @@
 ---
 title: A story of regret and retiring a library from Hex
 description: I'm retiring a library of mine from Hex. I want to explain why.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir

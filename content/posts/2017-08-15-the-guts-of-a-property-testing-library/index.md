@@ -1,7 +1,8 @@
 ---
 title: The guts of a property testing library
 description: A look at the design and mechanics of StreamData, a data generation and property testing library for Elixir.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir

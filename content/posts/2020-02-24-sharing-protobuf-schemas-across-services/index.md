@@ -1,7 +1,8 @@
 ---
 title: Sharing Protobuf schemas across services
 description: How we're managing, evolving, and sharing Protobuf schemas across several services and programming languages.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir

@@ -1,7 +1,8 @@
 ---
 title: RPC over RabbitMQ (with Elixir)
 description: A look into the RabbitMQ topology (exchanges, queues, bindings) and Elixir architecture that we use to perform RPCs over RabbitMQ.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir

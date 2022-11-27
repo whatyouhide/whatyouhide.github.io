@@ -1,7 +1,8 @@
 ---
 title: Persistent connections with gen_statem
 description: How we can use the gen_statem behaviour to implement a resilient state machine that holds a connection to an external service.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir

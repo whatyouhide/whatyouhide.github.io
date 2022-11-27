@@ -1,7 +1,8 @@
 ---
 title: Testing AWS in Elixir
 description: An overview of how we test Elixir applications that interact with AWS.
-cover_image: cover-image.jpg
+extra:
+  cover_image: cover-image.jpg
 taxonomies:
   tags:
     - elixir
