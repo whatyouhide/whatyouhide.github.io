@@ -168,7 +168,7 @@ gettext "Hello people of Gotham!", "fr"
 
 Running `mix gettext.extract` results in a `.po` file with this content:
 
-```po
+```txt
 #: lib/greetings.ex:2
 msgid "Hello people of Gotham!"
 msgstr ""
