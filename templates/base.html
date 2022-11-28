@@ -16,10 +16,12 @@
 
 <body>
     <div class="wrapper-masthead">
+        {% block header %}
         {% include "snippets/header.html" %}
-        <div id="main" role="main" class="container">
-            {% block content %}{% endblock content %}
-        </div>
+        {% endblock header %}
+
+        {% block content %}{% endblock content %}
+
         {% include "snippets/footer.html" %}
     </div>
 

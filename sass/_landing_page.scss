@@ -1,18 +1,96 @@
-.landing-page #hero-text {
-  font-family: "Mali", sans-serif;
-  font-size: 100pt;
+#main.landing-page {
+  flex: 1 1 0;
+  min-height: auto;
 }
 
-#blog h2 img {
-  height: 70px;
+.landing-page#main #content-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center; // Horizontal alignment
+  align-items: center; // Vertical alignment
+
+  width: 100%;
+
+  margin-top: 0;
+
+  padding-top: 50px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
 }
 
-#talks h2 img {
-  height: 50px;
+.landing-page #hero-container {
+  flex: 2.5 1 0;
+  max-width: 1100px;
+
+  margin-left: 0;
+  margin-right: 0;
+
+  // Flex container properties.
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 20px; // Horizontal distance between hero portrait and hero text.
+
+  #hero-portrait {
+    display: block;
+    width: auto;
+    height: max-content;
+    max-height: 400px;
+  }
+
+  #hero-text {
+    // Flex container properties.
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+
+    h1 {
+      font-family: "Mali", sans-serif;
+      font-size: 150pt;
+      text-align: left;
+      margin-top: 0;
+      margin-bottom: -40pt;
+    }
+
+    p {
+      width: 80%;
+      max-width: 350px;
+      margin: 0;
+    }
+  }
 }
 
-#talks img.big-icon {
-  margin-top: 30px;
-  margin-left: 30px;
+.landing-page #main-links {
+  flex: 1 1 0;
+  width: auto;
+  max-width: max-content;
+  margin-left: 0;
+  margin-right: 0;
   height: 300px;
+
+  // Flex container properties.
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+
+  a {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+  }
+
+  .big-icon {
+    display: block;
+    max-width: 200px;
+    max-height: 300px;
+  }
+
+  #talks .big-icon {
+    margin-top: 30px;
+    margin-left: 30px;
+    height: 300px;
+  }
 }
