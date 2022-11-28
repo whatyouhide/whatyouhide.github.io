@@ -324,20 +324,6 @@ img.site-title {
   margin: 0;
 }
 
-#blog h2 img {
-  height: 70px;
-}
-
-#talks h2 img {
-  height: 50px;
-}
-
-#talks img.big-icon {
-  margin-top: 30px;
-  margin-left: 30px;
-  height: 300px;
-}
-
 // Footer
 
 $footerIconWidth: 50px;
@@ -369,4 +355,5 @@ footer img.footer-icon {
   width: $footerIconWidth - 10px;
 }
 
+@import "landing_page";
 @import "highlights";
