@@ -248,88 +248,46 @@ img.post-img {
 // Header
 
 header {
-  padding: 20px 0;
-}
+  padding: 20px 0 10px 0;
 
-#header-contents {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0 auto;
-}
+  a {
+    display: flex;
+    flex-direction: column;
+  }
 
-#header-contents a {
-  display: block;
-}
+  img.hero-portrait {
+    display: block;
+    min-height: 100px;
+    max-height: 150px;
+    object-fit: contain;
+  }
 
-#header-contents * {
-  min-width: 0;
-  min-height: 0;
-}
-
-.site-avatar > img {
-  height: 100px;
-  border-radius: 50%;
-  margin-right: 20px;
-  border: 3px solid $textColor;
-  margin-left: 20px;
-
-  @include mobile {
-    height: 75px;
-    margin-right: 10px;
+  .site-name span {
+    display: block;
+    font-family: $handwrittenFont;
+    font-size: 80%;
   }
 }
 
-img.site-title {
-  height: 100px;
-
-  @include mobile {
-    height: 70px;
-    margin-right: 20px;
-  }
-}
-
-// Main content on the homepage
+// Main content for posts.
 
 #main h2 {
   text-align: center;
   margin: 0;
 }
 
-// Footer
+article.post {
+  padding: 0 5vw;
 
-$footerIconWidth: 50px;
-
-footer {
-  height: 100px;
-  flex: 0 1 0;
-  justify-self: flex-end;
-  margin-top: calc(min(2vh, 30px));
-  margin-bottom: calc(min(2vh, 30px)); // Space from the bottom of the page
-
-  div.icons {
-    width: 50%;
-    margin: 0 auto;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-
-    a {
-      display: block;
-    }
+  h1 {
+    font-family: $handwrittenFont;
   }
 
-  img.footer-icon {
-    width: $footerIconWidth;
-    position: relative;
-    top: 50%;
-    transform: translateY(-50%);
+  .entry {
+    font-size: 12pt;
   }
 }
 
-#icon-rss {
-  width: $footerIconWidth - 10px;
-}
-
+@import "footer";
 @import "landing_page";
 @import "highlights";

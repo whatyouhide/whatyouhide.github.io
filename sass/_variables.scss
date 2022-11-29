@@ -1,7 +1,3 @@
-//
-// VARIABLES
-//
-
 // Colors
 $blue: #4183c4;
 
@@ -20,13 +16,7 @@ $textColor: #212424;
 $helvetica: Helvetica, Arial, sans-serif;
 $helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $georgia: Georgia, serif;
-
-// Mobile breakpoints
-@mixin ipad {
-  @media screen and (max-width: 830px) {
-    @content;
-  }
-}
+$handwrittenFont: "Mali", sans-serif; // From Google Fonts
 
 @mixin mobile {
   @media screen and (max-width: 830px) {

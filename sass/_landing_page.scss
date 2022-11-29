@@ -69,7 +69,7 @@
     flex-direction: column;
 
     h1 {
-      font-family: "Mali", sans-serif;
+      font-family: $handwrittenFont;
       font-size: 50pt;
       line-height: 1;
       text-align: center;
@@ -107,7 +107,7 @@
 
   span[role="link"] {
     display: block;
-    font-family: "Mali", sans-serif;
+    font-family: $handwrittenFont;
     text-transform: uppercase;
     color: $textColor;
   }
