@@ -224,6 +224,7 @@ nav {
 // Header
 
 header {
+  flex: 1 1 0px;
   padding: 20px 0 10px 0;
 
   a {
@@ -247,12 +248,17 @@ header {
 
 // Main content for posts.
 
+#main {
+  flex: 10 1 0px;
+}
+
 #main h2 {
   text-align: center;
   margin: 0;
 }
 
-article.post {
+article.post,
+main.about {
   max-width: $maxContentWidth;
   margin: 0 auto;
   padding: 0 5vw;

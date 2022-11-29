@@ -40,3 +40,4 @@ google_analytics = "UA-41860599-4"
 disqus_shortname = "blog-andrealeopardi" # Shortname, not username
 email = "hi@andrealeopardi.com"
 twitter_username = "whatyouhide"
+talks_youtube_playlist_url = "https://youtube.com/playlist?list=PLd7I3U4fDsUJfNM-N7Kyss66gmml_OSDq"
