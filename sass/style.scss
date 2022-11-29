@@ -26,10 +26,6 @@ h6 {
   line-height: 1.7;
   margin: 1em 0 15px;
   padding: 0;
-
-  @include mobile {
-    line-height: 1.4;
-  }
 }
 
 h1 {
@@ -108,12 +104,6 @@ b {
   max-width: none;
 }
 
-article.post time.posted-at {
-  display: block;
-  font-style: italic;
-  color: $gray;
-}
-
 // Specify the color of the selection
 ::-moz-selection {
   color: $black;
@@ -124,74 +114,11 @@ article.post time.posted-at {
   background: $lightGray;
 }
 
-// Nicolas Gallagher's micro clearfix hack
-// http://nicolasgallagher.com/micro-clearfix-hack/
-.clearfix:before,
-.clearfix:after {
-  content: " ";
-  display: table;
-}
-
-.clearfix:after {
-  clear: both;
-}
-
 .wrapper-masthead {
   min-height: 100%;
   display: flex;
   flex-direction: column;
 }
-
-.site-name {
-  margin: 0;
-  color: $darkGray;
-  cursor: pointer;
-  font-family: $helveticaNeue;
-  font-weight: 300;
-  font-size: 28px;
-  letter-spacing: 1px;
-}
-
-.site-description {
-  margin: -5px 0 0 0;
-  color: $gray;
-  font-size: 16px;
-
-  @include mobile {
-    margin: 3px 0;
-  }
-}
-
-nav {
-  float: right;
-  margin-top: 23px; // @TODO: Vertically middle align
-  font-family: $helveticaNeue;
-  font-size: 18px;
-
-  @include mobile {
-    float: none;
-    margin-top: 9px;
-    display: block;
-    font-size: 16px;
-  }
-
-  a {
-    margin-left: 20px;
-    color: $darkGray;
-    text-align: right;
-    font-weight: 300;
-    letter-spacing: 1px;
-
-    @include mobile {
-      margin: 0 10px;
-      color: $blue;
-    }
-  }
-}
-
-//
-// .main
-//
 
 .posts > .post {
   padding-bottom: 2em;
@@ -239,10 +166,18 @@ header {
     object-fit: contain;
   }
 
-  .site-name span {
-    display: block;
+  h1.site-name {
+    margin: 0;
+    color: $darkGray;
+    cursor: pointer;
     font-family: $handwrittenFont;
-    font-size: 80%;
+    font-weight: 300;
+    font-size: 28px;
+    letter-spacing: 1px;
+
+    span {
+      display: block;
+    }
   }
 }
 
@@ -304,6 +239,12 @@ main.about {
     font-size: 120%;
     font-style: italic;
   }
+}
+
+article.post time.posted-at {
+  display: block;
+  font-style: italic;
+  color: $gray;
 }
 
 @import "footer";
