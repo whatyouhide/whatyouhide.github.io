@@ -1,0 +1,33 @@
+// The header is not present on the landing page. This is the header
+// that's in all other pages.
+
+header {
+  flex: 1 1 0px;
+  padding: 20px 0 10px 0;
+
+  a {
+    display: flex;
+    flex-direction: column;
+  }
+
+  img.hero-portrait {
+    display: block;
+    min-height: 100px;
+    max-height: 150px;
+    object-fit: contain;
+  }
+
+  h1.site-name {
+    margin: 0;
+    color: $textColor;
+    cursor: pointer;
+    font-family: $handwrittenFont;
+    font-weight: 300;
+    font-size: 28px;
+    letter-spacing: 1px;
+
+    span {
+      display: block;
+    }
+  }
+}
