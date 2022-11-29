@@ -46,7 +46,6 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 20px; // Horizontal distance between hero portrait and hero text.
 
   @include mobile {
     flex-direction: column;
@@ -63,6 +62,7 @@
   #hero-text {
     width: 100%;
     max-width: 380px;
+    padding: calc(min(3vh, 10px)) 0;
 
     // Flex container properties.
     display: flex;
@@ -81,6 +81,35 @@
       max-width: 350px;
       margin-top: 70px;
       margin-bottom: 0;
+    }
+  }
+
+  // Need to be careful with this little stupid section. Chrome is a bit kinder to my CSS
+  // skills and it worked pretty quickly, but Safari required a bit more fiddling. This
+  // works on both, so if changed please test on both.
+  #hero-about {
+    width: 100px;
+    max-height: 100px;
+
+    a {
+      display: block;
+      color: $textColor;
+      font-family: $handwrittenFont;
+      text-align: right;
+      text-decoration: underline;
+      text-transform: lowercase;
+      position: relative;
+      top: -70px;
+      left: -30px;
+    }
+
+    img.arrow {
+      display: block;
+      margin: 0 0 0 auto;
+      rotate: 166deg;
+      transform: scale(1, 0.8);
+      height: 100%;
+      object-fit: contain;
     }
   }
 }

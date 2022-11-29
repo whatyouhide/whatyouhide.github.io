@@ -7,6 +7,13 @@
 <div id="main" role="main" class="landing-page">
   <div id="content-container">
     <div id="hero-container" class="container">
+      <aside id="hero-about">
+        <img class="arrow"
+             src="{{ get_url(path="assets/media/arrow.png") }}"
+             alt="Just an arrow used to point to the 'About' page" />
+        <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
+      </aside>
+
       <img id="hero-portrait"
           src="{{ get_url(path="assets/media/hero-portrait.png") }}"
           alt="Portrait of Andrea" />
