@@ -13,7 +13,7 @@
     max-width: 1200px;
 
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: center; // Horizontal alignment
     align-items: center; // Vertical alignment
     gap: 20px;
@@ -24,10 +24,6 @@
     padding-left: 0;
     padding-right: 0;
     padding-bottom: 0;
-
-    @include mobile {
-      flex-direction: column;
-    }
   }
 }
 
@@ -126,12 +122,20 @@
   justify-content: center;
   gap: 30px;
 
+  @include mediumScreen {
+    flex-direction: row;
+    // Bump the distance between the hero container and the
+    // icons a bit more.
+    margin: 3vh 0;
+  }
+
   $iconHeight: 130px;
 
   a {
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 150px;
   }
 
   span[role="link"] {
