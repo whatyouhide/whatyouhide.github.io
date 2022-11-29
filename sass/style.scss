@@ -204,15 +204,6 @@ nav {
 }
 
 .post {
-  blockquote {
-    margin: 1.8em 0.8em;
-    border-left: 2px solid $gray;
-    padding: 0.1em 1em;
-    color: $gray;
-    font-size: 22px;
-    font-style: italic;
-  }
-
   .comments {
     margin-top: 10px;
   }
@@ -228,15 +219,6 @@ nav {
   padding-right: 4px;
   padding-bottom: 1px;
   border-radius: 2px;
-}
-
-.unsplash-credit {
-  font-size: 80%;
-  font-style: italic;
-  text-align: center;
-  width: 100%;
-  display: block;
-  margin-top: -10px;
 }
 
 // Header
@@ -271,7 +253,13 @@ header {
 }
 
 article.post {
+  max-width: $maxContentWidth;
+  margin: 0 auto;
   padding: 0 5vw;
+
+  @include mediumScreen {
+    padding: 0 10vw;
+  }
 
   h1 {
     font-family: $handwrittenFont;
@@ -291,6 +279,24 @@ article.post {
     padding: 15px;
     margin: 15px 0;
     overflow: scroll;
+  }
+
+  .unsplash-credit {
+    font-size: 80%;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+    display: block;
+    margin-top: -10px;
+  }
+
+  blockquote {
+    margin: 1.8em 0.8em;
+    border-left: 2px solid $gray;
+    padding: 0.1em 1em;
+    color: $gray;
+    font-size: 120%;
+    font-style: italic;
   }
 }
 

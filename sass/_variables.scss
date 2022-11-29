@@ -18,8 +18,19 @@ $helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $georgia: Georgia, serif;
 $handwrittenFont: "Mali", sans-serif; // From Google Fonts
 
+/* Sizes */
+
+// The maximum size of website content, such as posts, on any screen.
+$maxContentWidth: 1100px;
+
 @mixin mobile {
   @media screen and (max-width: 830px) {
+    @content;
+  }
+}
+
+@mixin mediumScreen {
+  @media screen and (min-width: 760px) {
     @content;
   }
 }
