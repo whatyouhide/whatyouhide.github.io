@@ -6,7 +6,6 @@ extra:
 taxonomies:
   tags:
     - elixir
-draft: true
 ---
 
 Database migrations are great. I love to be able to change the shape of tables and move data around in a controlled way to avoid issues and downtime. However, lately I started to view migrations more like *Git commits* than like active pieces of code in my applications. In this post, I want to dig a bit deeper into the topic. I'll start with some context on database migrations, I'll expand on the Git commits analogy, and I'll show you *what I've been doing instead*.
