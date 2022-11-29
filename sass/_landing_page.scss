@@ -18,33 +18,32 @@
     align-items: center; // Vertical alignment
     gap: 20px;
 
-    margin-top: 0;
+    @include wideScreen {
+      flex-direction: row;
+    }
 
-    padding-top: calc(min(3vh, 50px));
-    padding-left: 0;
-    padding-right: 0;
-    padding-bottom: 0;
+    margin-top: 0;
+    padding: calc(min(3vh, 50px)) 0 0 0;
   }
 }
 
 .landing-page #hero-container {
   flex: 2.5 0px;
 
-  @include mobile {
-    flex: 1.5 0px;
-  }
-
   margin-left: 1vw;
   margin-right: 0;
 
   // Flex container properties.
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  @include mobile {
-    flex-direction: column;
+  @include wideScreen {
+    // The hero section can be bigger on wider screens.
+    flex: 5 0px;
+
+    flex-direction: row;
   }
 
   #hero-portrait {
@@ -55,6 +54,7 @@
     max-height: 400px;
   }
 
+  // The "Hi" and small paragraph.
   #hero-text {
     width: 100%;
     max-width: 380px;
@@ -63,6 +63,11 @@
     // Flex container properties.
     display: flex;
     flex-direction: column;
+
+    @include wideScreen {
+      align-self: flex-end;
+      padding-bottom: 8vh;
+    }
 
     h1 {
       font-family: $handwrittenFont;
@@ -80,32 +85,39 @@
     }
   }
 
-  // Need to be careful with this little stupid section. Chrome is a bit kinder to my CSS
-  // skills and it worked pretty quickly, but Safari required a bit more fiddling. This
-  // works on both, so if changed please test on both.
-  #hero-about {
-    width: 100px;
-    max-height: 100px;
+  #hero-portrait-with-about-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
-    a {
-      display: block;
-      color: $textColor;
-      font-family: $handwrittenFont;
-      text-align: right;
-      text-decoration: underline;
-      text-transform: lowercase;
-      position: relative;
-      top: -70px;
-      left: -30px;
-    }
+    // Need to be careful with this little stupid section. Chrome is a bit kinder to my CSS
+    // skills and it worked pretty quickly, but Safari required a bit more fiddling. This
+    // works on both, so if changed please test on both.
+    #hero-about {
+      height: 100px;
+      width: 100px;
+      max-height: 100px;
 
-    img.arrow {
-      display: block;
-      margin: 0 0 0 auto;
-      rotate: 166deg;
-      transform: scale(1, 0.8);
-      height: 100%;
-      object-fit: contain;
+      a {
+        display: block;
+        color: $textColor;
+        font-family: $handwrittenFont;
+        text-align: right;
+        text-decoration: underline;
+        text-transform: lowercase;
+        position: relative;
+        top: -70px;
+        left: -30px;
+      }
+
+      img.arrow {
+        display: block;
+        margin: 0 0 0 auto;
+        rotate: 166deg;
+        transform: scale(1, 0.8);
+        height: 100%;
+        object-fit: contain;
+      }
     }
   }
 }
@@ -127,6 +139,11 @@
     // Bump the distance between the hero container and the
     // icons a bit more.
     margin: 3vh 0;
+  }
+
+  @include wideScreen {
+    flex-direction: column;
+    margin-top: 6vh; // Bring the whole section down a bit
   }
 
   $iconHeight: 130px;

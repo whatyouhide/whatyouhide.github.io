@@ -7,22 +7,24 @@
 <div id="main" role="main" class="landing-page">
   <div id="content-container">
     <div id="hero-container" class="container">
-      <aside id="hero-about">
-        <img class="arrow"
-             src="{{ get_url(path="assets/media/arrow.png") }}"
-             alt="Just an arrow used to point to the 'About' page" />
-        <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
-      </aside>
+      <div id="hero-portrait-with-about-link">
+        <aside id="hero-about">
+          <img class="arrow"
+               src="{{ get_url(path="assets/media/arrow.png") }}"
+               alt="Just an arrow used to point to the 'About' page" />
+          <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
+        </aside>
 
-      <img id="hero-portrait"
-          src="{{ get_url(path="assets/media/hero-portrait.png") }}"
-          alt="Portrait of Andrea" />
+        <img id="hero-portrait"
+            src="{{ get_url(path="assets/media/hero-portrait.png") }}"
+            alt="Portrait of Andrea" />
+      </div>
+
       <div id="hero-text">
         <h1>Hi.</h1>
 
         {{ section.content | safe }}
       </div>
-
     </div>
 
     <div id="main-links" class="container">
