@@ -1,32 +1,60 @@
 {% extends "base.html" %}
 
+{# The landing page shouldn't have a header. #}
+{% block header %}{% endblock header %}
+
 {% block content %}
+<div id="main" role="main" class="landing-page">
+  <div id="content-container">
+    <div id="hero-container" class="container">
+      <div id="hero-portrait-with-about-link">
+        <aside id="hero-about">
+          <img class="arrow"
+               src="{{ get_url(path="assets/media/arrow.png") }}"
+               alt="Just an arrow used to point to the 'About' page" />
+          <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
+        </aside>
 
-<div id="blog" class="container">
-  <a href="/blog">
-    <h2>
-      <img src="/assets/media/blog-text.png" />
-    </h2>
-    <img class="big-icon" src="/assets/media/blog.png" alt="Blog hand-drawn icon" />
-  </a>
+        <img id="hero-portrait"
+            src="{{ get_url(path="assets/media/hero-portrait.png") }}"
+            alt="Portrait of Andrea" />
+      </div>
+
+      <div id="hero-text">
+        <h1>Hi.</h1>
+
+        {{ section.content | safe }}
+      </div>
+    </div>
+
+    <div id="main-links" class="container">
+      <div id="blog" class="container website-section-icon-and-link">
+        <a href="{{ get_url(path="@/blog.md") }}">
+          <img class="big-icon"
+              src="{{ get_url(path="assets/media/blog.png") }}"
+              alt="Blog hand-drawn icon" />
+          <span role="link">Blog</span>
+        </a>
+      </div>
+
+      <div id="testing-elixir" class="container website-section-icon-and-link">
+        <a href="https://pragprog.com/titles/lmelixir/testing-elixir/" target="_blank">
+          <img class="big-icon"
+              src="{{ get_url(path="assets/media/testing-elixir.png") }}"
+              alt="Hand-drawn cover of the 'Testing Elixir' book" />
+          <span role="link">Book</span>
+        </a>
+      </div>
+
+      <div id="talks" class="container website-section-icon-and-link">
+        <a href="https://youtube.com/playlist?list=PLd7I3U4fDsUJfNM-N7Kyss66gmml_OSDq" target="_blank">
+          <img class="big-icon"
+              src="{{ get_url(path="assets/media/mic.png") }}"
+              alt="Hand-drawn microphone icon" />
+          <span role="link">Talks</span>
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
-
-<div id="testing-elixir" class="container">
-  <a href="https://pragprog.com/titles/lmelixir/testing-elixir/" target="_blank">
-    <h2>
-      <img src="/assets/media/testing-elixir-text.png" />
-    </h2>
-    <img class="big-icon" src="/assets/media/testing-elixir.png" alt="Hand-drawn cover of the 'Testing Elixir' book" />
-  </a>
-</div>
-
-<div id="talks" class="container">
-  <a href="https://youtube.com/playlist?list=PLd7I3U4fDsUJfNM-N7Kyss66gmml_OSDq" target="_blank">
-    <h2>
-      <img src="/assets/media/talks-text.png" />
-    </h2>
-    <img class="big-icon" src="/assets/media/mic.png" alt="Hand-drawn microphone icon" />
-  </a>
-</div>
-
 {% endblock content %}

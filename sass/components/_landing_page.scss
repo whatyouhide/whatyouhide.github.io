@@ -1,0 +1,181 @@
+#main.landing-page {
+  flex: 1 100%;
+  min-height: auto;
+  padding: 0;
+  width: 100%;
+
+  // This is only used to center the content.
+  display: flex;
+  justify-content: center;
+
+  #content-container {
+    width: 100%;
+    max-width: 1200px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center; // Horizontal alignment
+    align-items: center; // Vertical alignment
+    gap: 20px;
+
+    @include wideScreen {
+      flex-direction: row;
+    }
+
+    margin-top: 0;
+    padding: calc(min(3vh, 50px)) 0 0 0;
+  }
+}
+
+.landing-page #hero-container {
+  flex: 2.5 0px;
+
+  margin-left: 1vw;
+  margin-right: 0;
+
+  // Flex container properties.
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  @include wideScreen {
+    // The hero section can be bigger on wider screens.
+    flex: 5 0px;
+    gap: 30px;
+    flex-direction: row;
+  }
+
+  #hero-portrait {
+    display: block;
+    width: auto;
+    height: 30vw;
+    min-height: 200px;
+    max-height: 400px;
+  }
+
+  // The "Hi" and small paragraph.
+  #hero-text {
+    width: 100%;
+    max-width: 380px;
+    padding: calc(min(3vh, 10px)) 0;
+
+    // Flex container properties.
+    display: flex;
+    flex-direction: column;
+
+    @include wideScreen {
+      align-self: flex-end;
+      padding-bottom: 40px;
+    }
+
+    h1 {
+      font-family: $handwrittenFont;
+      font-size: 50pt;
+      line-height: 1;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: -40pt;
+
+      @include wideScreen {
+        font-size: 120pt;
+        text-align: left;
+      }
+    }
+
+    p {
+      max-width: 350px;
+      margin-top: 70px;
+      margin-bottom: 0;
+    }
+  }
+
+  #hero-portrait-with-about-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    // Need to be careful with this little stupid section. Chrome is a bit kinder to my CSS
+    // skills and it worked pretty quickly, but Safari required a bit more fiddling. This
+    // works on both, so if changed please test on both.
+    #hero-about {
+      height: 100px;
+      width: 100px;
+      max-height: 100px;
+
+      a {
+        display: block;
+        color: $textColor;
+        font-family: $handwrittenFont;
+        text-align: right;
+        text-decoration: underline;
+        text-transform: lowercase;
+        position: relative;
+        top: -70px;
+        left: -30px;
+      }
+
+      img.arrow {
+        display: block;
+        margin: 0 0 0 auto;
+        rotate: 166deg;
+        transform: scale(1, 0.8);
+        height: 100%;
+        object-fit: contain;
+      }
+    }
+  }
+}
+
+.landing-page #main-links {
+  flex: 1 0px;
+  margin-left: 0;
+  margin-right: 0;
+  height: min-content;
+
+  // Flex container properties.
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+
+  @include mediumScreen {
+    flex-direction: row;
+    // Bump the distance between the hero container and the
+    // icons a bit more.
+    margin: 3vh 0;
+  }
+
+  @include wideScreen {
+    flex-direction: column;
+    margin-top: 6vh; // Bring the whole section down a bit
+  }
+
+  $iconHeight: 130px;
+
+  a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 150px;
+  }
+
+  span[role="link"] {
+    display: block;
+    font-family: $handwrittenFont;
+    text-transform: uppercase;
+    color: $textColor;
+  }
+
+  .big-icon {
+    object-fit: contain;
+    display: block;
+    height: 100%;
+    width: 100%;
+    max-height: $iconHeight;
+  }
+}
+
+#main-links.container {
+  padding: 0;
+}

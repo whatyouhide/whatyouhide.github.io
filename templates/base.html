@@ -10,15 +10,18 @@
     <![endif]-->
 
     <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
     <link rel="alternate" type="application/rss+xml" title="{{ config.title }}" href="/feed.xml" />
 </head>
 
 <body>
     <div class="wrapper-masthead">
+        {% block header %}
         {% include "snippets/header.html" %}
-        <div id="main" role="main" class="container">
-            {% block content %}{% endblock content %}
-        </div>
+        {% endblock header %}
+
+        {% block content %}{% endblock content %}
+
         {% include "snippets/footer.html" %}
     </div>
 

@@ -1,5 +1,6 @@
 @import "reset";
 @import "variables";
+@import "mixins";
 
 html {
   font-size: 100%;
@@ -11,13 +12,6 @@ body {
   font: 18px/1.4 $helvetica;
   color: $textColor;
   height: 100%;
-}
-
-.container {
-  margin: 0 auto;
-  max-width: 830px;
-  padding: 0 10px;
-  width: 100%;
 }
 
 h1,
@@ -33,14 +27,10 @@ h6 {
   line-height: 1.7;
   margin: 1em 0 15px;
   padding: 0;
-
-  @include mobile {
-    line-height: 1.4;
-  }
 }
 
 h1 {
-  font-size: 30px;
+  font-size: 200%;
   text-align: center;
   a {
     color: inherit;
@@ -110,41 +100,9 @@ b {
   font-weight: bold;
 }
 
-#main img {
-  max-width: 100%;
-}
-
 // Fixes images in popup boxes from Google Translate
 .gmnoprint img {
   max-width: none;
-}
-
-article.post time.posted-at {
-  display: block;
-  font-style: italic;
-  color: $gray;
-}
-
-// Specify the color of the selection
-::-moz-selection {
-  color: $black;
-  background: $lightGray;
-}
-::selection {
-  color: $black;
-  background: $lightGray;
-}
-
-// Nicolas Gallagher's micro clearfix hack
-// http://nicolasgallagher.com/micro-clearfix-hack/
-.clearfix:before,
-.clearfix:after {
-  content: " ";
-  display: table;
-}
-
-.clearfix:after {
-  clear: both;
 }
 
 .wrapper-masthead {
@@ -152,70 +110,6 @@ article.post time.posted-at {
   display: flex;
   flex-direction: column;
 }
-
-.site-name {
-  margin: 0;
-  color: $darkGray;
-  cursor: pointer;
-  font-family: $helveticaNeue;
-  font-weight: 300;
-  font-size: 28px;
-  letter-spacing: 1px;
-}
-
-.site-description {
-  margin: -5px 0 0 0;
-  color: $gray;
-  font-size: 16px;
-
-  @include mobile {
-    margin: 3px 0;
-  }
-}
-
-nav {
-  float: right;
-  margin-top: 23px; // @TODO: Vertically middle align
-  font-family: $helveticaNeue;
-  font-size: 18px;
-
-  @include mobile {
-    float: none;
-    margin-top: 9px;
-    display: block;
-    font-size: 16px;
-  }
-
-  a {
-    margin-left: 20px;
-    color: $darkGray;
-    text-align: right;
-    font-weight: 300;
-    letter-spacing: 1px;
-
-    @include mobile {
-      margin: 0 10px;
-      color: $blue;
-    }
-  }
-}
-
-// aaaaaa
-#main {
-  min-height: 100%;
-  flex: 1;
-
-  display: flex;
-
-  @include mobile {
-    flex-direction: column;
-  }
-}
-// aaaaaa
-
-//
-// .main
-//
 
 .posts > .post {
   padding-bottom: 2em;
@@ -228,15 +122,6 @@ nav {
 }
 
 .post {
-  blockquote {
-    margin: 1.8em 0.8em;
-    border-left: 2px solid $gray;
-    padding: 0.1em 1em;
-    color: $gray;
-    font-size: 22px;
-    font-style: italic;
-  }
-
   .comments {
     margin-top: 10px;
   }
@@ -254,119 +139,75 @@ nav {
   border-radius: 2px;
 }
 
-.unsplash-credit {
-  font-size: 80%;
-  font-style: italic;
-  text-align: center;
-  width: 100%;
-  display: block;
-  margin-top: -10px;
-}
-
-img.post-img {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
-// Header
-
-header {
-  padding: 20px 0;
-}
-
-#header-contents {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0 auto;
-}
-
-#header-contents a {
-  display: block;
-}
-
-#header-contents * {
-  min-width: 0;
-  min-height: 0;
-}
-
-.site-avatar > img {
-  height: 100px;
-  border-radius: 50%;
-  margin-right: 20px;
-  border: 3px solid $textColor;
-  margin-left: 20px;
-
-  @include mobile {
-    height: 75px;
-    margin-right: 10px;
-  }
-}
-
-img.site-title {
-  height: 100px;
-
-  @include mobile {
-    height: 70px;
-    margin-right: 20px;
-  }
-}
-
-// Main content on the homepage
+// Main content for posts.
 
 #main {
-  margin-top: 40px;
+  flex: 10 1 0px;
+
+  h2 {
+    text-align: center;
+    margin: 25px 0 0 0;
+  }
 }
 
-#main h2 {
-  text-align: center;
-  margin: 0;
-}
-
-#blog h2 img {
-  height: 70px;
-}
-
-#talks h2 img {
-  height: 50px;
-}
-
-#talks img.big-icon {
-  margin-top: 30px;
-  margin-left: 30px;
-  height: 300px;
-}
-
-// Footer
-
-$footerIconWidth: 50px;
-
-footer {
-  height: 100px;
-}
-
-footer div.icons {
-  width: 50%;
+article.post,
+main.about {
+  max-width: $maxContentWidth;
   margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
+  padding: 0 5vw;
+
+  @include mediumScreen {
+    padding: 0 10vw;
+  }
+
+  h1,
+  h2 {
+    font-family: $handwrittenFont;
+    font-weight: bold;
+  }
+
+  .entry {
+    font-size: 12pt;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  pre[data-lang] {
+    padding: 15px;
+    margin: 15px 0;
+    overflow: scroll;
+  }
+
+  .unsplash-credit {
+    font-size: 80%;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+    display: block;
+    margin-top: -10px;
+  }
+
+  blockquote {
+    margin: 1.8em 0.8em;
+    border-left: 2px solid $gray;
+    padding: 0.1em 1em;
+    color: $gray;
+    font-size: 120%;
+    font-style: italic;
+  }
 }
 
-footer .icons a {
+article.post time.posted-at {
   display: block;
+  font-style: italic;
+  color: $gray;
 }
 
-footer img.footer-icon {
-  width: $footerIconWidth;
-  position: relative;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-#icon-rss {
-  width: $footerIconWidth - 10px;
-}
-
+@import "components/header";
+@import "components/footer";
+@import "components/landing_page";
 @import "highlights";

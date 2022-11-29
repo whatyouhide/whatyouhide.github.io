@@ -1,18 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="posts">
-  {% set section = get_section(path="posts/_index.md") %}
+<div id="main" role="main" class="container">
+  <div class="posts">
+    {% set section = get_section(path="posts/_index.md") %}
 
-  {% for post in section.pages | sort(attribute="date") | reverse %}
-  <article class="post">
+    {% for post in section.pages | sort(attribute="date") | reverse %}
+    <article class="post">
 
-    <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+      <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
 
-    <div class="entry">{{ post.summary | safe }}</div>
-    <a href="{{ post.permalink }}" class="read-more">Read more →</a>
-  </article>
-  {% endfor %}
+      <div class="entry">
+        {{ post.summary | safe }}
+
+        <a href="{{ post.permalink }}" class="read-more">Read more →</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
 </div>
-
 {% endblock content %}
