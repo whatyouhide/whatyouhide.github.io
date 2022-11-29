@@ -1,29 +1,44 @@
 #main.landing-page {
-  flex: 1 1 0;
+  flex: 1 100%;
   min-height: auto;
-}
-
-.landing-page#main #content-container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center; // Horizontal alignment
-  align-items: center; // Vertical alignment
-
+  padding: 0;
   width: 100%;
 
-  margin-top: 0;
+  // This is only used to center the content.
+  display: flex;
+  justify-content: center;
 
-  padding-top: 50px;
-  padding-left: 0;
-  padding-right: 0;
-  padding-bottom: 0;
+  #content-container {
+    width: 100%;
+    max-width: 1200px;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: center; // Horizontal alignment
+    align-items: center; // Vertical alignment
+    gap: 20px;
+
+    margin-top: 0;
+
+    padding-top: calc(min(3vh, 50px));
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+
+    @include mobile {
+      flex-direction: column;
+    }
+  }
 }
 
 .landing-page #hero-container {
-  flex: 2.5 1 0;
-  max-width: 1100px;
+  flex: 2.5 0px;
 
-  margin-left: 0;
+  @include mobile {
+    flex: 1.5 0px;
+  }
+
+  margin-left: 1vw;
   margin-right: 0;
 
   // Flex container properties.
@@ -33,64 +48,79 @@
   justify-content: center;
   gap: 20px; // Horizontal distance between hero portrait and hero text.
 
+  @include mobile {
+    flex-direction: column;
+  }
+
   #hero-portrait {
     display: block;
     width: auto;
-    height: max-content;
+    height: 30vw;
+    min-height: 200px;
     max-height: 400px;
   }
 
   #hero-text {
+    width: 100%;
+    max-width: 380px;
+
     // Flex container properties.
     display: flex;
     flex-direction: column;
 
-    width: 100%;
-
     h1 {
       font-family: "Mali", sans-serif;
-      font-size: 150pt;
-      text-align: left;
+      font-size: 50pt;
+      line-height: 1;
+      text-align: center;
       margin-top: 0;
       margin-bottom: -40pt;
     }
 
     p {
-      width: 80%;
       max-width: 350px;
-      margin: 0;
+      margin-top: 70px;
+      margin-bottom: 0;
     }
   }
 }
 
 .landing-page #main-links {
-  flex: 1 1 0;
-  width: auto;
-  max-width: max-content;
+  flex: 1 0px;
   margin-left: 0;
   margin-right: 0;
-  height: 300px;
+  height: min-content;
 
   // Flex container properties.
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
+  justify-content: center;
+  gap: 30px;
+
+  $iconHeight: 130px;
 
   a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  span[role="link"] {
     display: block;
-    max-width: 200px;
-    max-height: 200px;
+    font-family: "Mali", sans-serif;
+    text-transform: uppercase;
+    color: $textColor;
   }
 
   .big-icon {
+    object-fit: contain;
     display: block;
-    max-width: 200px;
-    max-height: 300px;
+    height: 100%;
+    width: 100%;
+    max-height: $iconHeight;
   }
+}
 
-  #talks .big-icon {
-    margin-top: 30px;
-    margin-left: 30px;
-    height: 300px;
-  }
+#main-links.container {
+  padding: 0;
 }
