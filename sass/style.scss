@@ -239,12 +239,6 @@ nav {
   margin-top: -10px;
 }
 
-img.post-img {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
 // Header
 
 header {
@@ -285,6 +279,18 @@ article.post {
 
   .entry {
     font-size: 12pt;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  pre[data-lang] {
+    padding: 15px;
+    margin: 15px 0;
+    overflow: scroll;
   }
 }
 
