@@ -4,6 +4,8 @@
 {% if page.extra.cover_image %}
   {% set assets_prefix_path = page.relative_path | split(pat="/") | slice(end=-1) | join(sep="/") %}
   {% set_global cover_image_url = get_url(path=assets_prefix_path) ~ "/" ~ page.extra.cover_image %}
+{% else %}
+  {% set_global cover_image_url = get_url(path="assets/media/website-overlay-cover.jpg") %}
 {% endif %}
 
 <meta charset="utf-8" />
@@ -21,18 +23,17 @@
 <meta property="og:title" content="{{ title }}" />
 <meta property="og:description" content="{{ description }}" />
 <meta property="og:url" content="{{ current_url | safe }}" />
+<meta property="og:image" content="{{ cover_image_url | safe }}" />
 {% if page.components is defined and page.components[0] == "posts" %}
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="{{ page.date | date(format="%+") }}" />
 {% else %}
 <meta property="og:type" content="website" />
 {% endif %}
-{% if cover_image_url %}<meta property="og:image" content="{{ cover_image_url | safe }}" />{% endif %}
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:creator" content="@{{ config.extra.twitter_username }}" />
 <meta name="twitter:title" content="{{ title }}" />
 <meta name="twitter:description" content="{{ description }}" />
-{% if cover_image_url %}<meta name="twitter:image" content="{{ cover_image_url | safe }}" />{% endif %}
-
+<meta name="twitter:image" content="{{ cover_image_url | safe }}" />
