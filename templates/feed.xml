@@ -47,7 +47,13 @@
     {% for post in pages %}
       <item>
         <title>{{ post.title | escape_xml }}</title>
-        <description>{{ post.summary | escape_xml }}</description>
+        <description>
+          {% if post.summary %}
+            {{ post.summary | escape_xml }}
+          {% else %}
+            {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
+          {% endif %}
+        </description>
         <pubDate>{{ post.date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
         <link>{{ post.permalink }}</link>
         <guid isPermaLink="true">{{ post.permalink }}</guid>
