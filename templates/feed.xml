@@ -16,6 +16,12 @@
   </author>
 
   {% for post in pages %}
+    {% if post.extra.last_updated_date %}
+      {% set_global last_updated_date = post.extra.last_updated_date %}
+    {% else %}
+      {% set_global last_updated_date = post.date %}
+    {% endif %}
+
     {{ post }}
     <entry>
       <title type="html"><![CDATA[{{ post.title | escape_xml }}]]></title>
@@ -30,7 +36,7 @@
       </summary>
 
       <published>{{ post.date | date(format="%+")}}</published>
-      <updated>{{ post.date | date(format="%+")}}</updated>
+      <updated>{{ last_updated_date | date(format="%+")}}</updated>
 
       <author>
         <name>{{ config.extra.full_name }}</name>
@@ -45,6 +51,7 @@
 </feed>
 {% else %}
 {# Normal RSS feed of all posts in my blog. #}
+{# Spec is here: https://cyber.harvard.edu/rss/rss.html #}
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="https://www.w3.org/2005/Atom">
   <channel>
@@ -53,6 +60,7 @@
     <link>{{ config.base_url }}</link>
     <atom:link href="{{ feed_url }}" rel="self" type="application/rss+xml" />
     <language>en-us</language>
+    <lastBuildDate>{{ now() | date(format="%a, %d %b %Y %H:%M:%S %z") }}</lastBuildDate>
 
     {% for post in pages %}
       <item>
@@ -67,6 +75,7 @@
         <pubDate>{{ post.date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
         <link>{{ post.permalink }}</link>
         <guid isPermaLink="true">{{ post.permalink }}</guid>
+        <author>{{ config.extra.email }}</author>
       </item>
     {% endfor %}
   </channel>
