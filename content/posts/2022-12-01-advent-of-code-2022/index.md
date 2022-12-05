@@ -3,9 +3,9 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
+updated: 2022-12-05
 extra:
   cover_image: cover-image.png
-  last_updated_date: 2022-12-05
 ---
 
 I'm doing [Advent of Code] 2022 in [Rust] as a chance to get more familiar with the language. In this ongoing post, I'm documenting each day's progress, my thought process, and so on. I'm better at writing than recording screencasts or what have you. This is essentially a small journal. Ah, and I'm trying **AI tools** for doing this as well, so this is bound to be fun.

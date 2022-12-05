@@ -16,12 +16,6 @@
   </author>
 
   {% for post in pages %}
-    {% if post.extra.last_updated_date %}
-      {% set_global last_updated_date = post.extra.last_updated_date %}
-    {% else %}
-      {% set_global last_updated_date = post.date %}
-    {% endif %}
-
     <entry>
       <title type="html"><![CDATA[{{ post.title | escape_xml }}]]></title>
       <link rel="alternate" type="text/html" href="{{ post.permalink }}" />
@@ -35,7 +29,7 @@
       </summary>
 
       <published>{{ post.date | date(format="%+")}}</published>
-      <updated>{{ last_updated_date | date(format="%+")}}</updated>
+      <updated>{{ post.updated | default(value=post.date) | date(format="%+")}}</updated>
 
       <author>
         <name>{{ config.extra.full_name }}</name>

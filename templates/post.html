@@ -9,7 +9,7 @@
 
     <time class="posted-at" datetime="{{ page.date }}">
       Written on {{ page.date | date(format="%B %e, %Y")}}
-      {% if page.extra.last_updated_date %} · Last updated on {{ page.extra.last_updated_date | date(format="%B %e, %Y") }}{% endif %}
+      {% if page.updated %} · Last updated on {{ page.updated | date(format="%B %e, %Y") }}{% endif %}
     </time>
 
     {% include "snippets/disqus.html" %}
