@@ -22,14 +22,13 @@
       {% set_global last_updated_date = post.date %}
     {% endif %}
 
-    {{ post }}
     <entry>
       <title type="html"><![CDATA[{{ post.title | escape_xml }}]]></title>
       <link rel="alternate" type="text/html" href="{{ post.permalink }}" />
       <id>{{ post.permalink }}</id>
       <summary>
         {% if post.summary %}
-          {{ post.summary | escape_xml }}
+          {{ post.summary | striptags | escape_xml | safe }}
         {% else %}
           {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
         {% endif %}
@@ -44,7 +43,7 @@
         <email>{{ config.extra.email }}</email>
       </author>
 
-      <content type="html">{{ post.content | escape_xml }}
+      <content type="html">{{ post.content | escape_xml | safe }}
       &lt;p&gt;&lt;a href=&quot;{{ post.permalink }}&quot;&gt;{{ post.title }}&lt;/a&gt; was originally published by {{ config.extra.full_name }} at &lt;a href=&quot;{{ config.base_url }}&quot;&gt;{{ config.title }}&lt;/a&gt; on {{ post.date | date(format="%B %d, %Y") }}.&lt;/p&gt;</content>
     </entry>
   {% endfor %}
@@ -67,7 +66,7 @@
         <title>{{ post.title | escape_xml }}</title>
         <description>
           {% if post.summary %}
-            {{ post.summary | escape_xml }}
+            {{ post.summary | striptags | escape_xml | safe }}
           {% else %}
             {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
           {% endif %}
