@@ -22,6 +22,100 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 4
+
+  1. Split each line into two ranges, `left` and `right`, by splitting at the comma `,`.
+  1. Convert each text range (`<start>-<end>`) into a range data structure (Rust should have one).
+  1. Count the occurrences of range pairs where `left` is included in `right` or `right` in `left`.
+
+The first nice thing I found out today is the `include_str!` macro. It's exactly what I want: it reads a file at compile time and includes its contents into the compiled binary as a static string.
+
+```rust
+let input = include_str!("../inputs/day4.txt");
+```
+
+Ready to go. First, I split up each line into two (text) ranges. I found the `.split_once()` method for strings, which does exactly what I want. I like that it returns a `Option` type.
+
+```rust
+for line in input.lines() {
+    let (left, right) = line.split_once(",").unwrap();
+}
+```
+
+Next, I wanted to write a small helper function that parses a textual range into a [`std::ops::Range`](https://doc.rust-lang.org/1.65.0/std/ops/struct.Range.html) struct. Hello, **Copilot**! Wow. I wrote the signature (`fn parse_into_range(input: &str) -> Range<u32> {}`), and Copilot did its magic:
+
+```rust
+fn parse_into_range(input: &str) -> Range<u32> {
+    let (left, right) = input.split_once("-").unwrap();
+    let left_range = left.parse::<u32>().unwrap();
+    let right_range = right.parse::<u32>().unwrap();
+    left_range..right_range
+}
+```
+
+I think I can do better at naming variable, but other than that, Copilot beats me easily. I understand Rust ranges are `[...)`, so we should do `right_range + 1` there to behave like the puzzle description wants us to. But I'm really only using Rust ranges here to play around, because we'd probably be better off with a `(u32, u32)` tuple anyway.
+
+Now I want a function that checks whether a `Range<u32>` is contained in another range. Once again, Copilot sketches it out great:
+
+```rust
+fn is_contained(left: Range<u32>, right: Range<u32>) -> bool {
+    left.start <= right.start && right.end <= left.end
+}
+```
+
+Ah, AI, you. I can't read that because of the order in which the boolean expression is written, but it does check if `right` is contained in `left`. Amazing.
+
+All that's left now is to count occurrences. Once again, let's go imperative mutable style.
+
+```rust
+let mut count: u32 = 0;
+
+for line in input.lines() {
+    // Same as before.
+
+    if is_contained(&left_range, &right_range) ||
+        is_contained(&right_range, &left_ranage) {
+        count += 1;
+    }
+}
+```
+
+Here, I changed `is_contained()` to take `&Range<u32>` values instead of `Range<u32>`. I'm not sure if it was the right thing to do, but the checker was complaining about moving values. It makes sense that here I only want to pass references to the same piece of data around, and I'm not modifying anything, so let's go for this.
+
+### Second Part
+
+Okay, easy peasy. The change is that the puzzle is now about finding **overlapping** ranges, not just **included** ranges.
+
+I started with a `is_overlapping()` function, and it turns out the boolean check I wrote was buggy. I submitted the puzzle solution and, for the first time this year, I got yelled at! Guess it's time for some testing, isn't it. I don't know much about Rust testing, but I saw `assert_eq!()` used everywhere, so I figured it'd be easy to test `is_overlapping()` before doing anything in the main function.
+
+What I got is something like this:
+
+```rust
+// Returns true if left and right overlap.
+fn is_overlapping(left: &Range<u32>, right: &Range<u32>) -> bool {
+    let (min, max) = if left.start < right.start {
+        (left, right)
+    } else {
+        (right, left)
+    };
+
+    min.end >= max.start
+}
+```
+
+The assertions look something like this:
+
+```rust
+pub fn run2() {
+    assert_eq!(is_overlapping(&(1..3), &(2..4)), true);
+    assert_eq!(is_overlapping(&(1..3), &(3..4)), true);
+    assert_eq!(is_overlapping(&(3..4), &(1..3)), true);
+    assert_eq!(is_overlapping(&(1..3), &(4..6)), false);
+    assert_eq!(is_overlapping(&(4..6), &(1..3)), false);
+```
+
+Works now.
+
 ## Day 3
 
 The "translated-to-computerese" puzzle is this:
