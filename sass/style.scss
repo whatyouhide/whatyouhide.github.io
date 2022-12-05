@@ -207,6 +207,17 @@ article.post time.posted-at {
   color: $gray;
 }
 
+article.post details {
+  background-color: darken($color: $siteBackground, $amount: 5);
+  border: 1px solid lighten($color: $textColor, $amount: 70);
+  border-radius: 7px;
+  padding: 0.5em 1em;
+
+  :not(pre) > code {
+    background-color: transparent;
+  }
+}
+
 @import "components/header";
 @import "components/footer";
 @import "components/landing_page";

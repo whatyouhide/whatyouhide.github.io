@@ -22,6 +22,187 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 5
+
+Ah, this starts to be more convoluted. The most annoying thing with this puzzle was to parse out the "stacks", since each stack is on a variable number of input lines.
+
+For this puzzle, I took a bottom-up approach. I started out with creating a new type for a "move", and a function to parse a `move N from X to Y` line into said struct.
+
+```rust
+// Deriving PartialEq because I want to be able to check if move1 == move2.
+#[derive(Debug, PartialEq)]
+struct Move {
+    start_stack: u16,
+    end_stack: u16,
+    crates_to_move: u16,
+}
+
+fn parse_move(string: &str) -> Move {
+    let words: Vec<&str> = string.split_ascii_whitespace().collect();
+
+    // Hard-code a bunch of indexes since the words are always the same.
+    // I miss Elixir pattern matching!
+    let crates_to_move = words[1].parse::<u16>().unwrap();
+    let start_stack = words[3].parse::<u16>().unwrap();
+    let end_stack = words[5].parse::<u16>().unwrap();
+
+    Move { start_stack, end_stack, crates_to_move, }
+}
+```
+
+I'm starting to get the hang of references. I understand that the input to this function needs to be a `&str` because I want just a little window to that string, and I'm not modifying it in any way. We're good.
+
+Next is a little function to find the line that goes ` 1  2  3 ...` to get to the *count* of stacks in the input. In hindsight, this is probably unnecessary as I could've hardcoded that to `9`, but here you go if you're curious.
+
+<details>
+  {{ summary_tag(text="`fn count_stacks(input: &str) -> u16`") }}
+
+```rust
+fn count_stacks(input: &str) -> u16 {
+    let indexes_line = input
+        .lines()
+        .find(|line| line.trim().starts_with("1"))
+        .unwrap();
+
+    indexes_line
+        .split_ascii_whitespace()
+        .count()
+        .try_into()
+        .unwrap()
+}
+```
+</details>
+
+Last but not least, a way to parse stacks. I created a new `Stack` struct first:
+
+```rust
+#[derive(Debug)]
+struct Stack {
+    // Crates are ordered from bottm to top (that is, the top crate is the last crate in the vector)
+    crates: Vec<char>,
+}
+```
+
+Then, I went with the most imperative approach I could think of. In a functional language, I'd have probably tried to matrices-and-transpositions my way out of this, but here I went with just slicing strings. I created a `parse_stack()` function that takes the whole `input: &str` as well as a "column index". Here you go:
+
+```rust
+fn parse_stack(input: &str, column_index: usize) -> Stack {
+    let mut crates: Vec<char> = Vec::new();
+
+    // Iterate through all lines until there's an empty one.
+    for line in input.lines().take_while(|line| !line.trim().is_empty()) {
+        // I don't like this, but it allows me to get the right [x] crate
+        // from the input line.
+        let range = (column_index * 4)..(column_index * 4 + 2);
+        let cleaned_line = line[range].trim();
+
+        if cleaned_line.starts_with("[") {
+            let char = cleaned_line
+                .trim_start_matches("[")
+                .trim_end_matches("]")
+                .chars()
+                .next()
+                .unwrap();
+
+            crates.push(char);
+        }
+    }
+
+    crates.reverse();
+    Stack { crates }
+}
+```
+
+Now, the final push: getting it all together. First, I built the "world", which is just a vector of `Stack`s:
+
+```rust
+let input = include_str!("../inputs/day5.txt");
+let mut world: Vec<Stack> = Vec::new();
+
+for column_index in 0..count_stacks(input) {
+    let stack = parse_stack(input, column_index as usize);
+    world.push(stack);
+}
+
+// A couple of tests can't hurt.
+assert_eq!(world.len(), 9);
+assert_eq!(world[0].crates, vec!['W', 'D', 'G', 'B', 'H', 'R', 'V']);
+```
+
+Now, I parsed all the `Move` structs:
+
+```rust
+let moves: Vec<Move> = input
+    .lines()
+    .filter(|line| line.starts_with("move"))
+    .map(parse_move)
+    .collect();
+
+// Spot check the first move.
+assert_eq!(
+    moves[0],
+    Move { start_stack: 2, end_stack: 7, crates_to_move: 2 }
+);
+```
+
+Finally, I iterated through `moves` and applied each move:
+
+```rust
+for move_ in moves {
+    move_crates(&mut world, move_);
+}
+
+// This is to get the puzzle output in the desired format.
+let top_chars_iter = world.iter().map(|stack| stack.crates.last().unwrap());
+println!("{}", String::from_iter(top_chars_iter));
+```
+
+The `move_crates` function was fun to write because it was the first time
+I used `&mut`. I had to pass `&mut world` to the function in order to be able
+to modify the stacks in place in the function.
+
+```rust
+fn move_crates(world: &mut Vec<Stack>, move_: Move) {
+    for _ in 0..move_.crates_to_move {
+        let start_stack = &mut world[(move_.start_stack - 1) as usize];
+        let crate_to_move = start_stack.crates.pop().unwrap();
+        let end_stack = &mut world[(move_.end_stack - 1) as usize];
+        end_stack.crates.push(crate_to_move);
+    }
+}
+```
+
+The most interesting thing about the code above? I tried to `let` both `start_stack` and `end_stack` after each other, but the compiler yelled at me after I successively tried to modify `start_stack`. This was pretty cool, and it makes sense: I can have *one* mutable reference to a piece of `world` at a time. If I get one by doing `&mut world[...]`, then I need to use it first, and only then I can get more references. Neat, and I'm quite happy that I have some idea of what's going on.
+
+### Second Part
+
+The second part didn't take too long. It's essentially about swapping the `pop()` + `push()` calls with a `pop_many`-sort-of-thing that keeps the order of the popped crates. I let Copilot guide me in writing this:
+
+```rust
+fn pop_many<T>(vec: &mut Vec<T>, count: u16) -> Vec<T> {
+    let mut popped = Vec::new();
+    for _ in 0..count {
+        popped.insert(0, vec.pop().unwrap());
+    }
+    popped
+}
+```
+
+Wrote my first function with a parametrized type! How cool. Now, I rewrote `move_crates()` from earlier into `move_craates_9001()` (after the model number of the new crane):
+
+```rust
+fn move_crates_9001(world: &mut Vec<Stack>, move_: Move) {
+    let start_stack = &mut world[(move_.start_stack - 1) as usize];
+    let to_move = pop_many(&mut start_stack.crates, move_.crates_to_move);
+    let end_stack = &mut world[(move_.end_stack - 1) as usize];
+
+    // Didn't know about extend(), but Copilot got my back.
+    end_stack.crates.extend(to_move);
+}
+```
+
+Another successful puzzle solution!
+
 ## Day 4
 
   1. Split each line into two ranges, `left` and `right`, by splitting at the comma `,`.
