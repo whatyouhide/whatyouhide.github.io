@@ -1,5 +1,6 @@
 {# This first one is a special feed for Community's federated blog. #}
 {% if taxonomy is defined and taxonomy.name == "tags" and term.name == "community" %}
+<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
   <title type="text">{{ config.title }} - Community</title>
   <generator uri="https://www.getzola.org">Zola</generator>
@@ -20,6 +21,13 @@
       <title type="html"><![CDATA[{{ post.title | escape_xml }}]]></title>
       <link rel="alternate" type="text/html" href="{{ post.permalink }}" />
       <id>{{ post.permalink }}</id>
+      <summary>
+        {% if post.summary %}
+          {{ post.summary | escape_xml }}
+        {% else %}
+          {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
+        {% endif %}
+      </summary>
 
       <published>{{ post.date | date(format="%+")}}</published>
       <updated>{{ post.date | date(format="%+")}}</updated>
@@ -44,6 +52,8 @@
     <description>{{ config.description }}</description>
     <link>{{ config.base_url }}</link>
     <atom:link href="{{ feed_url }}" rel="self" type="application/rss+xml" />
+    <language>en-us</language>
+
     {% for post in pages %}
       <item>
         <title>{{ post.title | escape_xml }}</title>
