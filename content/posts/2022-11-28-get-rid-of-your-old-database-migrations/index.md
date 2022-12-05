@@ -2,7 +2,7 @@
 title: Get Rid of Your Old Database Migrations
 description: Are database migrations good? Probably, but are we using them in the right way? In this post, I write about how I think about migrations and what I'm doing to mitigate some of their shortcomings.
 extra:
-  cover_image: cover-image.jpg
+  cover_image: cover-image.png
 taxonomies:
   tags:
     - elixir

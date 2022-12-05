@@ -4,7 +4,7 @@ description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
 extra:
-  cover_image: cover-image.jpg
+  cover_image: cover-image.png
   last_updated_date: 2022-12-05
 ---
 

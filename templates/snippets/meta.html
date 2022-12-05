@@ -2,8 +2,7 @@
 {% set description = page.description | default(value=config.description) %}
 
 {% if page.extra.cover_image %}
-  {% set assets_prefix_path = page.relative_path | split(pat="/") | slice(end=-1) | join(sep="/") %}
-  {% set_global cover_image_url = get_url(path=assets_prefix_path) ~ "/" ~ page.extra.cover_image %}
+  {% set_global cover_image_url = get_url(path="@/" ~ page.relative_path) ~ page.extra.cover_image %}
 {% else %}
   {% set_global cover_image_url = get_url(path="assets/media/website-overlay-cover.jpg") %}
 {% endif %}
