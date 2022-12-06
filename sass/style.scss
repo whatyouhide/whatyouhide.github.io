@@ -219,6 +219,13 @@ article.post details {
   }
 }
 
+article.post .embedded-youtube-player {
+  iframe {
+    width: 100%;
+    height: 20em;
+  }
+}
+
 @import "components/header";
 @import "components/footer";
 @import "components/landing_page";
