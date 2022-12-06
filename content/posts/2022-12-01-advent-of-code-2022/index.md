@@ -22,6 +22,12 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 6
+
+A screencast you said? Let's try that! I'm tired of typing!
+
+{{ youtube(id="FaEorUDhZq4", class="embedded-youtube-player") }}
+
 ## Day 5
 
 Ah, this starts to be more convoluted. The most annoying thing with this puzzle was to parse out the "stacks", since each stack is on a variable number of input lines.
