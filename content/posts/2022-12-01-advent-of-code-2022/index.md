@@ -22,6 +22,246 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 7
+
+Holy. Shit. I do not know Rust. I started recording a screencast for today's puzzle, but I stopped in anger one hour and twenty minutes in. It took me around four hours to get this right. As it turns out, recursive data structures are easy in functional programming languages like Elixir, but a whole other level of nightmares in something like Rust. That's due to the ownership and all that jazz. I struggled a lot with the **tree** data structure that is kind of needed to solve the puzzle: how to reference parent and children nodes was just not working for me.
+
+In the end, I had to do just a bit of searching the web, and I stumbled across [this post](https://applied-math-coding.medium.com/a-tree-structure-implemented-in-rust-8344783abd75) on how to implement these recursive data structures in Rust. I thought of using `Box` initially, without having any idea what that really is, but I would have never arrived to the conclusion that the solution was `Rc` and `RefCell`.
+
+In any case, let's go through my solution, without the four hours of ~~head smashing~~ thought process. Let's start out with some data structures: the file system is a *tree*. Each node can be a *directory* or a *file*. Directories can have children, which are other tree nodes. Directories and files also have a parent node, but I only bothered with adding it to directories (and not to files) for simplicity.
+
+```rust
+#[derive(Debug)]
+pub struct File {
+    name: String,
+    size: u64,
+}
+
+#[derive(Debug)]
+pub struct Dir {
+    name: String,
+}
+
+#[derive(Debug)]
+enum NodeValue {
+    File(File),
+    Dir(Dir),
+}
+
+struct Node {
+    value: NodeValue,
+    children: HashMap<String, Rc<RefCell<Node>>>,
+    parent: Option<Rc<RefCell<Node>>>,
+}
+```
+
+One interesting thing was that I had to implement the `Debug` trait for `Node`, because otherwise it would recursively try to print a node's parent, which prints another node that has children, that have parents, and so on.
+
+```rust
+impl fmt::Debug for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Node")
+            .field("value", &self.value)
+            .field("children", &self.children)
+            .finish()
+    }
+}
+```
+
+Then, just a couple of methods on the `Node` struct to construct it, append nodes, and calculate the size:
+
+```rust
+impl Node {
+    pub fn new(dir: Dir) -> Node {
+        Node {
+            value: NodeValue::Dir(dir),
+            children: HashMap::new(),
+            parent: None,
+        }
+    }
+
+    fn append_node<'a>(&mut self, name: String, node: Rc<RefCell<Node>>) {
+        self.children.insert(name.clone(), node);
+    }
+
+    fn size(&self) -> u64 {
+        match &self.value {
+            NodeValue::File(file) => file.size,
+            NodeValue::Dir(_) => {
+                let mut size = 0;
+                for child in self.children.values() {
+                    size += child.borrow().size();
+                }
+                size
+            }
+        }
+    }
+}
+```
+
+After this, I went with a couple of enums to give structure to the lines in the input:
+
+```rust
+// A command is either "cd <>" or "ls".
+enum Command {
+    Cd(String),
+    Ls,
+}
+
+enum Line {
+    Command(Command),
+    FileWithSize(String, u64),
+    Dir(String),
+}
+```
+
+I also wrote a small function to parse each line into one a `Line`:
+
+<details>
+ {{ summary_tag(text="`fn parse_line(line: &str) -> Line`") }}
+
+```rust
+fn parse_line(line: &str) -> Line {
+    if line.starts_with("$") {
+        let command = line[2..].trim();
+
+        if command.starts_with("cd") {
+            let dir = command[2..].trim();
+            Line::Command(Command::Cd(dir.to_string()))
+        } else if command == "ls" {
+            Line::Command(Command::Ls)
+        } else {
+            panic!("Unknown command: {}", command);
+        }
+    } else {
+        if line.starts_with("dir") {
+            let dir_name = line[4..].trim();
+            Line::Dir(dir_name.to_string())
+        } else {
+            let mut parts = line.split_whitespace();
+            let size: u64 = parts.next().unwrap().to_string().parse::<u64>().unwrap();
+            let name = parts.next().unwrap().to_string();
+            Line::FileWithSize(name, size)
+        }
+    }
+}
+```
+</details>
+
+Alright. Now for the heart of this puzzle: a function that walks through all the lines in the input, and builds out the tree data structure.
+
+```rust
+let input = include_str!("../inputs/day7.txt");
+
+let root = Rc::new(RefCell::new(Node::new(Dir {
+    name: "/".to_string(),
+})));
+
+let mut current_dir = Rc::clone(&root);
+
+let lines = input.lines().skip(1).map(parse_line);
+
+for line in lines {
+    match line {
+        // For a file, we create a new file struct and add it to the current directory's
+        // children.
+        Line::FileWithSize(filename, size) => {
+            let child_node = Rc::new(RefCell::new(Node {
+                value: NodeValue::File(File {
+                    name: filename.to_string(),
+                    size,
+                }),
+                children: HashMap::new(),
+                parent: None,
+            }));
+
+            current_dir
+                .borrow_mut()
+                .append_node(filename, Rc::clone(&child_node));
+
+            child_node.borrow_mut().parent = Some(Rc::clone(&current_dir));
+        }
+
+        // For a directory, we create a new directory struct, set its parent
+        // the current directory, and add it to the current directory's
+        // children.
+        Line::Dir(dir_name) => {
+            let child_node = Rc::new(RefCell::new(Node::new(Dir {
+                name: dir_name.to_string(),
+            })));
+
+            current_dir
+                .borrow_mut()
+                .append_node(dir_name, Rc::clone(&child_node));
+
+            let mut mut_child = child_node.borrow_mut();
+            mut_child.parent = Some(Rc::clone(&current_dir));
+        }
+
+        // "ls" is kind of not very useful, so we just ignore it.
+        Line::Command(Command::Ls) => continue,
+
+        // For "cd", we find the directory in the current directory's children
+        // and make it the current directory. If the directory is "/", we go
+        // back to the root. If the directory is "..", we go to the parent
+        // of the current directory.
+        Line::Command(Command::Cd(dir_name)) => match dir_name.as_str() {
+            "/" => {
+                current_dir = Rc::clone(&root);
+            }
+            ".." => {
+                let current_dir_clone = Rc::clone(&current_dir);
+                current_dir = Rc::clone(current_dir_clone.borrow().parent.as_ref().unwrap());
+            }
+            _ => {
+                let child_clone = Rc::clone(&current_dir.borrow().children[&dir_name]);
+                current_dir = child_clone;
+            }
+        },
+    }
+}
+```
+
+A lot of `.borrow()`, `.borrow_mut()`, `Rc::clone()`, and what have you. I'm sure this is not peak Rust, but I'm pretty proud that this worked!
+
+To solve part one of the puzzle, I then ended up writing a small function to calculate the size of all directories whose total size is at most `100_000`.
+
+<details>
+ {{ summary_tag(text="`fn calc_size(node: &Node) -> u64`") }}
+
+```rust
+fn calc_size(node: &Node) -> u64 {
+    let mut total = 0;
+    let size = node.size();
+
+    if size <= 100000 {
+        total += size;
+    }
+
+    for child in node.children.values() {
+        match child.borrow().value {
+            NodeValue::File(_) => continue,
+            NodeValue::Dir(_) => {
+                total += calc_size(&child.borrow());
+            }
+        }
+    }
+
+    return total;
+}
+```
+</details>
+
+### Second Part
+
+The second part had virtually no complexity once I had the first part down. I just:
+
+  1. Walked the tree again.
+  1. Calculated the size of each node.
+  1. If the size of a node was enough to "free up enough space", I stored it as the minimum size.
+
+I got this one right on the first try, and it took about 2% of the time it took to do the first part! Crossing my fingers that tomorrow's puzzle will have more mercy on me.
+
 ## Day 6
 
 A screencast you said? Let's try that! I'm tired of typing!
