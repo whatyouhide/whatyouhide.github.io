@@ -1,28 +1,35 @@
-{# This first one is a special feed for Community's federated blog. #}
-{% if taxonomy is defined and taxonomy.name == "tags" and term.name == "community" %}
 <?xml version="1.0" encoding="utf-8"?>
+{# The line above needs to be the first line, otherwise the feed will be invalid #}
+{# Spec: https://validator.w3.org/feed/docs/atom.html #}
+{% set is_community = taxonomy is defined and taxonomy.name == "tags" and term.name == "community" %}
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
-  <title type="text">{{ config.title }} - Community</title>
-  <generator uri="https://www.getzola.org">Zola</generator>
-  <link rel="self" type="application/rss+xml" href="{{ feed_url }}" />
-  <link rel="alternate" type="text/html" href="{{ config.base_url }}" />
-  <updated>{{ now() | date(format="%+") }}</updated>{# Needs to be ISO8601, https://docs.rs/chrono/0.4.23/chrono/format/strftime/index.html #}
   <id>{{ config.base_url }}</id>
-
+  <title type="text">{{ config.title }}{% if is_community %} - Community{% endif %}</title>
+  <updated>{{ now() | date(format="%+") }}</updated>{# Needs to be ISO8601, https://docs.rs/chrono/0.4.23/chrono/format/strftime/index.html #}
+  <subtitle>{{ config.description }}</subtitle>
+  <link rel="self" type="application/rss+xml" href="{{ feed_url | safe }}" />
+  <link rel="alternate" type="text/html" href="{{ config.base_url | safe }}" />
   <author>
     <name>{{ config.extra.full_name }}</name>
     <uri>{{ config.base_url }}</uri>
     <email>{{ config.extra.email }}</email>
   </author>
+  <category term="technology"/>
+  <generator uri="https://www.getzola.org">Zola</generator>
+  <icon>{{ get_url(path="favicons/icon-512.png") }}</icon>
+  <rights>©️ 2015 Andrea Leopardi</rights>
 
   {% for post in pages %}
     <entry>
-      <title type="html"><![CDATA[{{ post.title | escape_xml }}]]></title>
-      <link rel="alternate" type="text/html" href="{{ post.permalink }}" />
       <id>{{ post.permalink }}</id>
-      <summary>
+      <title type="html">{{ post.title }}</title>
+      <link rel="alternate"
+            type="text/html"
+            href="{{ post.permalink | safe }}"
+            title="{{ post.title }}" />
+      <summary type="html">
         {% if post.summary %}
-          {{ post.summary | striptags | escape_xml | safe }}
+          {{ post.summary | trim | escape_xml }}
         {% else %}
           {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
         {% endif %}
@@ -37,40 +44,13 @@
         <email>{{ config.extra.email }}</email>
       </author>
 
-      <content type="html">{{ post.content | escape_xml | safe }}
-      &lt;p&gt;&lt;a href=&quot;{{ post.permalink }}&quot;&gt;{{ post.title }}&lt;/a&gt; was originally published by {{ config.extra.full_name }} at &lt;a href=&quot;{{ config.base_url }}&quot;&gt;{{ config.title }}&lt;/a&gt; on {{ post.date | date(format="%B %d, %Y") }}.&lt;/p&gt;</content>
+      <content type="html">
+        {{ post.content | trim | escape_xml | safe }}
+
+        {% if is_community %}
+        &lt;p&gt;&lt;a href=&quot;{{ post.permalink }}&quot;&gt;{{ post.title }}&lt;/a&gt; was originally published by {{ config.extra.full_name }} at &lt;a href=&quot;{{ config.base_url }}&quot;&gt;{{ config.title }}&lt;/a&gt; on {{ post.date | date(format="%B %d, %Y") }}.&lt;/p&gt;
+        {% endif %}
+      </content>
     </entry>
   {% endfor %}
 </feed>
-{% else %}
-{# Normal RSS feed of all posts in my blog. #}
-{# Spec is here: https://cyber.harvard.edu/rss/rss.html #}
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="https://www.w3.org/2005/Atom">
-  <channel>
-    <title>{{ config.title }}</title>
-    <description>{{ config.description }}</description>
-    <link>{{ config.base_url }}</link>
-    <atom:link href="{{ feed_url }}" rel="self" type="application/rss+xml" />
-    <language>en-us</language>
-    <lastBuildDate>{{ now() | date(format="%a, %d %b %Y %H:%M:%S %z") }}</lastBuildDate>
-
-    {% for post in pages %}
-      <item>
-        <title>{{ post.title | escape_xml }}</title>
-        <description>
-          {% if post.summary %}
-            {{ post.summary | striptags | escape_xml | safe }}
-          {% else %}
-            {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
-          {% endif %}
-        </description>
-        <pubDate>{{ post.date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
-        <link>{{ post.permalink }}</link>
-        <guid isPermaLink="true">{{ post.permalink }}</guid>
-        <author>{{ config.extra.email }}</author>
-      </item>
-    {% endfor %}
-  </channel>
-</rss>
-{% endif %}
