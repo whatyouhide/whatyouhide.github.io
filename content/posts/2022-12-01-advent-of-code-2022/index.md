@@ -22,6 +22,12 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 8
+
+Today's puzzle was pretty fun, and not that hard. I opted for a screencast again.
+
+{{ youtube(id="0yI_vlx5evM", class="embedded-youtube-player") }}
+
 ## Day 7
 
 Holy. Shit. I do not know Rust. I started recording a screencast for today's puzzle, but I stopped in anger one hour and twenty minutes in. It took me around four hours to get this right. As it turns out, recursive data structures are easy in functional programming languages like Elixir, but a whole other level of nightmares in something like Rust. That's due to the ownership and all that jazz. I struggled a lot with the **tree** data structure that is kind of needed to solve the puzzle: how to reference parent and children nodes was just not working for me.
