@@ -105,7 +105,7 @@
 
       a {
         display: block;
-        color: $textColor;
+        color: inherit;
         font-family: $handwrittenFont;
         text-align: right;
         text-decoration: underline;
@@ -122,6 +122,10 @@
         transform: scale(1, 0.8);
         height: 100%;
         object-fit: contain;
+
+        @include darkMode {
+          filter: invert(1);
+        }
       }
     }
   }
@@ -164,15 +168,19 @@
     display: block;
     font-family: $handwrittenFont;
     text-transform: uppercase;
-    color: $textColor;
+    color: inherit;
   }
 
-  .big-icon {
+  img.big-icon {
     object-fit: contain;
     display: block;
     height: 100%;
     width: 100%;
     max-height: $iconHeight;
+
+    @include darkMode {
+      filter: invert(1);
+    }
   }
 }
 
