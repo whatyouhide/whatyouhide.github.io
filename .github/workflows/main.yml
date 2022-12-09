@@ -34,7 +34,6 @@ jobs:
         env:
           BUILD_ONLY: true
           BUILD_FLAGS: --drafts
-          CHECK_LINKS: true
 
       - name: List files
         run: |
