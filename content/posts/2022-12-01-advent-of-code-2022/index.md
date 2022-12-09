@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-08
+updated: 2022-12-09
 extra:
   cover_image: cover-image.png
 ---
@@ -18,9 +18,137 @@ I don't really know Rust, but it's a fascinating language for me. I mostly write
 
 The thing is this: it's hard to search specific stuff on the web when learning a new programming language, especially *at the beginning*. I'm clueless, so I go about it by searching for stuff like "how to read a file and split it into lines in Rust?". It takes a lot of Stack Overflow questions, small snippets of code lying around in blog posts, and documentation. However, 2022 is the **year of AI**, isn't it? I have not been too deep into the AI scene. I've used [DALL·E 2][dall-e-2] a bit, but not much else. Never tried writing software with the help of [GitHub Copilot][copilot], for example. And at the time of writing this, a lot of what I read on the Internet is about the recent release of [ChatGPT][chatgpt]. There's no time like the present, right? I figured these tools might be a nice help when learning a new language.
 
-Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top.
+Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top. All complete solutions are [on GitHub][repo].
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
+
+## Day 9
+
+I didn't have time for a screencast today, so we'll walk through the solution here.
+
+I started out with a few data structures. The first thing was trying out `type` aliases in Rust:
+
+```rust
+// Grid looks like this:
+// (2, 0) (2, 1) (2, 2) (2, 3)
+// (1, 0) (1, 1) (1, 2) (1, 3)
+// (0, 0) (0, 1) (0, 2) (0, 3)
+
+type Position = (i32, i32);
+```
+
+A position can be negative, too, that's why the indexes are `i32`s. Next, we have "moves":
+
+```rust
+#[derive(PartialEq, Debug)]
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+struct Move {
+    direction: Direction,
+    distance: usize,
+}
+
+impl Move {
+    pub fn from_line(line: &str) -> Move {
+        let (direction, distance) = line.split_at(1);
+        let distance = distance.trim().parse::<usize>().unwrap();
+
+        let direction = match direction {
+            "U" => Direction::Up,
+            "D" => Direction::Down,
+            "L" => Direction::Left,
+            "R" => Direction::Right,
+            _ => panic!("Unknown direction: {}", direction),
+        };
+
+        Move {
+            direction,
+            distance,
+        }
+    }
+}
+```
+
+Pretty straightforward to model this with types.
+
+Alright, the central data structure of this puzzle is a **rope**. For the first part of the puzzle, I started with a simple struct with `head` and `tail` fields.
+
+```rust
+#[derive(Debug)]
+struct Rope {
+    head: Position,
+    tail: Position,
+}
+```
+
+To count the visited positions, instead, I opted for a `HashSet`. The initialization looks like this:
+
+```rust
+let input = include_str!("../inputs/day9.txt");
+let mut visited_positions: HashSet<Position> = HashSet::new();
+let mut rope = Rope { head: (0, 0), tail: (0, 0) };
+```
+
+Then, the gist of the problem is going through all moves in the input, update the rope, and then print out the number of elements in `visited_positions` at the end.
+
+```rust
+for move_ in input.lines().map(Move::from_line) {
+    for _ in 0..move_.distance {
+        rope.move_head(&move_);
+        rope.update_tail(&mut visited_positions);
+    }
+}
+
+println!("Visited {} positions", visited_positions.len());
+```
+
+I won't bother you with the details of `.move_head()` and `.update_tail()` here, but it's a bunch of index math (that you can find [in GitHub](https://github.com/whatyouhide/advent_of_code_2022/commit/73b51c0a439ca092291a37a60b2337c163cd1b6e)).
+
+### Second Part
+
+The second part was really about generalizing the rope to have a bigger number of knots. Instead of having just `head` and `tail`, I went for a fixed-length slice:
+
+```rust
+#[derive(Debug)]
+struct Rope {
+    knots: [Position; 10],
+}
+```
+
+Then, it was a matter of renaming `update_tail` to `update_other_knots`. The math is the same, but generalized to go through all knots and make each one "follow" the next, with the exact same logic as before.
+
+One note I had fun with: I got stuck initially with some small bugs here and there, and the best thing I did was writing some code to *print* the grid. Visually debugging the puzzle against the example one on the website helped a lot. To do that, I implemented the `std::fmt::Display` trait for my `Rope` struct.
+
+```rust
+impl fmt::Display for Rope {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for row in (-20..20).rev() {
+            for column in -20..20 {
+                let mut found = false;
+                for index in 0..self.knots.len() {
+                    if self.knots[index] == (row, column) {
+                        write!(f, "{}", index)?;
+                        found = true;
+                    }
+                }
+
+                if !found {
+                    write!(f, ".")?
+                };
+            }
+
+            write!(f, "\n")?;
+        }
+
+        Ok(())
+    }
+}
+```
 
 ## Day 8
 
@@ -842,3 +970,4 @@ Surely I'm missing something, but I'm also weirded out by having to turn `chunk_
 [chatgpt]: https://openai.com/blog/chatgpt/
 [Cargo]: https://doc.rust-lang.org/book/ch01-03-hello-cargo.html
 [rust-docs-hashset]: https://doc.rust-lang.org/1.65.0/std/collections/hash_set/struct.HashSet.html
+[repo]: https://github.com/whatyouhide/advent_of_code_2022
