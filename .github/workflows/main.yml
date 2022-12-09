@@ -7,8 +7,8 @@ on:
       - main
 
 jobs:
-  lint-markdown:
-    name: Lint Markdown
+  test:
+    name: Run tests
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: true
@@ -17,17 +17,28 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
-      - name: Run markdownlint
+      - name: Lint Markdown files (with markdownlint)
         run: |
           docker run -v $PWD:/md peterdavehello/markdownlint markdownlint _posts
 
-      - name: Check validity of links
+      - name: Check validity of links in Markdown files
         uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           base-branch: main
           check-modified-files-only: "yes"
           use-verbose-mode: "yes"
           config-file: link_check_config.json
+
+      - name: Ensure the website builds
+        uses: shalzz/zola-deploy-action@v0.16.1
+        env:
+          BUILD_ONLY: true
+          BUILD_FLAGS: --drafts
+          CHECK_LINKS: true
+
+      - name: List files
+        run: |
+          ls -la public
 
   # Following https://www.getzola.org/documentation/deployment/github-pages/
   build:
