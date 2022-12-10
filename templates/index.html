@@ -15,9 +15,14 @@
           <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
         </aside>
 
-        <img id="hero-portrait"
-            src="{{ get_url(path="assets/media/hero-portrait.png") }}"
-            alt="Portrait of Andrea" />
+        <picture>
+          <source srcset="{{ get_url(path="assets/media/hero-portrait-dark.png") }}"
+                  media="(prefers-color-scheme: dark)">
+
+          <img id="hero-portrait"
+               src="{{ get_url(path="assets/media/hero-portrait.png") }}"
+               alt="Portrait of Andrea" />
+        </picture>
       </div>
 
       <div id="hero-text">
