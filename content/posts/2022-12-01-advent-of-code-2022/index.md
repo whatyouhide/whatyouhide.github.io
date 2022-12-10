@@ -22,6 +22,12 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 10
+
+You know the drill: it's a screencast.
+
+{{ youtube(id="lDBKLYZMe9o", class="embedded-youtube-player") }}
+
 ## Day 9
 
 I didn't have time for a screencast today, so we'll walk through the solution here.
