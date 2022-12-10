@@ -909,7 +909,7 @@ Calculating the total is a matter of parsing the round end, feeding it into this
 
 This is set-up day. I'm not completely clueless about Rust, so I have [Cargo] installed and I'm capable of creating a project. I created a new `aoc22` crate. I shove puzzle inputs in there with something like:
 
-```shell
+```bash
 mkdir inputs
 pbpaste > inputs/day1.txt
 ```
