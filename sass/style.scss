@@ -255,7 +255,13 @@ article.post .embedded-youtube-player {
   }
 }
 
+code {
+  font-family: "Bitstream Vera Sans Mono", "Courier", monospace;
+}
+
 @import "components/header";
 @import "components/footer";
 @import "components/landing_page";
-@import "highlights";
+
+@import url("syntax-theme-dark.css") (prefers-color-scheme: dark);
+@import url("syntax-theme-light.css") (prefers-color-scheme: light);
