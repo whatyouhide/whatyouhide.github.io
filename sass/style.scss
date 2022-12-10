@@ -12,6 +12,11 @@ body {
   font: 18px/1.4 $helvetica;
   color: $textColor;
   height: 100%;
+
+  @include darkMode {
+    background: map-get($darkModeColors, "site-background");
+    color: map-get($darkModeColors, "text-color");
+  }
 }
 
 h1,
@@ -21,7 +26,6 @@ h4,
 h5,
 h6 {
   font-family: $helveticaNeue;
-  color: $textColor;
   font-weight: bold;
 
   line-height: 1.7;
@@ -47,7 +51,11 @@ h3 {
 
 h4 {
   font-size: 18px;
-  color: $gray;
+  color: lighten($textColor, 30%);
+
+  @include darkMode {
+    color: darken(map-get($darkModeColors, "text-color"), 30%);
+  }
 }
 
 p {
@@ -138,6 +146,11 @@ b {
   padding-right: 4px;
   padding-bottom: 1px;
   border-radius: 2px;
+
+  @include darkMode {
+    background-color: map-get($darkModeColors, "inline-code-background");
+    border: 1px solid transparentize($lightGray, 0.9);
+  }
 }
 
 // Main content for posts.
@@ -193,12 +206,20 @@ main.about {
   }
 
   blockquote {
+    $borderWidth: 2px;
+
     margin: 1.8em 0.8em;
-    border-left: 2px solid $gray;
+    border-left: $borderWidth solid darken($textColor, 20%);
     padding: 0.1em 1em;
-    color: $gray;
+    color: darken($textColor, 20%);
     font-size: 120%;
     font-style: italic;
+
+    @include darkMode {
+      border-left: $borderWidth solid
+        darken(map-get($darkModeColors, "text-color"), 20%);
+      color: darken(map-get($darkModeColors, "text-color"), 20%);
+    }
   }
 }
 
@@ -213,6 +234,14 @@ article.post details {
   border: 1px solid lighten($color: $textColor, $amount: 70);
   border-radius: 7px;
   padding: 0.5em 1em;
+
+  @include darkMode {
+    background-color: darken(
+      $color: map-get($darkModeColors, "site-background"),
+      $amount: 1
+    );
+    border: 1px solid transparentize($color: $lightGray, $amount: 0.9);
+  }
 
   :not(pre) > code {
     background-color: transparent;
