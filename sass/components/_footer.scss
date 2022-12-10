@@ -28,13 +28,10 @@ footer {
     transform: translateY(-50%);
   }
 
-  #icon-github {
+  #icon-github,
+  #icon-rss {
     @include darkMode {
       filter: invert(1);
     }
   }
-}
-
-#icon-rss {
-  width: $footerIconWidth - 10px;
 }
