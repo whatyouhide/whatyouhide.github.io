@@ -169,6 +169,10 @@
     font-family: $handwrittenFont;
     text-transform: uppercase;
     color: $textColor;
+
+    @include darkMode {
+      color: map-get($darkModeColors, "text-color");
+    }
   }
 
   img.big-icon {
