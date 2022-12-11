@@ -1,28 +1,53 @@
 <footer>
     <div class="icons">
         <a href="mailto:{{ config.extra.email }}">
-            <img id="icon-email" class="footer-icon" src="/assets/media/icon-email.png"
-                alt="Hand-drawn icon of a letter envelope" title="Email" />
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
         </a>
 
-        <a href="https://github.com/whatyouhide">
-            <img id="icon-github" class="footer-icon" src="/assets/media/icon-github.png"
-                alt="Hand-drawn icon of the GitHub logo" title="GitHub" />
+        <a href="https://github.com/{{ config.extra.github_username }}">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
         </a>
 
-        <a href="https://www.twitter.com/whatyouhide">
-            <img id="icon-twitter" class="footer-icon" src="/assets/media/icon-twitter.png"
-                alt="Hand-drawn icon of the Twitter logo" title="Twitter" />
+        <a href="https://www.twitter.com/{{ config.extra.twitter_username }}">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
         </a>
 
         <a rel="me" href="https://mas.to/@whatyouhide">
-            <img id="icon-mastodon" class="footer-icon" src="/assets/media/icon-mastodon.png"
-                alt="Hand-drawn icon of the Mastodon logo" title="Mastodon" />
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
         </a>
 
         <a href="/feed.xml">
-            <img id="icon-rss" class="footer-icon" src="/assets/media/icon-rss.png"
-                alt="Hand-drawn icon of the RSS logo" title="RSS feed" />
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
         </a>
     </div>
 </footer>
