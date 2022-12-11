@@ -181,7 +181,9 @@
     height: 100%;
     width: 100%;
     max-height: $iconHeight;
+  }
 
+  img.big-icon:not(#blog *) {
     @include darkMode {
       filter: invert(1);
     }
