@@ -26,6 +26,11 @@ footer {
     position: relative;
     top: 50%;
     transform: translateY(-50%);
+    transition: all 0.1s ease-in-out;
+
+    &:hover {
+      scale: 1.1;
+    }
   }
 
   #icon-github {
