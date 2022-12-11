@@ -22,6 +22,12 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 11
+
+Part one went smoothly. Part two took quite a lot, and I ended up needing some help from [r/adventofcode](https://www.reddit.com/r/adventofcode/). Bums me out a bit, but hey, never stop learning and being humbled!
+
+{{ youtube(id="dTfYoeLri1M", class="embedded-youtube-player") }}
+
 ## Day 10
 
 You know the drill: it's a screencast.
