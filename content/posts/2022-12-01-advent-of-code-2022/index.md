@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-09
+updated: 2022-12-12
 extra:
   cover_image: cover-image.png
 ---
@@ -21,6 +21,129 @@ The thing is this: it's hard to search specific stuff on the web when learning a
 Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top. All complete solutions are [on GitHub][repo].
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
+
+## Day 12
+
+No time for screencasting today, so I'm gonna type it out real quick.
+
+Today's puzzle was about applying [**Dijkstra's shortest-path algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). The algorithm is somewhat straightforward, and the thing that took me some time was figuring out little things here and there to do with distance between vertices and so on.
+
+It took me a while to get to this implementation, and I won't really go through the steps today. I'll just explain what I got to. First off, a couple of data structures, one for nodes in the graph and one fo the graph itself:
+
+```rust
+#[derive(PartialEq, Eq, Debug, Hash, Clone, Copy, PartialOrd, Ord)]
+struct Node(i32, i32);
+
+#[derive(Debug, Clone)]
+struct Graph {
+    nodes: HashMap<Node, char>,
+}
+```
+
+Then, a few methods on `Graph`. They're all standard graph methods, and I could've probably used any graph library for Rust, but I wanted to try this out myself. The body of the methods below is not included here, but you can find it out [on GitHub](https://github.com/whatyouhide/advent_of_code_2022/blob/main/src/day12.rs).
+
+```rust
+impl Graph {
+    // Parses a graph from the input string.
+    pub fn from(input: &str) -> Graph
+
+    // Gets the distance between node1 and node2. It's 1 if the nodes
+    // point to a different character, otherwise it's 0.
+    fn distance_between_nodes(&self, node1: Node, node2: Node) -> u16
+
+    // Find a node in the graph. I only used this for finding the
+    // start node 'S' and target node 'E'.
+    fn find_node(&self, target: char) -> Option<Node>
+
+    // Returns all the neighbors of the given node.
+    fn neighbors(&self, node: Node) -> Vec<Node>
+}
+```
+
+Then, just a couple more helper functions:
+
+```rust
+fn chars_are_connectable(char1: &char, char2: &char) -> bool {
+    (*char2 as i32) <= (*char1 as i32) + 1
+}
+
+fn find_node_with_min_distance(distances: &DistanceMap, set: &HashSet<Node>) -> Node {
+    set.iter()
+        .min_by_key(|node| distances[*node])
+        .unwrap()
+        .clone()
+}
+```
+
+After that, I really just went through the [Wikipedia pseudocode](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm#Pseudocode) and turned it into Rust.
+
+<details>
+ {{ summary_tag(text="`fn dijkstra(graph: &mut Graph, start_node: Node, end_node: Node) -> Option<u32>`") }}
+
+```rust
+fn dijkstra(graph: &mut Graph, start_node: Node, end_node: Node) -> Option<u32> {
+    let mut unvisited_set: HashSet<Node> = HashSet::new();
+    let mut distances: DistanceMap = HashMap::new();
+    let mut prev: HashMap<Node, Option<Node>> = HashMap::new();
+
+    for node in graph.nodes.keys() {
+        unvisited_set.insert(node.clone());
+        distances.insert(node.clone(), Infinity);
+        prev.insert(node.clone(), None);
+    }
+
+    distances.insert(start_node, Finite(0));
+
+    while unvisited_set.len() > 0 {
+        // Pick the position with minimum distance that is in the unvisited set.
+        let u = find_node_with_min_distance(&distances, &unvisited_set);
+
+        if u == end_node {
+            break;
+        }
+
+        unvisited_set.remove(&u);
+
+        for v in graph
+            .neighbors(u)
+            .iter()
+            .filter(|node| unvisited_set.contains(*node))
+        {
+            let alt = match distances[&u] {
+                Infinity => continue,
+                NegativeInfinity => continue,
+                Finite(alt) => alt,
+            } + graph.distance_between_nodes(u, v.clone()) as i32;
+
+            if Finite(alt) < distances[v] {
+                distances.insert(v.clone(), Finite(alt));
+                prev.insert(v.clone(), Some(u));
+            }
+        }
+    }
+
+    let mut s = vec![];
+    let mut u = Some(end_node);
+
+    if let Some(_) = prev[&u.unwrap()] {
+        while let Some(u1) = u {
+            s.insert(0, u1);
+            u = prev[&u1];
+        }
+    } else {
+        return None;
+    }
+
+    Some((s.len() - 1) as u32)
+}
+```
+</details>
+
+The function is more parametrized than needed for part one, but it turned out to be useful for part two (hindsight!). With this code in place, it's a matter of running the `dijkstra` function.
+
+### Second Part
+
+For the second part, it's about "brute forcing", really. We want to calculate the `dijkstra` function above for all starting point `a`s. It was a bit slow to run, but it could've been parallelized easily. Oh well. Not enough time today!
 
 ## Day 11
 
