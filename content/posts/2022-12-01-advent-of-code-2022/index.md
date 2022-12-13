@@ -179,7 +179,7 @@ fn cmp(&self, other: &Self) -> Ordering {
 
 Now it was just a matter of counting the pairs where `left < right`, which we can do thanks to `PartialOrd`.
 
-### Second Part
+### Day 13: Part Two
 
 Today's second part was quite easy to build on top of part one. This is especially true in Rust, where `PartialOrd` allowed me to build a `Vec<LinkedList>` and then just call `sort` on it. All the new code I needed to solve part two is what's below.
 
@@ -212,7 +212,7 @@ println!(
 
 No time for screencasting today, so I'm gonna type it out real quick.
 
-Today's puzzle was about applying [**Dijkstra's shortest-path algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). The algorithm is somewhat straightforward, and the thing that took me some time was figuring out little things here and there to do with distance between vertices and so on.
+Today's puzzle was about applying [**Dijkstra's shortest-path algorithm**](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). The algorithm is somewhat straightforward, and the thing that took me some time was figuring out little things here and there to do with distance between vertices and so on.
 
 It took me a while to get to this implementation, and I won't really go through the steps today. I'll just explain what I got to. First off, a couple of data structures, one for nodes in the graph and one fo the graph itself:
 
@@ -327,7 +327,7 @@ fn dijkstra(graph: &mut Graph, start_node: Node, end_node: Node) -> Option<u32> 
 
 The function is more parametrized than needed for part one, but it turned out to be useful for part two (hindsight!). With this code in place, it's a matter of running the `dijkstra` function.
 
-### Second Part
+### Day 12: Part Two
 
 For the second part, it's about "brute forcing", really. We want to calculate the `dijkstra` function above for all starting point `a`s. It was a bit slow to run, but it could've been parallelized easily. Oh well. Not enough time today!
 
@@ -430,7 +430,7 @@ println!("Visited {} positions", visited_positions.len());
 
 I won't bother you with the details of `.move_head()` and `.update_tail()` here, but it's a bunch of index math (that you can find [in GitHub](https://github.com/whatyouhide/advent_of_code_2022/commit/73b51c0a439ca092291a37a60b2337c163cd1b6e)).
 
-### Second Part
+### Day 9: Part Two
 
 The second part was really about generalizing the rope to have a bigger number of knots. Instead of having just `head` and `tail`, I went for a fixed-length slice:
 
@@ -707,7 +707,7 @@ fn calc_size(node: &Node) -> u64 {
 ```
 </details>
 
-### Second Part
+### Day 7: Part Two
 
 The second part had virtually no complexity once I had the first part down. I just:
 
@@ -875,7 +875,7 @@ fn move_crates(world: &mut Vec<Stack>, move_: Move) {
 
 The most interesting thing about the code above? I tried to `let` both `start_stack` and `end_stack` after each other, but the compiler yelled at me after I successively tried to modify `start_stack`. This was pretty cool, and it makes sense: I can have *one* mutable reference to a piece of `world` at a time. If I get one by doing `&mut world[...]`, then I need to use it first, and only then I can get more references. Neat, and I'm quite happy that I have some idea of what's going on.
 
-### Second Part
+### Day 5: Part Two
 
 The second part didn't take too long. It's essentially about swapping the `pop()` + `push()` calls with a `pop_many`-sort-of-thing that keeps the order of the popped crates. I let Copilot guide me in writing this:
 
@@ -964,7 +964,7 @@ for line in input.lines() {
 
 Here, I changed `is_contained()` to take `&Range<u32>` values instead of `Range<u32>`. I'm not sure if it was the right thing to do, but the checker was complaining about moving values. It makes sense that here I only want to pass references to the same piece of data around, and I'm not modifying anything, so let's go for this.
 
-### Second Part
+### Day 4: Part Two
 
 Okay, easy peasy. The change is that the puzzle is now about finding **overlapping** ranges, not just **included** ranges.
 
@@ -1053,7 +1053,7 @@ fn priority(c: char) -> i32 {
 }
 ```
 
-### Second Part
+### Day 3: Part Two
 
 Okay, the second part boils down to:
 
@@ -1187,7 +1187,7 @@ fn calculate_score(opponent_choice: Choice, my_choice: Choice) -> i32 {
 }
 ```
 
-### Second Part
+### Day 2: Part Two
 
 The second part here is about turning the second letter in each line into a "round end", that is, a win, loss, or draw. That sounds like an enum to me.
 
@@ -1261,7 +1261,7 @@ I have not used Copilot or ChatGPT yet at this point. This was fairly straightfo
 
   * My solution is pretty functional. I would have written something *very* similar in Elixir.
 
-### Second Part
+### Day 1: Part Two
 
 The second part of the puzzle boils down to finding the sum of the three highest chunks. It takes little changes to get there: I only need to sort `chunk_sums`, get the first three elements, and sum those.
 
