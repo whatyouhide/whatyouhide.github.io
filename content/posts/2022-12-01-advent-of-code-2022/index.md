@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-12
+updated: 2022-12-13
 extra:
   cover_image: cover-image.png
 ---
@@ -21,6 +21,192 @@ The thing is this: it's hard to search specific stuff on the web when learning a
 Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top. All complete solutions are [on GitHub][repo].
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
+
+## Day 13
+
+Today's problem involved a well-known data structure for us functional programmers: linked lists. Thanks to day 7, I now know a bit more about Rust's smart pointers, so I was able to use `Box`es here. I started with the main data structure. A linked list is made of a **cons cell** that holds a value, plus a link to the next cons cell. In this case, since we can have nested lists, a cons cell can be:
+
+  * an integer (I went with `u16`)
+  * a linked list (think of the first nested list in `[[1], 2, 3]`)
+  * the *empty* cell, which signals the end of the linked list
+
+There are several ways to model this. You can use `Option` to model the empty cell as `None`, for example. I went with an approach I liked.
+
+```rust
+// The value contained in a cons cell.
+#[derive(Debug, PartialEq, Eq, Clone)]
+enum Value {
+    Int(u16),
+    List(Box<LinkedList>),
+}
+
+// This is essentially a cons cell itself.
+#[derive(Debug, PartialEq, Eq, Clone)]
+enum LinkedList {
+    Empty,
+    Cons(Value, Box<LinkedList>),
+}
+```
+
+After this, the problem was really about two things:
+
+  1. Parsing a line of input into a linked list.
+  1. Making linked lists **orderable** in order to compare them.
+
+To parse lines into `LinkedList` structs, I went with a simple function in the `LinkedList` implementation:
+
+```rust
+impl LinkedList {
+    pub fn from_string(string: &str) -> LinkedList {
+        let mut chars = string.chars().skip(1);
+        Self::from_chars(&mut chars)
+    }
+
+    fn from_chars(chars: &mut impl Iterator<Item = char>) -> LinkedList {
+        loop {
+            match chars.next().unwrap() {
+                '[' => {
+                    return LinkedList::Cons(
+                        Value::List(Box::new(Self::from_chars(chars))),
+                        Box::new(Self::from_chars(chars)),
+                    );
+                }
+                ']' => {
+                    if char_digits.is_empty() {
+                        return LinkedList::Empty;
+                    } else {
+                        let int = char_digits.parse::<u16>().unwrap();
+                        return LinkedList::Cons(Value::Int(int), Box::new(LinkedList::Empty));
+                    }
+                }
+                ',' => {
+                    if !char_digits.is_empty() {
+                        let int = char_digits.parse::<u16>().unwrap();
+                        return LinkedList::Cons(
+                            Value::Int(int),
+                            Box::new(Self::from_chars(chars)),
+                        );
+                    } else {
+                        continue;
+                    }
+                }
+                char => {
+                    char_digits.push(char);
+                }
+            }
+        }
+    }
+}
+```
+
+Then, I took the chance to learn a bit more about Rust's trait, and in particular [`std::cmp::Ord`](https://doc.rust-lang.org/1.65.0/std/cmp/trait.Ord.html). Pretty straightforward stuff: you implement a `cmp` function that returns a `Ordering` enum (equal, less than, greater than).
+
+```rust
+impl Ord for LinkedList {
+    fn cmp(&self, other: &Self) -> Ordering { /* ... */ }
+}
+
+// This required me to implement PartialOrd as well, which I did
+// by just proxying to Ord. That's exactly what the docs for Ord
+// show, after all.
+impl PartialOrd for LinkedList {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+```
+
+The implementation of `cmp` is tedious to look at, so I'm including it in the collapsed code block below. It essentially implements the rules described by the puzzle description.
+
+<details>
+
+{{ summary_tag(text="`fn cmp(&self, other: &Self) -> Ordering`") }}
+
+```rust
+fn cmp(&self, other: &Self) -> Ordering {
+    match (self, other) {
+        (LinkedList::Empty, LinkedList::Empty) => Ordering::Equal,
+
+        // If the left list runs out of items first, the inputs are in the right order.
+        (LinkedList::Empty, _) => Ordering::Less,
+
+        // If the right list runs out of items first, the inputs are in the wrong order.
+        (_, LinkedList::Empty) => Ordering::Greater,
+
+        (LinkedList::Cons(value, tail), LinkedList::Cons(other_value, other_tail)) => {
+            // If both values are integers, the lower integer should come first.
+            match (value, other_value) {
+                (Value::Int(int), Value::Int(other_int)) => match int.cmp(other_int) {
+                    Ordering::Equal => tail.cmp(other_tail),
+                    ordering => ordering,
+                },
+
+                // If exactly one value is an integer, convert the integer to a list which
+                // contains that integer as its only value, then retry the comparison.
+                (Value::Int(int), Value::List(list)) => {
+                    let wrapped_int =
+                        LinkedList::Cons(Value::Int(*int), Box::new(LinkedList::Empty));
+
+                    match wrapped_int.cmp(list) {
+                        Ordering::Equal => tail.cmp(other_tail),
+                        ordering => ordering,
+                    }
+                }
+
+                // If exactly one value is an integer, convert the integer to a list which
+                // contains that integer as its only value, then retry the comparison.
+                (Value::List(list), Value::Int(int)) => {
+                    let wrapped_int =
+                        LinkedList::Cons(Value::Int(*int), Box::new(LinkedList::Empty));
+
+                    match list.cmp(&Box::new(wrapped_int)) {
+                        Ordering::Equal => tail.cmp(other_tail),
+                        ordering => ordering,
+                    }
+                }
+
+                (Value::List(list), Value::List(other_list)) => match list.cmp(other_list) {
+                    Ordering::Equal => tail.cmp(other_tail),
+                    ordering => ordering,
+                },
+            }
+        }
+    }
+}
+```
+
+</details>
+
+Now it was just a matter of counting the pairs where `left < right`, which we can do thanks to `PartialOrd`.
+
+### Second Part
+
+Today's second part was quite easy to build on top of part one. This is especially true in Rust, where `PartialOrd` allowed me to build a `Vec<LinkedList>` and then just call `sort` on it. All the new code I needed to solve part two is what's below.
+
+```rust
+let mut packets = input
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .map(LinkedList::from_string)
+    .collect::<Vec<LinkedList>>();
+
+// Push the divider packets.
+let divider_packet1 = LinkedList::from_string("[[2]]");
+let divider_packet2 = LinkedList::from_string("[[6]]");
+packets.push(divider_packet1.clone());
+packets.push(divider_packet2.clone());
+
+// Comes for free with PartialOrd.
+packets.sort();
+
+let position1 = packets.iter().position(|packet| packet == &divider_packet1).unwrap() + 1;
+let position2 = packets.iter().position(|packet| packet == &divider_packet2).unwrap() + 1;
+
+println!(
+    "Position of packet 1 is {position1}, packet 2 is {position2}, key is {}",
+    position1 * position2
+);
+```
 
 ## Day 12
 
