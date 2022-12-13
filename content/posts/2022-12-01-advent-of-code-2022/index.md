@@ -24,7 +24,7 @@ Also, a disclaimer: this is not a polished post. I went with the approach that p
 
 ## Day 13
 
-Today's problem involved a well-known data structure for us functional programmers: linked lists. Thanks to day 7, I now know a bit more about Rust's smart pointers, so I was able to use `Box`es here. I started with the main data structure. A linked list is made of a **cons cell** that holds a value, plus a link to the next cons cell. In this case, since we can have nested lists, a cons cell can be:
+Today's problem could be solved with different data structures. The important property was the ability to arbitrarily nest lists of integers. I used a well-known data structure for us functional programmers: linked lists. Thanks to day 7, I now know a bit more about Rust's smart pointers, so I was able to use `Box`es here. I started with the main data structure. A linked list is made of a **cons cell** that holds a value, plus a link to the next cons cell. In this case, since we can have nested lists, a cons cell can be:
 
   * an integer (I went with `u16`)
   * a linked list (think of the first nested list in `[[1], 2, 3]`)
