@@ -255,6 +255,38 @@ article.post .embedded-youtube-player {
   }
 }
 
+article.post {
+  h2,
+  h3,
+  h4 {
+    a.zola-anchor {
+      color: $textColor;
+
+      &::after {
+        content: "";
+        background-image: url(assets/icons/anchor.svg);
+        background-size: 100% 100%;
+        display: inline-block;
+
+        $side: 0.7em;
+
+        width: $side;
+        height: $side;
+        margin-left: 5px;
+        margin-top: 3px;
+      }
+
+      @include darkMode {
+        color: map-get($darkModeColors, "text-color");
+
+        &::after {
+          filter: invert(1);
+        }
+      }
+    }
+  }
+}
+
 code {
   font-family: "Bitstream Vera Sans Mono", "Courier", monospace;
 }
