@@ -1,20 +1,41 @@
-// Colors
-$blue: #4183c4;
-$gray: #666;
-$lightGray: #eee;
-$siteBackground: #f4f5f0;
-$textColor: #212424;
-
 // Font stacks
 $helvetica: Helvetica, Arial, sans-serif;
 $helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $handwrittenFont: "Mali", sans-serif; // From Google Fonts
 
-$darkModeColors: (
-  "site-background": #2a2e31,
-  "text-color": #fff,
-  "inline-code-background": #2a2e31,
-);
+// Colors
+
+:root {
+  $siteBackground: #f4f5f0;
+  $text: #212424;
+
+  --color-site-background: $siteBackground;
+  --color-site-background-accented: #{darken($siteBackground, 5)};
+  --color-code-background: #eee;
+
+  --color-text: $text;
+  --color-text-dimmer: #{lighten($text, 30%)};
+  --color-links: #4183c4;
+
+  --color-box-borders: #d3d7d7;
+}
+
+@include darkMode {
+  $site-background: #2a2e31;
+  $text: #fff;
+
+  :root {
+    --color-site-background: #{$site-background};
+    --color-site-background-accented: #{darken($site-background, 5)};
+    --color-code-background: transparent;
+
+    --color-text: #{$text};
+    --color-text-dimmer: #{darken($text, 30%)};
+    --color-links: #4f97de;
+
+    --color-box-borders: rgba(238, 238, 238, 0.1);
+  }
+}
 
 // Sizes
 
