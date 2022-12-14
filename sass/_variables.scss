@@ -9,11 +9,11 @@ $handwrittenFont: "Mali", sans-serif; // From Google Fonts
   $siteBackground: #f4f5f0;
   $text: #212424;
 
-  --color-site-background: $siteBackground;
+  --color-site-background: #{$siteBackground};
   --color-site-background-accented: #{darken($siteBackground, 5)};
   --color-code-background: #eee;
 
-  --color-text: $text;
+  --color-text: #{$text};
   --color-text-dimmer: #{lighten($text, 30%)};
   --color-links: #4183c4;
 
