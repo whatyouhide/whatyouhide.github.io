@@ -95,6 +95,10 @@
     flex-direction: column;
     align-items: center;
 
+    // We use this to put images in "position: absolute" around this element.
+    // It doesn't change the position of this container itself.
+    position: relative;
+
     // Need to be careful with this little stupid section. Chrome is a bit kinder to my CSS
     // skills and it worked pretty quickly, but Safari required a bit more fiddling. This
     // works on both, so if changed please test on both.
