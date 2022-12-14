@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-13
+updated: 2022-12-14
 extra:
   cover_image: cover-image.png
 ---
@@ -22,9 +22,115 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 14
+
+It seems to me like picking the right data structures, just like in the real world, is a game changer when it comes to Advent of Code puzzles. Today, I was lucky enough to start out with a data structure that made solving the problem straightforward.
+
+Usually, when the puzzle input is a sort of *grid*, I think many of us tend to reach for arrays of arrays (vectors of vectors in Rust) to represent the grid as a bi-dimensional matrix. Point `(x, y)` can be accessed as `grid[x][y]`. However, I find that sometimes a **map** (or dict, depending on the language) of `(x, y)` to value is a good alternative. That's what I used for today's puzzle. The `HashMap` came in handy especially for the second part, as we'll see later.
+
+For part one, I started out with a `Point` type alias and a function for initializing the "world" (that is, the grid map):
+
+```rust
+use std::collections::HashMap;
+
+type Point = (usize, usize);
+type World = HashMap<Point, char>;
+```
+
+Then, it was time to parse the input. This was the deal: go through each input line, go through each `x1,y1 -> x2,y2` pair, and "draw" lines between each pair. Drawing a line with the `World` data structure meant adding a `(x, y) -> '#'` entry for each point on the line.
+
+The heart of the puzzle is *pouring sand*. So, I wrote a `pour_sand` function that does exactly that:
+
+```rust
+// Returns the point where the sand comes to rest.
+fn pour_sand(world: &mut World, sand_starting_point: Point) -> Point {
+    let mut sand_point = sand_starting_point;
+
+    loop {
+        let down = (sand_point.0, sand_point.1 + 1);
+        let down_left = (sand_point.0 - 1, sand_point.1 + 1);
+        let down_right = (sand_point.0 + 1, sand_point.1 + 1);
+
+        match (
+            world.get(&down),
+            world.get(&down_left),
+            world.get(&down_right),
+        ) {
+            // There is space right below, so we move the sand down and keep going.
+            (Some('.'), _, _) => {
+                world.insert(sand_point, '.');
+                world.insert(down, '+');
+                sand_point = down;
+            }
+
+            // Space below is taken by sand or rock, but down left is free.
+            (Some('#' | 'o'), Some('.'), _) => {
+                world.insert(sand_point, '.');
+                world.insert(down_left, '+');
+                sand_point = down_left;
+            }
+
+            // Spaces below *and* down left are taken by sand or rock, but down right is free.
+            (Some('#' | 'o'), Some('#' | 'o'), Some('.')) => {
+                world.insert(sand_point, '.');
+                world.insert(down_right, '+');
+                sand_point = down_right;
+            }
+
+            // All spaces are taken, so the sand comes to rest at the current point.
+            (Some('#' | 'o'), Some('#' | 'o'), Some('#' | 'o')) => {
+                world.insert(sand_point, 'o');
+                return sand_point;
+            }
+
+            _ => {
+                panic!("Unexpected state at {:?}", sand_point);
+            }
+        }
+    }
+}
+```
+
+Finding the solution was a matter of `loop`ing until we could not put sand to rest anymore.
+
+### Day 14: Part Two
+
+The second part was fairly straightforward with a couple of small changes. The first one was changing the `World` type a bit: now, I wanted a struct with the same map as before, but also the `y` coordinate of the "floor".
+
+```rust
+struct World {
+    points: HashMap<Point, char>,
+    floor_y: usize,
+}
+```
+
+Then, the trick was to replace the `HashMap::get` method in `pour_sand` with a custom `at_point` method in `impl World`. The custom method accounts for the presence of the floor, and looks like this:
+
+```rust
+impl World {
+    fn at_point(&self, point: &Point) -> Option<&char> {
+        match self.points.get(point) {
+            Some(char) => Some(char),
+
+            // Always rocks on the floor
+            None if point.1 == self.floor_y => Some(&'#'),
+
+            // Empty space everywhere above the floor
+            None if point.1 < self.floor_y => Some(&'.'),
+
+            None => None,
+        }
+    }
+}
+```
+
+Now, the solution was about `loop`ing until a sand's resting point was `(500, 0)` (the starting point).
+
+I loved today's puzzle: simple enough to be done in a reasonable amount of time, but still fun to work through.
+
 ## Day 13
 
-Today's problem could be solved with different data structures. The important property was the ability to arbitrarily nest lists of integers. I used a well-known data structure for us functional programmers: linked lists. Thanks to day 7, I now know a bit more about Rust's smart pointers, so I was able to use `Box`es here. I started with the main data structure. A linked list is made of a **cons cell** that holds a value, plus a link to the next cons cell. In this case, since we can have nested lists, a cons cell can be:
+Today's problem could be solved with different data structures. The important property was the ability to arbitrarily nest lists of integers. I used a well-known data structure for us functional programmers: linked lists. Thanks to [day 7](#day-7), I now know a bit more about Rust's smart pointers, so I was able to use `Box`es here. I started with the main data structure. A linked list is made of a **cons cell** that holds a value, plus a link to the next cons cell. In this case, since we can have nested lists, a cons cell can be:
 
   * an integer (I went with `u16`)
   * a linked list (think of the first nested list in `[[1], 2, 3]`)
