@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-14
+updated: 2022-12-15
 extra:
   cover_image: cover-image.png
 ---
@@ -21,6 +21,125 @@ The thing is this: it's hard to search specific stuff on the web when learning a
 Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top. All complete solutions are [on GitHub][repo].
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
+
+## Day 15
+
+Today's puzzle was interesting: in the second part, I had to actually shrink my little brain and figure out an *efficient* way to solve it, instead of brute forcing. But let's start from part one. Data structures first.
+
+```rust
+// Love using tuple-like structs.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+struct Point(i64, i64);
+
+#[derive(Debug)]
+struct Grid {
+    sensors_and_closest_beacons: HashMap<Point, Point>,
+    top_left_corner: Point,
+    bottom_right_corner: Point,
+}
+```
+
+I won't show how I parsed the input into a `Grid`, as parsing the input is becoming quite repetitive. The only interesting function in `Grid` is `Grid::manhattan_distance`. The best thing? GitHub Copilot basically wrote this.
+
+```rust
+fn manhattan_distance(a: &Point, b: &Point) -> i64 {
+    (a.0 - b.0).abs() + (a.1 - b.1).abs()
+}
+```
+
+For part one of the puzzle, I was able to find a solution through sheer brute force.
+
+```rust
+let target_row = 10;
+let mut forbidden_positions = 0;
+
+// Grid::points_in_row returns an iterator of points on the given y.
+for point in grid.points_in_row(target_row) {
+    if grid.is_in_sensor_range(&point) {
+        forbidden_positions += 1;
+    }
+}
+
+println!("On line {target_row} there are {forbidden_positions} forbidden positions");
+```
+
+One thing to note: the more days go by, the more I find it useful to have a way to *represent* data structures on the terminal. In this case, I also implemented a `Grid::draw` method, which helped me match my representation and calculations against the provided examples.
+
+### Day 15: Part Two
+
+Part two was a fun challenge. The problem instructs you to search through the space `(0, 0) -> (4000000, 4000000)`. That's 16 trillion points. Rust is fast, but apparently not *that* fast. So, I had to get clever. The thing is: I'm not clever! I rarely have to think through optimizations like these, because I tend to work in higher-level domains (like the Web™).
+
+The intuition I followed was to build a list of ranges on each row from the list of beacons. Ranges are fairly cheap to build. I'm sure I could've done something more clever, but I went with something like this:
+
+```rust
+let mut ranges_by_row = HashMap::new();
+
+// Prefill each row with an empty vector. There's probably a better way to do
+// this in Rust, but laziness got the best of me.
+for y in self.top_left_corner.1..=self.bottom_right_corner.1 {
+    ranges_by_row.insert(y, Vec::new());
+}
+
+for (sensor, beacon) in &self.sensors_and_closest_beacons {
+    let distance = Self::manhattan_distance(sensor, beacon);
+
+    for current_distance in -distance..=distance {
+        let row = sensor.1 + current_distance;
+        let offset = (current_distance.abs() - distance).abs();
+        let range = (sensor.0 - offset)..=(sensor.0 + offset);
+        ranges_by_row.get_mut(&row).unwrap().push(range);
+    }
+}
+```
+
+This was reasonably fast, in the ballpark of a few seconds tops. Then, for each row, I went through all the ranges and **merged** them. This was fun to write:
+
+```rust
+let mut merged_ranges = HashMap::new();
+
+for (row, mut ranges) in ranges_by_row {
+    ranges.sort_by_key(|range| range.start().clone());
+
+    // Start with the first element
+    let mut mut_ranges = vec![ranges[0].clone()];
+
+    for i in 1..ranges.len() {
+        let next_range = ranges[i].clone();
+
+        // Pop the current range, modify it if necessary, and put it back.
+        let current_range = mut_ranges.pop().unwrap();
+
+        if current_range.end() >= next_range.start() {
+            let start = current_range.start().min(next_range.start());
+            let end = current_range.end().max(next_range.end());
+            mut_ranges.push(*start..=*end);
+        } else {
+            // If the ranges don't overlap, but both back.
+            mut_ranges.push(current_range);
+            mut_ranges.push(next_range);
+        }
+    }
+
+    merged_ranges.insert(row, mut_ranges);
+}
+```
+
+Now the trick: the point we're searching for is on the only row (in the search space) that has **two** instead of one "detected ranges".
+
+```rust
+for y in 0..=4000000 {
+    let ranges = detected_ranges.get(&y).unwrap();
+    let ranges_len = ranges.len();
+
+    if ranges_len > 1 {
+        println!("Found the line with a space! It's line {y}");
+        println!("It has ranges: {:?}", ranges);
+        break;
+    }
+}
+```
+
+This was done in a few seconds, too. There's a good chance that there would be a smarter and more efficient solution, but hey, not my day job. Another day another puzzle!
 
 ## Day 14
 
