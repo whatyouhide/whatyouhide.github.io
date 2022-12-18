@@ -22,6 +22,60 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 18
+
+Today I managed to squeeze in the puzzle. Parsing the input and defining types was straightforward:
+
+```rust
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+struct Cube(i32, i32, i32);
+
+impl Cube {
+    pub fn from_string(string: &str) -> Self { /* ... */ }
+}
+```
+
+Then, I went for an inefficient-but-effective approach. I added a method to `Cube` that counts the exposed sides of the given cube when compared to a given **set** of other cubes. The trick of the function is to build a set of all cubes "adjacent" to the target one, and then check how many of those are in the given set of other cubes. The total of exposed sides is six minus that number.
+
+```rust
+fn exposed_sides(&self, other_cubes: &HashSet<Self>) -> u16 {
+    let adjacent_cubes = HashSet::from([
+        Self(self.0 + 1, self.1, self.2),
+        Self(self.0 - 1, self.1, self.2),
+        Self(self.0, self.1 + 1, self.2),
+        Self(self.0, self.1 - 1, self.2),
+        Self(self.0, self.1, self.2 + 1),
+        Self(self.0, self.1, self.2 - 1),
+    ]);
+
+    6 - (adjacent_cubes.intersection(other_cubes).count() as u16)
+}
+```
+
+Calculating all the exposed sides was then a matter of this:
+
+```rust
+let total_exposed_sides = cubes
+    .iter()
+    .map(|cube| {
+        let set_with_cube = HashSet::from([cube.clone()]);
+        let difference: HashSet<Cube> =
+            HashSet::from_iter(cubes.difference(&set_with_cube).cloned());
+        cube.exposed_sides(&difference) as u32
+    })
+    .sum::<u32>();
+```
+
+This approach works because two cubes that are adjacent on one side are **both** adjacent to each other on that side, which means that we'll only count the uniquely-exposed sides.
+
+## Day 17
+
+Same as yesterday... Had to skip for now!
+
+## Day 16
+
+Had to skip for now due to time constraints, I'll try to come back to this later.
+
 ## Day 15
 
 Today's puzzle was interesting: in the second part, I had to actually shrink my little brain and figure out an *efficient* way to solve it, instead of brute forcing. But let's start from part one. Data structures first.
