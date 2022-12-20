@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-18
+updated: 2022-12-20
 extra:
   cover_image: cover-image.png
 ---
@@ -21,6 +21,73 @@ The thing is this: it's hard to search specific stuff on the web when learning a
 Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top. All complete solutions are [on GitHub][repo].
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
+
+## Day 20
+
+Today's puzzle was surprisingly easy considering that it's day 20 at this point. It's also the sort of puzzle that a language like Rust, with constant-access vectors and mutable data structures.
+
+For part one, I mostly used the puzzle as an excuse to learn more about some traits.
+
+```rust
+struct CircularList(Vec<(i64, usize)>);
+```
+
+I stored each number (`i64`) along its "ID" (the `usize`), which is just its original index in the provided input. There are duplicates in the input numbers, so trying to find each number by its value wouldn't have worked. Now for the traits:
+
+```rust
+// Allows me to do some_iter.collect::<CircularList>().
+impl FromIterator<(i64, usize)> for CircularList {
+    fn from_iter<I: IntoIterator<Item = (i64, usize)>>(iter: I) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+
+// Nice for reproducing the input example with println!("{}", circular_list).
+impl Display for CircularList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.iter().map(|(n, _)| n).join(", "))
+    }
+}
+```
+
+After this, it was a matter of looping through each original number and moving each one to the new position. The only thing that took a second to realize was that the way to calculate the right destination index was to do modulo `length - 1`. This makes sense as we remove the element before finding its new position.
+
+```rust
+impl CircularList {
+    fn move_element(&mut self, element: (i64, usize)) {
+        let len = self.0.len() as i64;
+        let (number, target_id) = element;
+
+        let current_index = self.0.iter().position(|(_, id)| *id == target_id).unwrap();
+
+        let mut new_index = (current_index as i64 + number) % (len - 1);
+        if new_index < 0 {
+            new_index = (len - 1) + new_index;
+        }
+
+        let element = self.0.remove(current_index);
+        self.0.insert(new_index as usize, element);
+    }
+}
+```
+
+After this, I just looped through the original elements, moved each one, and then calculated the 1000th, 2000th, and 3000th element in the list with:
+
+```rust
+fn get_element_from_zero(&self, offset_from_zero: u32) -> i64 {
+    let zero_index = self.0.iter().position(|(n, _)| *n == 0).unwrap();
+    let offset = (offset_from_zero + zero_index as u32) % self.0.len() as u32;
+    self.0[offset as usize].0
+}
+```
+
+### Day 20: Part Two
+
+Part two was such a small iteration over part one today. I only had to multiply each number in the input with the "decryption key" and run through the full iteration 10 times instead of only once.
+
+## Day 19
+
+Coming soon!
 
 ## Day 18
 
