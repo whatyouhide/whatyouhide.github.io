@@ -87,7 +87,77 @@ Part two was such a small iteration over part one today. I only had to multiply 
 
 ## Day 19
 
-Coming soon!
+**Loved** today's puzzle. I got re-acquainted with a bunch of new stuff that I had studied in university many ages ago. Namely:
+
+  * What [linear programming](https://en.wikipedia.org/wiki/Linear_programming) is. I did not actually do anything with this info, but it was great to brush up.
+
+  * [Depth-first search](https://en.wikipedia.org/wiki/Depth-first_search) and [breadth-first search](https://en.wikipedia.org/wiki/Breadth-first_search) for trees.
+
+For part one, I did not have to look anything up. The basic idea was to build a tree of possible successive states, branching at each state by the possible next states. Then, I walked down the tree and calculate the number of geodes at each final state, choosing the maximum for that given tree. I called trees "simulations".
+
+```rust
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+struct State {
+    ore_robots: u16,
+    clay_robots: u16,
+    obsidian_robots: u16,
+    geode_robots: u16,
+    ore: Ore,
+    clay: Clay,
+    obsidian: Obsidian,
+    cracked_geodes: u16,
+}
+```
+
+I liked the approach I went with: I took advantage of the `Option<State>` type to figure out the possible next states. The heart of the puzzle is the following method in the `State` implementation:
+
+```rust
+fn possible_next_states(&self, blueprint: &Blueprint, time_left: u16) -> Vec<State> {
+    // Each of the buil_* functions returns Option<State>, returning None
+    // if that state is impossible at this point, and Some(state) if it's
+    // possible.
+    let possible_next_states_with_new_robots = vec![
+        self.build_ore_robot(blueprint, time_left),
+        self.build_clay_robot(blueprint, time_left),
+        self.build_obsidian_robot(blueprint, time_left),
+        self.build_geode_robot(blueprint),
+        Some(self.clone()) // This state is an "idle" state of just mining
+    ];
+
+    let mut next_states = possible_next_states_with_new_robots
+        .iter()
+        .filter_map(|state| state.clone())
+        .collect::<Vec<Self>>();
+
+    // Update "mined resources".
+    for mut state in &mut next_states {
+        state.ore = Ore(state.ore.0 + self.ore_robots);
+        state.clay = Clay(state.clay.0 + self.clay_robots);
+        state.obsidian = Obsidian(state.obsidian.0 + self.obsidian_robots);
+        state.cracked_geodes = state.cracked_geodes + self.geode_robots;
+    }
+
+    next_states
+}
+```
+
+Then, you have your sort of usual tree walk function that recursively goes down the tree. Initially, this was so painfully slow for the input 24 minutes that I had to figure out some optimizations. After lightly browsing [/r/adventofcode][subreddit], I understood that the main idea here is to try to *prune* as many tree branches as possible. This can be done in several ways. For example, an easy way was:
+
+  1. When building the state, calculate the maximum resource needed for each robot for each type of resource.
+
+  1. Now, when building the next possible states, you can ignore the "idle" state (`Some(self.clone())` above) if you already have the max of each needed resource, since you can only build a single robot at each minute anyway.
+
+Since the tree growth is exponential on the number of possible next states, reducing that number has quite a big effect in general. With these optimizations, part one of the puzzle took a handful of seconds to run.
+
+### Day 19: Part Two
+
+Part two's deal was bumping the minutes from 24 to 32, which is a significant exponential growth in the search space. So, I had to scout for a few more optimizations:
+
+  1. Say the number you mine for resource R reaches the maximum number of R needed for any robot. Also, say you won't be able to mine enough for new robots with the time left. Then, you can stop building robots that produce R. This is harder to write than to implement, but the main idea is to prune useless states where you build robots that you're not going to need.
+
+  1. The biggest optimization, by far, was to keep track of the maximum number of geodes produced in any final state of a simulation. When exploring that simulation, you can then prune whole subtrees where the **optimal** number of geodes produced is lower than that tree. The optimal number is calculated by pretending that you start producing a geode robot each minute from the current state, and you crack as many geodes as possible. This optimization ended up reducing the search space significantly.
+
+With these, it took about ~3 minutes to solve part two. I saw on Reddit that many folks managed to optimize this enough to run in a few hundred milliseconds. That's pretty interesting, and as far as I could tell it was all done through other optimizations, playing with DFS/BFS, and stuff like that. Great (re-)learning experience today.
 
 ## Day 18
 
@@ -137,7 +207,7 @@ This approach works because two cubes that are adjacent on one side are **both**
 
 ## Day 17
 
-Same as yesterday... Had to skip for now!
+Same as yesterday… Had to skip for now!
 
 ## Day 16
 
@@ -679,7 +749,7 @@ For the second part, it's about "brute forcing", really. We want to calculate th
 
 ## Day 11
 
-Part one went smoothly. Part two took quite a lot, and I ended up needing some help from [r/adventofcode](https://www.reddit.com/r/adventofcode/). Bums me out a bit, but hey, never stop learning and being humbled!
+Part one went smoothly. Part two took quite a lot, and I ended up needing some help from [r/adventofcode][subreddit]. Bums me out a bit, but hey, never stop learning and being humbled!
 
 {{ youtube(id="dTfYoeLri1M", class="embedded-youtube-player") }}
 
@@ -1638,3 +1708,4 @@ Surely I'm missing something, but I'm also weirded out by having to turn `chunk_
 [Cargo]: https://doc.rust-lang.org/book/ch01-03-hello-cargo.html
 [rust-docs-hashset]: https://doc.rust-lang.org/1.65.0/std/collections/hash_set/struct.HashSet.html
 [repo]: https://github.com/whatyouhide/advent_of_code_2022
+[subreddit]: https://reddit.com/r/adventofcode
