@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-20
+updated: 2022-12-21
 extra:
   cover_image: cover-image.png
 ---
@@ -21,6 +21,120 @@ The thing is this: it's hard to search specific stuff on the web when learning a
 Anyway, enough prefacing. I'll post each day, and I'll probably break that promise. Most recent day on top. All complete solutions are [on GitHub][repo].
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
+
+## Day 21
+
+Nice puzzle today. For part one, I was able to get away with a quick-enough solution: iterate through the monkeys and "solve" the ones that point to monkeys that already have a number. Without all the parsing code, the core looks something like this:
+
+```rust
+let monkeys = input
+    .lines()
+    .map(|line| line.parse::<Monkey>().unwrap())
+    .collect::<HashMap<String, Monkey>>();
+
+let mut computed_monkeys = HashMap::new();
+
+loop {
+    if monkeys.len() == 0 {
+        break;
+    }
+
+    for monkey in monkeys.clone() {
+        match monkey.clone() {
+            Monkey::YellingMonkey(name, number) => {
+                monkeys.remove(monkey.name());
+                computed_monkeys.insert(name, number);
+            }
+            Monkey::MathMonkey(name, op, monkey1, monkey2) => {
+                match (
+                    computed_monkeys.get(&monkey1),
+                    computed_monkeys.get(&monkey2),
+                ) {
+                    (Some(number1), Some(number2)) => {
+                        monkeys.remove(monkey.name());
+                        let result = op.apply(*number1, *number2);
+                        computed_monkeys.insert(name, result);
+                    }
+                    _ => continue,
+                }
+            }
+        }
+    }
+}
+
+println!("The 'root' monkey yells: {}", computed_monkeys["root"])
+```
+
+Not very pretty, but fast enough to spit out the correct result.
+
+### Day 21: Part Two
+
+Part two was more fun! The same brute-force approach as above crumbled down. I naively tried this: if I know how to calculate the `root` monkey's values, and I can compare them for equality… Let's try all numbers (`0..`) for the `humn` value and see if we find one that works. Failed miserably.
+
+So, time to roll up my sleeves and build an AST of operations. I went with a straightforward structure:
+
+```rust
+enum ASTNode {
+    Human,
+    Number(isize),
+    Operation(Operation, Box<ASTNode>, Box<ASTNode>)
+}
+```
+
+Parsing the AST was easy enough. The fun part was to "solve" the full AST for the `humn` variable. To do that, I went with the simplest one-variable equation solving approach I could think of. The idea was to do something to both sides of the `=` that would simplify the side where the `humn` variable is. This is really early grades math, I know. So, I went with a `simplify_equation(left_ast, right_ast)` function:
+
+```rust
+fn simplify_equation(left: &Self, right: &Self) -> (Self, Self) {
+    match (left, right) {
+        // We solved it!
+        (Self::Human, Self::Number(_)) => (left.clone(), right.clone()),
+
+        // If there's an operation on the left, we simplify it.
+        (Self::Operation(op, x, y), Self::Number(right_number)) => {
+            // The equation is number • y = right_number, so we can simplify it as
+            // y = right_number ¬ number, where ¬ is the opposite of •.
+            match (x.as_ref(), y.as_ref()) {
+                (Self::Number(number), _) => {
+                    // The Sub operation is tricky, because it's technically
+                    // (Add -> Mul(-1)).
+                    let (simplified_left, op) = if *op == Operation::Sub {
+                        (
+                            Box::new(Self::Operation(
+                                Operation::Mul,
+                                Box::new(Self::Number(-1)),
+                                y.clone(),
+                            )),
+                            Operation::Add,
+                        )
+                    } else {
+                        (y.clone(), *op)
+                    };
+
+                    let simplified_right = Self::Number(op.inverse().apply(*right_number, *number));
+
+                    Self::simplify_equation(&simplified_left, &simplified_right)
+                }
+
+                // The equation is x • number = right_number, so we can simplify it as
+                // x = right_number ¬ number, where ¬ is the opposite of •.
+                (_, Self::Number(number)) => {
+                    let simplified_left = x.clone();
+                    let simplified_right = Self::Number(op.inverse().apply(*right_number, *number));
+                    Self::simplify_equation(&simplified_left, &simplified_right)
+                }
+
+                _ => {
+                    panic!("found an operation on the left where neither operand is a number")
+                }
+            }
+        }
+
+        _ => panic!("Should never get here"),
+    }
+}
+```
+
+To make this work, I also added a `simplify(ast)` function that simplifies an AST made entirely of numbers (which can be reduced to a single number). My initial solution did not work, so I turned out to Reddit and someone mentioned the [QuickMath website](https://quickmath.com/webMathematica3/quickmath/equations/solve/basic.jsp). I pretty-printed my original equation, pasted it in there, and it spit out the right number. After a bit of debugging, I figured that the issue in my code was that I was not handling the `-` operation correctly (which I did in the code above). All is well now.
 
 ## Day 20
 
