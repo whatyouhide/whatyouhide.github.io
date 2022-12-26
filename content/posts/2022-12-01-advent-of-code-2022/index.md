@@ -3,7 +3,7 @@ title: Advent of Code 2022
 description: |
   An experiment in solving AoC 2022 with Rust and some AI (GitHub Copilot and
   OpenAI's ChatGPT).
-updated: 2022-12-21
+updated: 2022-12-26
 extra:
   cover_image: cover-image.png
 ---
@@ -325,7 +325,77 @@ Same as yesterday… Had to skip for now!
 
 ## Day 16
 
-Had to skip for now due to time constraints, I'll try to come back to this later.
+~~Had to skip for now due to time constraints, I'll try to come back to this later.~~
+
+I went back to this. I used the help of [/r/adventofcode][subreddit] again. The idea I found to work was:
+
+  1. Build an undirected graph of valves. I used the [`petgraph` crate](https://docs.rs/petgraph/latest/petgraph/index.html) (in particular, the [`petgraph::graphmap::UnGraphMap`](https://docs.rs/petgraph/latest/petgraph/graphmap/type.UnGraphMap.html) type).
+
+  1. Use the [Floyd-Warshall algorithm](https://en.wikipedia.org/wiki/Floyd–Warshall_algorithm) to build a matrix of distance between each node in the graph, assigning the value of `1` to each edge. I typed the distance matrix as:
+
+     ```rust
+     struct DistanceMatrix<'a>(HashMap<(&'a str, &'a str), u32>);
+     ```
+
+     and has one method, `DistanceMatrix::get(u, v)`, that returns the distance between `u` and `v` (or `v` and `u`, since the graph is undirected).
+
+  1. Instead of exploring all solutions by moving one step at a time, I explored solutions by moving directly to the next valve to open, using the distance matrix to calculate how long it would take.
+
+Building the graph was fairly easy. It looks something like this:
+
+```rust
+// Valve is just a struct with a few fields that you can easily guess
+// from this function.
+fn graph_from_valves(valves: &Vec<Valve>) -> ValveGraph {
+    let mut graph: ValveGraph = graphmap::UnGraphMap::new();
+
+    for valve in valves.iter() {
+        graph.add_node(valve.id.as_str());
+    }
+
+    for valve in valves.iter() {
+        for connected_valve in valve.connected_valves.iter() {
+            graph.add_edge(valve.id.as_str(), connected_valve.as_str(), ());
+        }
+    }
+
+    graph
+}
+```
+
+Then, the idea is to run simulations on successive states:
+
+```rust
+fn run_simulation(
+    state: State,
+    distance_matrix: &DistanceMatrix,
+    graph: &ValveGraph,
+    flow_rates: &HashMap<String, u32>,
+    explored_states: &mut u32,
+) -> State {
+    // Just for fun, seeing how many states we need to explore.
+    *explored_states += 1;
+
+    state
+        .next_states(graph, distance_matrix, flow_rates)
+        .into_iter()
+        .map(|s| run_simulation(s, distance_matrix, graph, flow_rates, explored_states))
+        .max_by_key(|s| s.released_pressure)
+        .unwrap_or(state)
+}
+```
+
+With this strategy, I found a solution after exploring less than 100k states, in about 300ms.
+
+### Day 16: Part Two
+
+I didn't really know where to start on part two, and honestly out of laziness I went to Reddit straight away. [This post](https://www.reddit.com/r/adventofcode/comments/znr2eh/2022_day_16_the_elephant_in_the_room/) suggested that I do something like this:
+
+  1. Run the simulation like in part one.
+
+  1. Now, take away all the valves opened by the human, and run the simulation again as the elephant, seeing which valves get opened.
+
+With the data structures I used, the easiest way to do this was to set the flow rate of the vales opened in part one to `0` before running the "elephant simulation". Still under 100k states explored, and still under 300ms to get a solution.
 
 ## Day 15
 
