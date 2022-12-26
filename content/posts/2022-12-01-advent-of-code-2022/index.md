@@ -22,6 +22,44 @@ Anyway, enough prefacing. I'll post each day, and I'll probably break that promi
 
 Also, a disclaimer: this is not a polished post. I went with the approach that publishing something is better than publishing nothing, so I'm going for it. I'd absolutely love to know if this was interesting for you, so reach out on Twitter/Mastodon (links in footer) if you have feedback.
 
+## Day 25
+
+I could only do part one here since I don't have all other puzzles completed yet. The most fun thing about today's puzzle was implementing a bunch of Rust traits for these "SNAFU" numbers to play more with Rust.
+
+I went with:
+
+  * `std::fmt::Display`, which prints a SNAFU as a string (as seen in the puzzle input).
+  * `std::str::FromStr`, which lets me parse a string representation of a SNAFU number.
+  * `TryFrom<i128>`, which lets me convert `i128` numbers to `SNAFU` numbers.
+
+Other than that, this is a base conversion thing. Early in my career, I got obsessed for a little bit with base conversions and even created [a library for Elixir](https://github.com/whatyouhide/convertat) and [a library for Ruby](https://github.com/whatyouhide/bases) to do base conversion. Go figure.
+
+## Day 24
+
+Haven't attempted yet. Time.
+
+## Day 23
+
+Some kind of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) thing for today's puzzle.
+
+Absolutely nothing interesting to write about. I didn't really learn anything new, didn't play with any Rust features, or anything like that. Just plain old working-through-the-problem. Same for part two.
+
+## Day 22
+
+Uh, sort-of-2D work. Not a fan here.
+
+Part one was a matter of getting the wrapping and directions and grid right. I don't even know what to write about here, as the code is pretty boring to look at. The only thing I enjoyed doing was using types a lot to ["make illegal states unrepresentable"](https://fsharpforfunandprofit.com/posts/designing-with-types-making-illegal-states-unrepresentable/). For example, instead of having a board of `char`s (`' '`, `'.'`, or `'#'`), I went with an enum:
+
+```rust
+enum Cell {
+    Empty,
+    Space,
+    Wall
+}
+```
+
+Other than this… Not my jam. I didn't even attempt part two yet because it goes from sort-of-2D to sort-of-3D. I don't want anything to do with that!
+
 ## Day 21
 
 Nice puzzle today. For part one, I was able to get away with a quick-enough solution: iterate through the monkeys and "solve" the ones that point to monkeys that already have a number. Without all the parsing code, the core looks something like this:
