@@ -41,7 +41,6 @@ highlight_themes_css = [
 
 [extra]
 full_name = "Andrea Leopardi"
-google_analytics = "UA-41860599-4"
 disqus_shortname = "blog-andrealeopardi" # Shortname, not username
 email = "hi@andrealeopardi.com"
 twitter_username = "whatyouhide"
