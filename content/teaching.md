@@ -27,5 +27,5 @@ Here's the playlist on YouTube:
 [Elixir]: https://elixir-lang.org
 [livebook]: https://livebook.dev
 [guide-async-processing-repo]: https://github.com/whatyouhide/guide_async_processing_in_elixir
-[advent-of-code-post]: /posts/advent-of-code-2022/
+[advent-of-code-post]: https://andrealeopardi.com/posts/advent-of-code-2022/
 [Protohackers]: https://protohackers.com
