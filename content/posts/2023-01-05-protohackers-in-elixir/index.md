@@ -16,4 +16,4 @@ Here's the playlist on YouTube:
 <iframe width="100%" height="400px" src="https://www.youtube.com/embed/videoseries?list=PLd7I3U4fDsULTLqbRAkWzA002-IzMe8fl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 [Protohackers]: https://protohackers.com
-[advent-of-code-post]: /posts/advent-of-code-2022/
+[advent-of-code-post]: https://andrealeopardi.com/posts/advent-of-code-2022/
