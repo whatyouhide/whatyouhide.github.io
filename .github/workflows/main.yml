@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v3.0.0
 
       - name: Build with Zola and push to GitHub Pages
-        uses: shalzz/zola-deploy-action@v0.17.2
+        uses: shalzz/zola-deploy-action@448f43557d06624a326567089b8965c79ba58306
         env:
           PAGES_BRANCH: gh-pages
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
