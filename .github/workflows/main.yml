@@ -30,7 +30,7 @@ jobs:
           config-file: link_check_config.json
 
       - name: Ensure the website builds
-        uses: shalzz/zola-deploy-action@v0.16.1
+        uses: shalzz/zola-deploy-action@448f43557d06624a326567089b8965c79ba58306
         env:
           BUILD_ONLY: true
           BUILD_FLAGS: --drafts
