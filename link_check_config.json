@@ -1,7 +1,7 @@
 {
     "ignorePatterns": [
         {
-            "pattern": "https://twitter.com/idlehands"
+            "pattern": "https://twitter.com"
         }
     ]
 }
