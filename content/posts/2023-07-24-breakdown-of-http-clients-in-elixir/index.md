@@ -138,6 +138,23 @@ Elixir.
 
 ### Finch
 
+Finch is a client built on top of Mint. It serves an important job in the "pyramid of abstractions" of HTTP clients listed in this post: **pooling**. Finch provides pooling for Mint connections. Using Mint on its own means implementing some sort of strategy to store and pool connections, which is what Finch provides.
+
+Finch is quite smart about its pooling. It uses [nimble_pool] when pooling HTTP/1.1 connections. The nimble_pool library is a tiny resource pool implementation heavily focused on a small resource-usage footprint as well as on performance. Since HTTP/2 works quite differently from HTTP/1.1, especially when it comes to persistent connections and multiplexed requests, nimble_pool uses a completely different pooling strategy when working with HTTP/2 connections.
+
+The API that Finch provides is still quite low-level, with manual request building and such:
+
+```elixir
+{:ok, _} = Finch.start_link(name: MyFinch)
+
+Finch.build(:get, "https://hex.pm") |> Finch.request(MyFinch)
+#=> {:ok, %Finch.Response{...}}
+```
+
+However, but the convenience of pooling and reconnections that Finch provides is fantastic..
+
+Okay, when to use Finch then? Personally, I think Finch is a fantastic library whenever you have performance-sensitive applications where you're ready to sacrifice some of the convenience provided by "higher-level" clients. It's also great when you know you'll have to make a lot of requests to the same host, since you can specify dedicated connection pools per host.
+
 ### Req
 
 ### Tesla
@@ -153,6 +170,7 @@ Elixir.
 [httpc]: https://www.erlang.org/doc/man/httpc.html
 [mint]: https://github.com/elixir-mint/mint
 [mint_web_socket]: https://github.com/elixir-mint/mint_web_socket
+[nimble_pool]: https://github.com/dashbitco/nimble_pool
 [postgrex]: https://github.com/elixir-ecto/postgrex
 [req]: https://github.com/wojtekmach/req
 [tesla]: https://github.com/elixir-tesla/tesla
