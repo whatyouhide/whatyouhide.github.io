@@ -16,13 +16,23 @@ TODO
 
 ## All Your Clients Are Belong to Us
 
-### httpc
+So, let's take a whirlwind tour of some HTTP clients available in Elixir. We'll talk about these:
+
+  * [Mint][mint]
+  * [httpc]
+  * [Finch][finch]
+  * [Tesla][tesla]
+  * [Req][req]
+
+This is not a comprehensive list of all the Elixir HTTP clients, but rather a
+list of clients that I think make sense in different situation. At the end of
+this post, you'll also find a mention of other well-known clients.
 
 ### Mint
 
-Mint is arguably the lowest-level HTTP client we've got in Elixir. It's
-essentially a *wrapper* around a raw TCP or SSL socket. Its job is to make the
-socket **aware of the network protocol**.
+Let's start with Mint. Mint is arguably the lowest-level HTTP client we've got
+in Elixir. It's essentially a *wrapper* around a raw TCP or SSL socket. Its job
+is to make the socket **aware of the network protocol**.
 
 Think about a `:gen_tcp` or a `:ssl` socket. Their job is to allow you to
 connect servers and clients on the TCP and TLS network protocols, respectively.
@@ -124,6 +134,8 @@ That said, I think of Mint as the "standard-library HTTP client", that is, the
 low-level client that you'd expect in the standard library of a language like
 Elixir.
 
+### httpc
+
 ### Finch
 
 ### Req
@@ -134,10 +146,16 @@ Elixir.
 
 ## For Application Developers
 
+## What About the Others?
+
+[finch]: https://github.com/sneako/finch
 [gen_stage]: https://github.com/elixir-lang/gen_stage
+[httpc]: https://www.erlang.org/doc/man/httpc.html
 [mint]: https://github.com/elixir-mint/mint
 [mint_web_socket]: https://github.com/elixir-mint/mint_web_socket
 [postgrex]: https://github.com/elixir-ecto/postgrex
+[req]: https://github.com/wojtekmach/req
+[tesla]: https://github.com/elixir-tesla/tesla
 [gh-whatyouhide]: https://github.com/whatyouhide
 [gh-ericmj]: https://github.com/ericmj
 [forza-football-gen_stage-post]: https://tech.forzafootball.com/blog/maximizing-http2-performance-with-genstage
