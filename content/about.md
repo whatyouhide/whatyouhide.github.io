@@ -6,9 +6,8 @@ Hi. I'm Andrea *(he/him)*.
 
 I'm a person from Italy 🇮🇹, working as a software engineer.
 
-Currently, I work at <a href="https://apple.com"
-target="_blank">Apple</a>  to help towards the plan to make all products
-*carbon neutral* <a href="https://apple.com/2030" target="_blank">by 2030</a>.
+Currently, I'm a principal software engineer at <a href="https://veeps.com"
+target="_blank">Veeps</a>, a fantastic company bringing live music to the internets.
 
 Throughout my whole career, I've been active in **open-source software**. I've
 been a member of the core team of the <a href="https://elixir-lang.org"
