@@ -205,6 +205,42 @@ main.about {
   }
 }
 
+article.post table {
+  width: 100%;
+  margin: 1em 0;
+
+  thead tr {
+    border-bottom: 1px solid var(--color-text-dimmer);
+  }
+
+  th {
+    font-weight: bold;
+  }
+
+  tr {
+    border-bottom: 1px solid var(--color-text-dimmer);
+
+
+
+    th:first-child, td:first-child {
+      white-space: nowrap;
+    }
+  }
+
+  tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  th, td {
+    padding: 0.5em 0.5em;
+    border-right: 1px solid var(--color-text-dimmer);
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+}
+
 article.post time.posted-at {
   display: block;
   font-style: italic;
