@@ -6,7 +6,10 @@ extra:
   cover_image: cover-image.png
 ---
 
-TODO
+Elixir's ecosystem has quite a few **HTTP clients** at this point. But what's
+the *best one*? In this post, I want to break down a bunch of the clients we
+have available. I'll give an overview of the clients I personally like the most,
+and I'll talk about which clients are the best choice in different use cases.
 
 <!-- more -->
 
@@ -43,7 +46,7 @@ sockets carry just binary data.
 Mint introduces an abstraction layer *around* raw sockets, rather than *on top*
 of them. Here's a visual representation:
 
-![Drawing of Mint surrounding a "raw" socket](TODO)
+<img src="./sketch-mint.png" alt="Drawing of Mint surrounding a raw socket" width="70%">
 
 When you use Mint, you have an API that is similar to the one provided by the
 `:gen_tcp` and `:ssl` modules, and you're using a socket underneath. Mint
@@ -60,7 +63,8 @@ connection information inside the connection data structure itself.
 {:ok, conn} = Mint.HTTP.connect(:http, "httpbin.org", 80)
 ```
 
-Then, you'd use `Mint.HTTP.request/5` to send a request.
+Then, you'd use [`Mint.HTTP.request/5`](docs-mint-http-request) to send a
+request.
 
 ```elixir
 {:ok, conn, request_ref} = Mint.HTTP.request(conn, "GET", "/", [], "")
@@ -113,7 +117,7 @@ Mint being processless solves exactly that.
 
 ![Drawing of a GenStage pipeline with a traditional process-based HTTP client on
 the left, and the same pipeline but with Mint as the HTTP client on the
-right](TODO)
+right](./sketch-genstage.png)
 
 A few years ago, I worked at a company where we would've likely used Mint in
 exactly this way. At the time, I wrote [a blog
@@ -143,7 +147,7 @@ implementing some sort of strategy to store and pool connections, which is what
 Finch provides.
 
 Finch is quite smart about its pooling. It uses [nimble_pool] when pooling
-HTTP/1.1 connections. The nimble_pool library is a tiny resource pool
+HTTP/1.1 connections. The nimble_pool library is a tiny resource-pool
 implementation heavily focused on a small resource-usage footprint as well as on
 performance. Since HTTP/2 works quite differently from HTTP/1.1, especially when
 it comes to persistent connections and multiplexed requests, nimble_pool uses a
@@ -346,33 +350,96 @@ libraries using different HTTP clients (and all their transitive dependencies).
 I've tried to write a bit about when to use each client so far, but to recap,
 this is my loose recommendation:
 
-| Client     | When                                                                                                                                                            |
-| :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mint       | You need 100% control on connections and request lifecycle                                                                                                      |
-| Mint       | You already have a process architecture, and don't want to introduce any more processes                                                                         |
-| Mint       | You're a library author and you want to force as few dependencies as possible on your users                                                                     |
-| Finch      | You need a low-level client with high performance, but you want pooling built in                                                                                |
-| Req        | Scripting                                                                                                                                                       |
-| Req, Tesla | You want to build tailored HTTP clients in your application                                                                                                     |
-| Tesla      | You're a library author and you want to support all sorts of underlying HTTP clients                                                                            |
-| httpc      | You're a (hardcore) library author who needs a few HTTP requests in their library, but you don't want to add unnecessary transitive dependencies for your users |
+| Client         | When                                                                                                                                                            |
+| :---------     | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| *Mint*         | You need 100% control on connections and request lifecycle                                                                                                      |
+| *Mint*         | You already have a process architecture, and don't want to introduce any more processes                                                                         |
+| *Mint*         | You're a library author and you want to force as few dependencies as possible on your users                                                                     |
+| *Finch*        | You need a low-level client with high performance, but you want pooling built in                                                                                |
+| *Req*          | Scripting                                                                                                                                                       |
+| *Req*, *Tesla* | You want to build tailored HTTP clients in your application                                                                                                     |
+| *Tesla*        | You're a library author and you want to support all sorts of underlying HTTP clients                                                                            |
+| *httpc*        | You're a (hardcore) library author who needs a few HTTP requests in their library, but you don't want to add unnecessary transitive dependencies for your users |
 
 Some of the HTTP clients I've talked about here form sort of an abstraction
 pyramid.
 
-![A drawing of a pyramid (like the food pyramid thing) but for HTTP clients](TODO)
+![A drawing of a pyramid (like the food pyramid thing) but for HTTP clients](./sketch-pyramid.png)
 
 ## What About the Others?
 
+These are not all the HTTP clients available in Elixir, let alone on the BEAM! I have not mentioned well-known Elixir clients such as [HTTPoison][httpoison], nor Erlang clients such as [hackney]. HTTPoison is an Elixir wrapper on top of hackney:
+
+```elixir
+HTTPoison.get!("https://example.com")
+#=> %HTTPoison.Response{...}
+```
+
+hackney is a widely-used Erlang client which provides a nice and modern API and
+has support for streaming requests, compression, encoding, file uploads, and
+more. If your project is an Erlang project (which is not the focus of this
+post), hackney can be a good choice.
+
+```elixir
+:hackney.request(:get, "https://example.com", [])
+#=> {:ok, 200, [...], "..."}
+```
+
+However, hackney presents some issues in my opinion. The first is that hackney
+had questionable *security defaults*. It uses good defaults, but when changing
+even a single SSL option, then it drops all those defaults. This is prone to
+security flaws, because users don't always fill in secure options. While not
+technically a fault of the library itself, the API makes it easy to mess up:
+
+```elixir
+# Secure defaults:
+:hackney.get("https://wrong.host.badssl.com")
+#=> {:error, {:tls_alert, {:handshake_failure, ...
+
+# When changing any SSL options, no secure defaults anymore:
+ssl_options = [reuse_sessions: true]
+:hackney.get("https://wrong.host.badssl.com", [], "", ssl_options: ssl_options)
+# 11:52:32.033 [warning] Description: ~c"Server authenticity is not verified ...
+#=> {:ok, 200, ...}
+```
+
+In the second example above, where I changed the `reuse_sessions` SSL options,
+you get a warning about the host's authenticity, but the request goes through.
+
+Another thing that I think could be improved in hackney is that it brings in a
+whopping *seven* dependencies. They're all pertinent to what hackney does, but
+it's quite a few in my opinion.
+
+Last but not least, hackney doesn't use the standard [telemetry] library to
+report metrics, which can make it a bit of a hassle to wire in metrics (since
+many Elixir applications, at this point, use telemetry for instrumentation).
+
+There are **other clients** in Erlang and Elixir: [gun], [ibrowse], and
+more. But we gotta draw a line at some point!
+
+## Conclusions
+
+We went through a bunch of stuff here. We talked about the clients I personally
+like and recommend for different use cases. You also got a nice little summary
+table for when to use each of those client. Last but not least, I mentioned some
+other clients as well reasons why I prefer the ones in this post.
+
+That's all. Happy HTTP'ing!
+
 [finch]: https://github.com/sneako/finch
 [gen_stage]: https://github.com/elixir-lang/gen_stage
+[gun]: https://github.com/ninenines/gun
+[hackney]: https://github.com/benoitc/hackney
 [httpc]: https://www.erlang.org/doc/man/httpc.html
+[httpoison]: https://github.com/edgurgel/httpoison
+[ibrowse]: https://github.com/cmullaparthi/ibrowse
 [mint]: https://github.com/elixir-mint/mint
 [mint_web_socket]: https://github.com/elixir-mint/mint_web_socket
 [nimble_pool]: https://github.com/dashbitco/nimble_pool
 [plug]: https://github.com/elixir-plug/plug
 [postgrex]: https://github.com/elixir-ecto/postgrex
 [req]: https://github.com/wojtekmach/req
+[telemetry]: https://github.com/beam-telemetry/telemetry
 [tesla]: https://github.com/elixir-tesla/tesla
 [tesla-adapters]: https://github.com/elixir-tesla/tesla#adapters
 [gh-whatyouhide]: https://github.com/whatyouhide
@@ -381,6 +448,7 @@ pyramid.
 [mint-blog-post]: https://elixir-lang.org/blog/2019/02/25/mint-a-new-http-library-for-elixir/
 [req-request-docs]: https://hexdocs.pm/req/Req.Request.html
 [req-request-docs-plugins]: https://hexdocs.pm/req/Req.Request.html#module-writing-plugins
+[docs-mint-http-request]: https://hexdocs.pm/mint/Mint.HTTP.html#request/5
 [docs-mix-install]: https://hexdocs.pm/mix/Mix.html#install/1
 [docs-ssl]: https://erlang.org/doc/man/ssl.html
 [docs-tesla-middleware]: https://hexdocs.pm/tesla/Tesla.Middleware.html
