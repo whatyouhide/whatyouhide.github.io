@@ -1,7 +1,7 @@
 ---
 title: A Breakdown of HTTP Clients in Elixir
 description: |
-  This is an overview of the HTTP clients we have available in Elixir, as long as when to use each one.
+  This is an overview of the HTTP clients we have available in Elixir, as well as when to use each one.
 extra:
   cover_image: cover-image.png
 ---
@@ -10,6 +10,7 @@ Elixir's ecosystem has quite a few **HTTP clients** at this point. But what's
 the *best one*? In this post, I want to break down a bunch of the clients we
 have available. I'll give an overview of the clients I personally like the most,
 and I'll talk about which clients are the best choice in different use cases.
+I'll also share some advice with library authors.
 
 <!-- more -->
 
@@ -19,23 +20,27 @@ and I'll talk about which clients are the best choice in different use cases.
 
 ## All Your Clients Are Belong to Us
 
-So, let's take a whirlwind tour of some HTTP clients available in Elixir. We'll talk about these:
+So, let's take a whirlwind tour of some HTTP clients available in Elixir. We'll
+talk about these:
 
   * [Mint](#mint)
   * [Finch](#finch)
   * [Req](#req)
   * [httpc](#httpc)
-  * [Tesla](#tesla)
 
 This is not a comprehensive list of all the Elixir HTTP clients, but rather a
 list of clients that I think make sense in different situation. At the end of
-this post, you'll also find a mention of other well-known clients.
+this post, you'll also find a mention of other well-known clients, as well as
+advice for library authors.
 
 ### Mint
 
 Let's start with [Mint][mint]. Mint is arguably the lowest-level HTTP client
 we've got in Elixir. It's essentially a *wrapper* around a raw TCP or SSL
-socket. Its job is to make the socket **aware of the network protocol**.
+socket. Its job is to make the socket **aware of the network protocol**. It's
+stateless, meaning that all you deal with is a "connection" data structure, and
+it's process-less, meaning that it doesn't impose any process architecture on
+you.
 
 Think about a `:gen_tcp` or a `:ssl` socket. Their job is to allow you to
 connect servers and clients on the TCP and TLS network protocols, respectively.
@@ -91,7 +96,8 @@ end
 #=> ]
 ```
 
-Mint supports HTTP/1.1 and HTTP/2 out of the box, as well as WebSocket through [mint_web_socket].
+Mint supports HTTP/1.1 and HTTP/2 out of the box, as well as WebSocket through
+[mint_web_socket].
 
 #### When to Use Mint
 
@@ -153,7 +159,8 @@ performance. Since HTTP/2 works quite differently from HTTP/1.1 and the former
 is capable of multiplexing requests, Finch uses a completely different strategy
 for HTTP/2, without any pooling. All of this is transparent to users.
 
-The API that Finch provides is still quite low-level, with manual request building and such:
+The API that Finch provides is still quite low-level, with manual request
+building and such:
 
 ```elixir
 {:ok, _} = Finch.start_link(name: MyFinch)
@@ -169,7 +176,9 @@ Okay, when to use Finch then? Personally, I think Finch is a fantastic library
 whenever you have performance-sensitive applications where you're ready to
 sacrifice some of the convenience provided by "higher-level" clients. It's also
 great when you know you'll have to make a lot of requests to the same host,
-since you can specify dedicated connection pools per host.
+since you can specify dedicated connection pools per host. This is especially
+useful when communicating across internal services, or talking to third-party
+APIs.
 
 ### Req
 
@@ -188,7 +197,7 @@ options, callbacks, headers, and more before making an HTTP request.
 
 ```elixir
 req =
-  %Req.Request{method: :get, url: "https://github.com/..."}
+  Req.Request.new(method: :get, url: "https://github.com/...")
   |> Req.Request.append_request_steps(
     put_user_agent: &Req.Steps.put_user_agent/1
   )
@@ -232,7 +241,8 @@ straight from Finch's README here:
 > [Req][req] which takes advantage of Finch's pooling and provides an extremely
 > friendly and pleasant to use API.
 
-So, yeah.
+So, yeah. In your applications, unless you have some of the needs that we
+described so far, just go with Req.
 
 ### httpc
 
@@ -286,79 +296,24 @@ alternative? You need Hex to fetch dependencies in your Elixir projects, so it
 would be a nasty chicken-and-egg problem to try to use a third-party HTTP client
 to fetch libraries over HTTP (including that client!).
 
-### Tesla
-
-[Tesla][tesla] is an HTTP client that's been around for a while. Its deal? Well,
-there are actually two: it's based on middlewares, and it has swappable
-underlying HTTP clients.
-
-*Middlewares* are sort of like [plugs from the Plug library][plug]. Tesla
-provides a behaviour ([`Tesla.Middleware`][docs-tesla-middleware]) that you can
-implement to extend Tesla's functionality. This makes it a breeze to implement
-tailored HTTP clients for specific use cases, similarly to what we saw with Req
-earlier.
-
-```elixir
-client = Tesla.client(_middlewares = [
-  {Tesla.Middleware.BaseUrl, "https://example.com"},
-  Tesla.Middleware.JSON
-])
-
-Tesla.get!(client, "/users", _options = [])
-#=> %Tesla.Env{status: 200, ...}
-```
-
-You can even use the [`plug/2` macro][docs-tesla-plug] that Tesla provides to
-build module-based HTTP clients:
-
-```elixir
-defmodule ExampleApi do
-  use Tesla
-
-  plug Tesla.Middleware.BaseUrl, "http://api.example.com"
-  plug Tesla.Middleware.JSON
-  plug MyProject.CustomMiddleware
-
-  def fetch_users do
-    get("/users")
-  end
-end
-```
-
-There's some magic going on here, but I've used this API in the past in
-application code, and I find it pretty nice.
-
-The biggest advantage of Tesla in my opinion, however, is that it uses a
-"swappable" underlying HTTP adapter system. It supports [many built-in HTTP
-adapters][tesla-adapters], including ones for `httpc` and Finch.
-
-#### When to Use Tesla?
-
-I find Tesla and Req to be similar in level of abstraction and functionality, so
-I don't have a particular recommendation. I think Tesla, however, can be a good
-choice for library authors who need a rich HTTP client for their library's
-functionality. In those cases, Tesla makes a good candidate exactly because of
-its HTTP adapter system: as a library author, as long as you expose
-functionality to swap the Tesla adapter, you're not forcing your users to use a
-particular HTTP client. This is a big deal as far as I'm concerned, because I've
-worked on projects with tens and tens of dependencies. In those projects, many
-of those dependencies were a result of exactly this, that is, different
-libraries using different HTTP clients (and all their transitive dependencies).
+Other libraries that use `httpc` are [Tailwind][tailwind] and
+[Esbuild][esbuild]. Both of these use `httpc` to download artifacts the first
+time they run, so using a more complex HTTP client (at the cost of additional
+dependencies) isn't really necessary.
 
 ## Choosing the Right Client
 
 I've tried to write a bit about when to use each client so far, but to recap,
-this is my loose recommendation:
+these are my loose recommendations:
 
 | Client         | When                                                                                                                                                            |
 | :---------     | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | *Mint*         | You need 100% control on connections and request lifecycle                                                                                                      |
 | *Mint*         | You already have a process architecture, and don't want to introduce any more processes                                                                         |
-| *Mint*         | You're a library author and you want to force as few dependencies as possible on your users                                                                     |
-| *Finch*        | You need a low-level client with high performance, but you want pooling built in                                                                                |
+| *Mint*         | You're a library author, and you want to force as few dependencies as possible on your users while being mindful of performance and security (so no `httpc`)    |
+| *Finch*        | You need a low-level client with high performance, transparent support for HTTP/1.1 (with pooling) and HTTP/2 (with multiplexing)                               |
+| *Req*          | Most applications that make HTTP calls                                                                                                                          |
 | *Req*          | Scripting                                                                                                                                                       |
-| *Req*, *Tesla* | You want to build tailored HTTP clients in your application                                                                                                     |
-| *Tesla*        | You're a library author and you want to support all sorts of underlying HTTP clients                                                                            |
 | *httpc*        | You're a (hardcore) library author who needs a few HTTP requests in their library, but you don't want to add unnecessary transitive dependencies for your users |
 
 Some of the HTTP clients I've talked about here form sort of an abstraction
@@ -366,9 +321,57 @@ pyramid.
 
 ![A drawing of a pyramid (like the food pyramid thing) but for HTTP clients](./sketch-pyramid.png)
 
+### Library Authors
+
+I want to also talk about library authors here. If you're the author of a
+library that needs to make HTTP calls, you have the options we talked about. If
+you're only making a handful of one-off HTTP calls, then I'd go with `httpc`, so
+that you don't have any impact on downstream code that depends on your library.
+However, if making HTTP requests is central to your library, I would really
+recommend you use the "adapter behaviour" technique.
+
+What I mean by *adapter behaviour technique* is that ideally you'd build an
+interface for what you need your HTTP client to do in your library. For example,
+if you're building a client for an error-reporting service (such as
+[Sentry][sentry]), you might only care about making synchronous `POST` requests.
+In those cases, you can define a behaviour in your library:
+
+```elixir
+defmodule SentryClient.HTTPClientBehaviour do
+  @type status() :: 100..599
+  @type headers() :: [{String.t(), String.t()}]
+  @type body() :: binary()
+
+  @callback post(url :: String.t(), headers(), body()) ::
+              {:ok, status(), headers(), body()} | {:error, term()}
+end
+```
+
+This would be a *public* interface, allowing your users to implement their own
+clients. This allows users to choose a client that they're already using in
+their codebase, for example. You can still provide a default implementation that
+ships with your library and uses the client of your choice. Incidentally, this
+is exactly what the Sentry library for Elixir does: it ships with [a default
+client][docs-sentry-hackney-client] based on Hackney. If you go with this
+approach, remember to make the HTTP client an **optional dependency** of your
+library:
+
+```elixir
+# In mix.exs
+defp deps do
+  [
+    # ...,
+    {:hackney, "~> 1.0", optional: true}
+  ]
+end
+```
+
 ## What About the Others?
 
-These are not all the HTTP clients available in Elixir, let alone on the BEAM! I have not mentioned well-known Elixir clients such as [HTTPoison][httpoison], nor Erlang clients such as [hackney]. HTTPoison is an Elixir wrapper on top of hackney:
+These are not all the HTTP clients available in Elixir, let alone on the BEAM! I
+have not mentioned well-known Elixir clients such as [HTTPoison][httpoison], nor
+Erlang clients such as [hackney]. HTTPoison is an Elixir wrapper on top of
+hackney:
 
 ```elixir
 HTTPoison.get!("https://example.com")
@@ -426,6 +429,7 @@ other clients as well reasons why I prefer the ones in this post.
 
 That's all. Happy HTTP'ing!
 
+[esbuild]: https://github.com/phoenixframework/esbuild
 [finch]: https://github.com/sneako/finch
 [gen_stage]: https://github.com/elixir-lang/gen_stage
 [gun]: https://github.com/ninenines/gun
@@ -439,6 +443,7 @@ That's all. Happy HTTP'ing!
 [plug]: https://github.com/elixir-plug/plug
 [postgrex]: https://github.com/elixir-ecto/postgrex
 [req]: https://github.com/wojtekmach/req
+[tailwind]: https://github.com/phoenixframework/tailwind
 [telemetry]: https://github.com/beam-telemetry/telemetry
 [tesla]: https://github.com/elixir-tesla/tesla
 [tesla-adapters]: https://github.com/elixir-tesla/tesla#adapters
@@ -450,9 +455,11 @@ That's all. Happy HTTP'ing!
 [req-request-docs-plugins]: https://hexdocs.pm/req/Req.Request.html#module-writing-plugins
 [docs-mint-http-request]: https://hexdocs.pm/mint/Mint.HTTP.html#request/5
 [docs-mix-install]: https://hexdocs.pm/mix/Mix.html#install/1
+[docs-sentry-hackney-client]: https://hexdocs.pm/sentry/Sentry.HackneyClient.html
 [docs-ssl]: https://erlang.org/doc/man/ssl.html
 [docs-tesla-middleware]: https://hexdocs.pm/tesla/Tesla.Middleware.html
 [docs-tesla-plug]: https://hexdocs.pm/tesla/Tesla.Builder.html#plug/2
 [otp-26-ssl-changelog]: https://www.erlang.org/blog/otp-26-highlights/#ssl-safer-defaults
 [hex]: https://hex.pm
 [hex-httpc]: https://github.com/hexpm/hex/blob/1881f9fe8e0571ba7fdcfc86ecf484913125dc37/lib/hex/http.ex
+[sentry]: https://sentry.io
