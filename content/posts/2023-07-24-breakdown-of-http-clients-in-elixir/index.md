@@ -68,7 +68,7 @@ connection information inside the connection data structure itself.
 {:ok, conn} = Mint.HTTP.connect(:http, "httpbin.org", 80)
 ```
 
-Then, you'd use [`Mint.HTTP.request/5`](docs-mint-http-request) to send a
+Then, you'd use [`Mint.HTTP.request/5`][docs-mint-http-request] to send a
 request.
 
 ```elixir
@@ -429,6 +429,10 @@ other clients as well reasons why I prefer the ones in this post.
 
 That's all. Happy HTTP'ing!
 
+### Acknowledgements
+
+I want to thank a few folks for helping review this post before it went out. Thank you [José](https://twitter.com/josevalim), [Wojtek](http://wojtekmach.pl), and [Jean](https://github.com/sabiwara).
+
 [esbuild]: https://github.com/phoenixframework/esbuild
 [finch]: https://github.com/sneako/finch
 [gen_stage]: https://github.com/elixir-lang/gen_stage
@@ -440,13 +444,10 @@ That's all. Happy HTTP'ing!
 [mint]: https://github.com/elixir-mint/mint
 [mint_web_socket]: https://github.com/elixir-mint/mint_web_socket
 [nimble_pool]: https://github.com/dashbitco/nimble_pool
-[plug]: https://github.com/elixir-plug/plug
 [postgrex]: https://github.com/elixir-ecto/postgrex
 [req]: https://github.com/wojtekmach/req
 [tailwind]: https://github.com/phoenixframework/tailwind
 [telemetry]: https://github.com/beam-telemetry/telemetry
-[tesla]: https://github.com/elixir-tesla/tesla
-[tesla-adapters]: https://github.com/elixir-tesla/tesla#adapters
 [gh-whatyouhide]: https://github.com/whatyouhide
 [gh-ericmj]: https://github.com/ericmj
 [forza-football-gen_stage-post]: https://tech.forzafootball.com/blog/maximizing-http2-performance-with-genstage
@@ -457,8 +458,6 @@ That's all. Happy HTTP'ing!
 [docs-mix-install]: https://hexdocs.pm/mix/Mix.html#install/1
 [docs-sentry-hackney-client]: https://hexdocs.pm/sentry/Sentry.HackneyClient.html
 [docs-ssl]: https://erlang.org/doc/man/ssl.html
-[docs-tesla-middleware]: https://hexdocs.pm/tesla/Tesla.Middleware.html
-[docs-tesla-plug]: https://hexdocs.pm/tesla/Tesla.Builder.html#plug/2
 [otp-26-ssl-changelog]: https://www.erlang.org/blog/otp-26-highlights/#ssl-safer-defaults
 [hex]: https://hex.pm
 [hex-httpc]: https://github.com/hexpm/hex/blob/1881f9fe8e0571ba7fdcfc86ecf484913125dc37/lib/hex/http.ex
