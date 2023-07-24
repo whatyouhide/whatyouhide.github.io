@@ -97,7 +97,7 @@ Mint supports HTTP/1.1 and HTTP/2 out of the box, as well as WebSocket through [
 
 Generally, ***don't use Mint***. Seriously. You know I mean this advice, because
 I'm one of the [two][gh-whatyouhide] [people][gh-ericmj] who maintain and
-originally created Mint itself! However, for most use cases, Mint is too low
+originally created Mint itself! For most use cases, Mint is too low
 level. When you use it, you'll have to care about things such as pooling
 connections, process architecture, keeping the connection structs around, and so
 on. It's a bit like what you'd do in other cases, after all. For example, you're
