@@ -149,9 +149,9 @@ Finch provides.
 Finch is quite smart about its pooling. It uses [nimble_pool] when pooling
 HTTP/1.1 connections. The nimble_pool library is a tiny resource-pool
 implementation heavily focused on a small resource-usage footprint as well as on
-performance. Since HTTP/2 works quite differently from HTTP/1.1, especially when
-it comes to persistent connections and multiplexed requests, nimble_pool uses a
-completely different pooling strategy when working with HTTP/2 connections.
+performance. Since HTTP/2 works quite differently from HTTP/1.1 and the former
+is capable of multiplexing requests, Finch uses a completely different strategy
+for HTTP/2, without any pooling. All of this is transparent to users.
 
 The API that Finch provides is still quite low-level, with manual request building and such:
 
