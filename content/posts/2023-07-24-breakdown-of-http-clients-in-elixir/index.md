@@ -369,14 +369,22 @@ end
 ## What About the Others?
 
 These are not all the HTTP clients available in Elixir, let alone on the BEAM! I
-have not mentioned well-known Elixir clients such as [HTTPoison][httpoison], nor
-Erlang clients such as [hackney]. HTTPoison is an Elixir wrapper on top of
-hackney:
+have not mentioned well-known Elixir clients such as [HTTPoison][httpoison] and
+[Tesla][tesla], nor Erlang clients such as [hackney].
+
+### HTTPoison
+
+HTTPoison is an Elixir wrapper on top of hackney:
 
 ```elixir
 HTTPoison.get!("https://example.com")
 #=> %HTTPoison.Response{...}
 ```
+
+Because of this, I tend to not really use HTTPoison and, if necessary, go
+straight to hackney.
+
+### Hackney
 
 hackney is a widely-used Erlang client which provides a nice and modern API and
 has support for streaming requests, compression, encoding, file uploads, and
@@ -417,6 +425,22 @@ Last but not least, hackney doesn't use the standard [telemetry] library to
 report metrics, which can make it a bit of a hassle to wire in metrics (since
 many Elixir applications, at this point, use telemetry for instrumentation).
 
+One important thing to mention: while HTTPoison is a wrapper around hackney, its
+[version 2.0.0][httpoison-version-2] fixes the potentially-unsecure SSL behavior
+that we just described for hackney.
+
+### Tesla
+
+[Tesla][tesla] is a pretty widely-used HTTP client for Elixir. It provides a
+similar level of abstraction as Req. In my opinion, its main advantage is that
+it provides **swappable HTTP client adapters**, meaning that you can use its
+common API but choose the underlying HTTP client among ones like Mint, hackney,
+and more. Luckily, this feature is in the works for Req as well.
+
+The reason I tend to not reach for Tesla is mostly that, in my opinion, it
+relies a bit too much on module-based configuration and meta-programming. In
+comparison, I find Req's functional API easier to compose, abstract, and reuse.
+
 There are **other clients** in Erlang and Elixir: [gun], [ibrowse], and
 more. But we gotta draw a line at some point!
 
@@ -440,6 +464,7 @@ I want to thank a few folks for helping review this post before it went out. Tha
 [hackney]: https://github.com/benoitc/hackney
 [httpc]: https://www.erlang.org/doc/man/httpc.html
 [httpoison]: https://github.com/edgurgel/httpoison
+[httpoison-version-2]: https://github.com/edgurgel/httpoison#upgrading-to-2xx
 [ibrowse]: https://github.com/cmullaparthi/ibrowse
 [mint]: https://github.com/elixir-mint/mint
 [mint_web_socket]: https://github.com/elixir-mint/mint_web_socket
@@ -448,6 +473,7 @@ I want to thank a few folks for helping review this post before it went out. Tha
 [req]: https://github.com/wojtekmach/req
 [tailwind]: https://github.com/phoenixframework/tailwind
 [telemetry]: https://github.com/beam-telemetry/telemetry
+[tesla]: https://github.com/elixir-tesla/tesla
 [gh-whatyouhide]: https://github.com/whatyouhide
 [gh-ericmj]: https://github.com/ericmj
 [forza-football-gen_stage-post]: https://tech.forzafootball.com/blog/maximizing-http2-performance-with-genstage
