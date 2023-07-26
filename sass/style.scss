@@ -160,10 +160,6 @@ main.about {
   margin: 0 auto;
   padding: 0 5vw;
 
-  @include mediumScreen {
-    padding: 0 10vw;
-  }
-
   h1,
   h2 {
     font-family: $handwrittenFont;
