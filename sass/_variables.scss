@@ -1,7 +1,12 @@
+@font-face {
+  font-family: "Andrea";
+  src: url('assets/fonts/andrea.otf') format('opentype');
+}
+
 // Font stacks
 $helvetica: Helvetica, Arial, sans-serif;
 $helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
-$handwrittenFont: "Mali", sans-serif; // From Google Fonts
+$handwrittenFont: "Andrea", "Mali", sans-serif; // From Google Fonts
 
 // Colors
 
