@@ -387,6 +387,18 @@ This was a long post, but I hope I covered most of the NIF universe in it. As yo
 
 Thanks for making it this far!
 
+### Updates
+
+#### Undefined reference errors on Debian Jesse
+
+Brent Shaffer commmented that this was helpful:
+
+```bash
+cc -fPIC -I/usr/local/lib/erlang/usr/include \
+    -Wl,-undefined -Wl,dynamic_lookup -shared \
+    -o fast_compare.so fast_compare.c
+```
+
 [docs-erlang-load_nif-2]: https://www.erlang.org/doc/man/erlang.html#load_nif-2
 [devinus-markdown]: https://github.com/devinus/markdown
 [sasa-juric-ports]: https://theerlangelist.com/article/outside_elixir

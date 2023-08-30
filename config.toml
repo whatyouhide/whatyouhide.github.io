@@ -41,7 +41,6 @@ highlight_themes_css = [
 
 [extra]
 full_name = "Andrea Leopardi"
-disqus_shortname = "blog-andrealeopardi" # Shortname, not username
 email = "hi@andrealeopardi.com"
 twitter_username = "whatyouhide"
 github_username = "whatyouhide"
