@@ -1,5 +1,5 @@
 ---
-template: about.html
+template: extra_page.html
 ---
 
 Hi. I'm Andrea *(he/him)*.

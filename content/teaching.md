@@ -1,5 +1,5 @@
 ---
-template: teaching.html
+template: extra_page.html
 ---
 
 Sometimes I end up teaching stuff, mostly about [Elixir] and related topics.
