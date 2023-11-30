@@ -174,6 +174,12 @@ main.about {
     display: block;
     max-width: 100%;
     margin: 0 auto;
+
+    &.invert-in-dark-mode {
+      @include darkMode {
+        filter: invert(1);
+      }
+    }
   }
 
   pre[data-lang] {
@@ -215,8 +221,6 @@ article.post table {
 
   tr {
     border-bottom: 1px solid var(--color-text-dimmer);
-
-
 
     th:first-child, td:first-child {
       white-space: nowrap;
