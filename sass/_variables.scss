@@ -13,6 +13,7 @@ $handwrittenFont: "Andrea", "Mali", sans-serif; // From Google Fonts
 :root {
   $siteBackground: #f4f5f0;
   $text: #212424;
+  $callout-background-info: rgba(#81d2d4, 0.3);
 
   --color-site-background: #{$siteBackground};
   --color-site-background-accented: #{darken($siteBackground, 5)};
@@ -23,6 +24,9 @@ $handwrittenFont: "Andrea", "Mali", sans-serif; // From Google Fonts
   --color-links: #4183c4;
 
   --color-box-borders: #d3d7d7;
+
+  --color-callout-info-background: #{$callout-background-info};
+  --color-callout-info-background-title: #{darken($callout-background-info, 20)};
 }
 
 @include darkMode {

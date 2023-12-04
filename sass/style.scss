@@ -299,6 +299,34 @@ code {
   font-family: "Bitstream Vera Sans Mono", "Courier", monospace;
 }
 
+aside.callout {
+  $border-radius: 15px;
+
+  margin-top: 2em;
+  margin-bottom: 2em;
+
+  border-radius: $border-radius;
+
+  h5 {
+    border-radius: $border-radius $border-radius 0 0;
+    padding: .7em 2em;
+    margin: 0;
+    font-size: 120%;
+  }
+
+  div.callout-content {
+    padding: 0 1em .5em;
+  }
+
+  &.callout-info {
+    background-color: var(--color-callout-info-background);
+
+    h5 {
+      background-color: var(--color-callout-info-background-title);
+    }
+  }
+}
+
 @import "components/header";
 @import "components/footer";
 @import "components/landing_page";
