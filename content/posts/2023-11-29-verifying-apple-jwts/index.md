@@ -83,18 +83,18 @@ The code below assumes that you downloaded the Apple root certificate ([`AppleRo
 defp valid_certificate_chain?(
       [raw_leaf, raw_intermediate, _raw_root = @apple_root_cert]
     ) do
- case :public_key.pkix_path_validation(
-        @apple_root_cert,
-        [raw_intermediate, raw_leaf],
-        []
-      ) do
-   {:ok, _} -> true
-   {:error, _} -> false
- end
+  case :public_key.pkix_path_validation(
+         @apple_root_cert,
+         [raw_intermediate, raw_leaf],
+         []
+       ) do
+    {:ok, _} -> true
+    {:error, _} -> false
+  end
 end
 
 defp valid_certificate_chain?(_x5c_certs) do
- false
+  false
 end
 ```
 
