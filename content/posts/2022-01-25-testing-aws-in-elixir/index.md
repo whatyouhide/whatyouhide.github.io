@@ -156,7 +156,10 @@ for service <- [:s3, :sqs] do
   config :ex_aws, service,
     scheme: aws_uri.scheme,
     host: aws_uri.host,
-    port: aws_uri.port
+    port: aws_uri.port,
+    # You might also want to set bogus credentials:
+    access_key_id: "my-key-id",
+    secret_access_key: "my-secret-key"
 end
 ```
 
