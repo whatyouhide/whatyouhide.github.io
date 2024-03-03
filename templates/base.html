@@ -14,8 +14,7 @@
     <link rel="alternate" type="application/rss+xml" title="{{ config.title }}" href="/feed.xml" />
 
     {% block rss %}
-    <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="feed.xml",
-        trailing_slash=false) }}">
+    <link rel="alternate" type="application/rss+xml" title="{{ config.title }}" href="{{ get_url(path="feed.xml", trailing_slash=false) }}" />
     {% endblock %}
 </head>
 

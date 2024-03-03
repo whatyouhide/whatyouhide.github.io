@@ -7,9 +7,8 @@ compile_sass = true
 # Whether to build a search index to be used later on by a JavaScript library
 build_search_index = false
 
-# The site title and description; used in feeds by default.
 title = "Andrea Leopardi"
-description = "Andrea Leopardi's personal website"
+description = "Writing about Elixir, system architecture, and more."
 
 ## Feeds
 
@@ -21,13 +20,11 @@ feed_filename = "feed.xml"
 
 # The number of articles to include in the feed. All items are included if
 # this limit is not set (the default).
-feed_limit = 10
+feed_limit = 20
 
 ## Taxonomies
 
-taxonomies = [
-    { name = "tags", feed = true }
-]
+taxonomies = [{ name = "tags", feed = true }]
 
 [markdown]
 # Whether to do syntax highlighting
