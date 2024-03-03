@@ -30,7 +30,7 @@
             title="{{ post.title }}" />
       <summary type="html">
         {% if post.summary %}
-          {{ post.summary | trim | escape_xml }}
+          {{ post.summary | trim | spaceless | escape_xml }}
         {% else %}
           {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
         {% endif %}
@@ -45,13 +45,13 @@
         <email>{{ config.extra.email }}</email>
       </author>
 
-      <content type="html">
-        {{ post.content | trim | escape_xml | safe }}
+    {% if is_community %}
+      <content type="html">{{ post.content | trim | spaceless | escape_xml | safe }}
 
-        {% if is_community %}
-        &lt;p&gt;&lt;a href=&quot;{{ post.permalink }}&quot;&gt;{{ post.title }}&lt;/a&gt; was originally published by {{ config.extra.full_name }} at &lt;a href=&quot;{{ config.base_url }}&quot;&gt;{{ config.title }}&lt;/a&gt; on {{ post.date | date(format="%B %d, %Y") }}.&lt;/p&gt;
-        {% endif %}
-      </content>
+      &lt;p&gt;&lt;a href=&quot;{{ post.permalink }}&quot;&gt;{{ post.title }}&lt;/a&gt; was originally published by {{ config.extra.full_name }} at &lt;a href=&quot;{{ config.base_url }}&quot;&gt;{{ config.title }}&lt;/a&gt; on {{ post.date | date(format="%B %d, %Y") }}.&lt;/p&gt;</content>
+    {% else %}
+      <content type="html">{{ post.content | trim | spaceless | escape_xml | safe }}</content>
+    {% endif %}
     </entry>
   {% endfor %}
 </feed>
