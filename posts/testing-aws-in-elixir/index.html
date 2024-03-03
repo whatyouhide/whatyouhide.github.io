@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Testing AWS in Elixir – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="An overview of how we test Elixir applications that interact with AWS." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Testing AWS in Elixir">
+<meta property="og:description" content="An overview of how we test Elixir applications that interact with AWS.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/testing-aws-in-elixir/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/testing-aws-in-elixir/cover-image.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2022-01-25T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Testing AWS in Elixir">
+<meta name="twitter:description" content="An overview of how we test Elixir applications that interact with AWS.">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/testing-aws-in-elixir/cover-image.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Testing AWS in Elixir</h1>
+
+    <div class="entry"><p>At Community, we run most of our infrastructure and services on AWS. We use several AWS services. Many of our own services interact with AWS directly, such as by uploading and downloading files from S3, querying Athena, and more. Lately, I've been trying to improve how we <em>test</em> the interaction between our services and AWS, testing error conditions and edge cases as well as running reproducible integration tests. In this post, I'll talk about Localstack, mocks, ExAws, and more.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/testing-aws-in-elixir/cover-image.jpg" alt="Cover image of a data center" /></p>
+<span class="unsplash-credit">
+    Photo by <a href="https:&#x2F;&#x2F;unsplash.com&#x2F;@ianjbattaglia?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Ian Battaglia</a> on <a href="https://unsplash.com">Unsplash</a>
+</span>
+<p>AWS is an external system that our system has limited control over. First, it operates over the network, which makes it vulnerable to all sorts of network issues and failures. Furthermore, I can't control how an AWS service operates or its business logic. However, as external services go, it's a stable one when it comes to its APIs.</p>
+<p>When I work with external systems like AWS, I want to test two aspects:</p>
+<ol>
+<li>
+<p>What happens on the uncommon code branches — network failures, services unavailable, all sorts of things that we know can (and will) happen.</p>
+</li>
+<li>
+<p>What happens when interacting with the actual service — I want the application's code to have some tests that execute the whole code that interacts with the external service end-to-end, without mocks in the middle.</p>
+</li>
+</ol>
+<p>Let's take a look at these below. I set up <a href="https://github.com/whatyouhide/testing_aws_in_elixir">a repository</a> with most of the code discussed here, so you can see it pieced together and working.</p>
+<h2 id="testing-uncommon-conditions"><a class="zola-anchor" href="#testing-uncommon-conditions" aria-label="Anchor link for: testing-uncommon-conditions">Testing Uncommon Conditions</a></h2>
+<p>Testing relatively-uncommon conditions (such as network failures) requires precise control of the external system. We do not have <em>any</em> control of the external system in the case of something like AWS. <strong>Test doubles</strong> are helpful in these cases.</p>
+<p>I call &quot;test double&quot; any piece of code that mimics a dependency of a system but is only used in tests. Folks use terms like test double, mock, or stub interchangeably, but I'm a stickler for this stuff, so I'll use <em>test double</em> in this post.</p>
+<p>In our case, AWS is a natural point where to define a contract between our system and an external dependency. I always think back to <a href="https://twitter.com/josevalim">José Valim</a>'s legendary post <a href="http://blog.plataformatec.com.br/2015/10/mocks-and-explicit-contracts/">&quot;Mocks and Explicit Contracts&quot;</a> when talking about these things. Go give it a read if you haven't read it already.</p>
+<h3 id="exaws-and-its-behaviour-with-a-u"><a class="zola-anchor" href="#exaws-and-its-behaviour-with-a-u" aria-label="Anchor link for: exaws-and-its-behaviour-with-a-u">ExAws and Its Behaviour (With a &quot;U&quot;)</a></h3>
+<p>To interact with AWS in our Elixir services we use <a href="https://github.com/ex-aws/ex_aws">ExAws</a> and its plethora of service libraries. I generally like ExAws but lately found a not-very-advertised feature that I <em>love</em>. I suspect it's not even intended for the purpose we're going to use it for here, but it fits like a glove.</p>
+<p>ExAws's architecture is essentially made of a main ExAws library which contains code to make generic HTTP requests to various AWS services. On top of that, there are many service-specific libraries (such as <a href="https://github.com/ex-aws/ex_aws_s3">ex_aws_s3</a>). These libraries usually define <strong>operations</strong> that implement the <a href="https://hexdocs.pm/ex_aws/ExAws.Operation.html"><code>ExAws.Operation</code></a> behaviour. Operations are just data structures. The way you use ExAws is that you create operations (that is, data structures) using the service-specific libraries and execute them against AWS using the main ExAws library.</p>
+<p>This is where the cool things begin. ExAws also ships with the <a href="https://hexdocs.pm/ex_aws/ExAws.Behaviour.html"><code>ExAws.Behaviour</code></a> behaviour, which defines the core functionality provided by the library. Well, wouldn't you know, that core functionality is exactly the set of functions that take operations and execute them against AWS. This is the perfect architecture for test doubles.</p>
+<h3 id="test-doubles-for-exaws"><a class="zola-anchor" href="#test-doubles-for-exaws" aria-label="Anchor link for: test-doubles-for-exaws">Test Doubles for ExAws</a></h3>
+<p>We use <a href="https://github.com/dashbitco/mox">Mox</a> for test doubles (well, &quot;mocks&quot; as the library calls them). In our application, we usually define a test double for <code>ExAws</code> itself. It's as simple as the code below, which we have in a file called <code>test/support/mocks.ex</code>. We add <code>test/support</code> to <code>:elixirc_paths</code> in <code>mix.exs</code> for the <code>:test</code> Mix environment.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Mox</span><span class="z-punctuation z-separator z-method z-elixir">.</span>defmock<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAwsMock</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">for<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Behaviour</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>In any code that executes AWS requests, we don't use <code>ExAws.request/1</code> or <code>ExAws.stream/1</code>. Instead, we read the module to use at compile time from our application configuration (still defaulting to <code>ExAws</code>).</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>ex_aws_mod</span> <span class="z-entity z-name z-class z-elixir">Application</span><span class="z-punctuation z-separator z-method z-elixir">.</span>compile_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>test_doubles</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ex_aws</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">get_s3_file</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>bucket<span class="z-punctuation z-separator z-object z-elixir">,</span> path<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    operation <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get_object<span class="z-punctuation z-section z-function z-elixir">(</span>bucket<span class="z-punctuation z-separator z-object z-elixir">,</span> path<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>ex_aws_mod</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request<span class="z-punctuation z-section z-function z-elixir">(</span>operation<span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Now, testing this is straightforward using the functionality provided by Mox.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">import</span> <span class="z-entity z-name z-class z-elixir">Mox</span>
+
+setup <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>verify_on_exit!</span>
+
+test <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>some piece of code that uses get_s3_file/2<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+  expect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAwsMock</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>request</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-keyword z-control z-elixir">fn</span> operation <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+    assert %<span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Operation</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> operation
+    assert operation<span class="z-punctuation z-separator z-method z-elixir">.</span>http_method <span class="z-keyword z-operator z-comparison z-elixir">==</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>get</span>
+    assert operation<span class="z-punctuation z-separator z-method z-elixir">.</span>bucket <span class="z-keyword z-operator z-comparison z-elixir">==</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+    assert operation<span class="z-punctuation z-separator z-method z-elixir">.</span>path <span class="z-keyword z-operator z-comparison z-elixir">==</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>expected/path<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">body<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>file contents<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+  run_code<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Testing the uncommon cases is just as straightforward, since we control the value returned by the mock's function.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">expect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAwsMock</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>request</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-keyword z-control z-elixir">fn</span> _operation <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>http_error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">403</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>We need little code to achieve all this. The operation data structure combined with the behaviour make it easy to build flexible test doubles that we can use to assert we are making the right calls to AWS and to control return values with precision.</p>
+<h2 id="integration-tests"><a class="zola-anchor" href="#integration-tests" aria-label="Anchor link for: integration-tests">Integration Tests</a></h2>
+<p>Using test doubles works well in many cases, but it has one drawback that I can't get over. By using test doubles, we are <em>not exercising</em> parts of our application code when running tests. Achieving 100% code coverage and exercising every single production code line when testing is not easy. Often, it's not worth it either. However, testing the interactions with AWS only in the running production code seems a bit too far on the other end.</p>
+<p>Luckily, for this particular use case there's a pretty fantastic tool called <a href="https://localstack.cloud/">Localstack</a>. Localstack provides a faithful replica of AWS itself, but running locally. It fits this use case perfectly (it was kind of built for local integration testing, you could say).</p>
+<p>Just a note here: before Localstack, we sometimes used to use <a href="https://github.com/parroty/exvcr">ExVCR</a> to perform this sort of more integration tests. ExVCR lets you <em>record HTTP requests</em> and make sure that your requests conform to the recorded real requests. It can work well in some cases, but for AWS it didn't give us the flexibility of quickly changing the way we interface with AWS itself. On top of that, ExVCR is ultimately still defining test doubles under the hood, so we are still not exercising the real ExAws HTTP code.</p>
+<h3 id="running-localstack"><a class="zola-anchor" href="#running-localstack" aria-label="Anchor link for: running-localstack">Running Localstack</a></h3>
+<p>We use <a href="https://www.docker.com/">Docker</a> for running our production application, so we are heavily invested in the Docker ecosystem on our local machines too. We already use Docker and <a href="https://docs.docker.com/compose/">Docker Compose</a> locally to spin up infrastructure needed by the services we work on. A typical <code>docker-compose.yml</code> file in one of our services looks like this:</p>
+<pre data-lang="yaml" class="language-yaml z-code"><code class="language-yaml" data-lang="yaml"><span class="z-source z-yaml"><span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">version</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>3<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+
+<span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">services</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+  <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">event-bus</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">image</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-unquoted z-plain z-out z-yaml">our-rabbitmq-image</span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">ports</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+      <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>5672:5672<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+      <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>15672:15672<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+
+  <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">redis</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">image</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>redis:5.0-alpine<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">ports</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+      <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>6379:6379<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+</span></code></pre>
+<p>You can run Localstack in a few different ways, but for us the natural fit is to add it as an infrastructure dependency in the <code>docker-compose.yml</code> file.</p>
+<pre data-lang="yaml" class="language-yaml z-code"><code class="language-yaml" data-lang="yaml"><span class="z-source z-yaml">  <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">localstack</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">image</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-unquoted z-plain z-out z-yaml">localstack/localstack</span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">environment</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+      <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">AWS_DEFAULT_REGION</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>us-west-2<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+      <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">SERVICES</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>s3,sqs<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+      <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">EDGE_PORT</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>4566<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+    <span class="z-string z-unquoted z-plain z-out z-yaml"><span class="z-entity z-name z-tag z-yaml">ports</span></span><span class="z-punctuation z-separator z-key-value z-mapping z-yaml">:</span>
+      <span class="z-punctuation z-definition z-block z-sequence z-item z-yaml">-</span> <span class="z-string z-quoted z-double z-yaml"><span class="z-punctuation z-definition z-string z-begin z-yaml">&quot;</span>4566:4566<span class="z-punctuation z-definition z-string z-end z-yaml">&quot;</span></span>
+</span></code></pre>
+<p>As you can see, Localstack uses the <code>SERVICES</code> environment variable configure which services to make available. In this case, we specified AWS S3 and AWS SQS.</p>
+<p>We can now spin up local infrastructure the same way we did before, with <code>docker compose up</code>. AWS S3 and AWS SQS are running locally, which is pretty cool.</p>
+<h3 id="pointing-exaws-to-localstack"><a class="zola-anchor" href="#pointing-exaws-to-localstack" aria-label="Anchor link for: pointing-exaws-to-localstack">Pointing ExAws to Localstack</a></h3>
+<p>Next step is configuring ExAws to talk to the local Localstack running instance.</p>
+<p>To do that, we add some configuration to <code>config/test.exs</code> that only takes affect in the <code>:test</code> Mix environment. You could easily adapt this to work similarly in the <code>:dev</code> environment if you wanted to.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> In config/test.exs
+</span>aws_uri <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+  <span class="z-entity z-name z-class z-elixir">System</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>AWS_ENDPOINT_URL<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>http://localhost:4566<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">URI</span><span class="z-punctuation z-separator z-method z-elixir">.</span>parse<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-keyword z-control z-elixir">for</span> service <span class="z-keyword z-operator z-arrow z-elixir">&lt;-</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>s3</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>sqs</span><span class="z-punctuation z-section z-array z-elixir">]</span> <span class="z-keyword z-control z-elixir">do</span>
+  config <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ex_aws</span><span class="z-punctuation z-separator z-object z-elixir">,</span> service<span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-keywords z-elixir">scheme<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> aws_uri<span class="z-punctuation z-separator z-method z-elixir">.</span>scheme<span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-keywords z-elixir">host<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> aws_uri<span class="z-punctuation z-separator z-method z-elixir">.</span>host<span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-keywords z-elixir">port<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> aws_uri<span class="z-punctuation z-separator z-method z-elixir">.</span>port<span class="z-punctuation z-separator z-object z-elixir">,</span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> You might also want to set bogus credentials:
+</span>    <span class="z-constant z-other z-keywords z-elixir">access_key_id<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my-key-id<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-keywords z-elixir">secret_access_key<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my-secret-key<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>We're now almost ready to run some integration tests by talking to the local Localstack.</p>
+<h3 id="bypassing-the-exaws-test-double"><a class="zola-anchor" href="#bypassing-the-exaws-test-double" aria-label="Anchor link for: bypassing-the-exaws-test-double">Bypassing the ExAws Test Double</a></h3>
+<p>Remember that in our code we read the ExAws module to use <strong>at compile time</strong>.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>ex_aws_mod</span> <span class="z-entity z-name z-class z-elixir">Application</span><span class="z-punctuation z-separator z-method z-elixir">.</span>compile_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>test_doubles</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ex_aws</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>This means that we cannot use <code>ExAws</code> as the module, because <code>@ex_aws_mod</code> has been <em>compiled</em> to <code>ExAwsMock</code> in the test environment. This is great for performance since we don't need any runtime lookup to retrieve the ExAws module in production, so we're not really willing to change this approach.</p>
+<p>Luckily, Mox ships with the perfect feature for this: the <a href="https://hexdocs.pm/mox/Mox.html#stub_with/2"><code>stub_with/2</code> function</a>. This function tells mock to call out to another module when defining the stubs for all the functions in the given module. The only requirement is that both the mock module passed as the first argument as well as the module passed as the second argument implement the same behaviour. Well, <code>ExAws</code> implements the <code>ExAws.Behaviour</code> already. The world is smiling upon us all here.</p>
+<p>In integration tests that want to talk to the local Localstack instead of defining stubs and mocks for <code>ExAws</code> functions, we do this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">setup <span class="z-keyword z-control z-elixir">do</span>
+  <span class="z-entity z-name z-class z-elixir">Mox</span><span class="z-punctuation z-separator z-method z-elixir">.</span>stub_with<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAwsMock</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This effectively &quot;resets&quot; the ExAws mock to use ExAws itself. To make this a little more streamlined, we can define this as a test helper function and use it similarly to how we use <code>setup :verify_on_exit!</code> from Mox.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> In test_helpers.exs (or wherever you define your test helpers)
+</span><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">TestHelpers</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">use_real_ex_aws</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_ex_unit_context<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-entity z-name z-class z-elixir">Mox</span><span class="z-punctuation z-separator z-method z-elixir">.</span>stub_with<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAwsMock</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> In tests
+</span><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyTest</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">ExUnit</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Case</span>
+
+  <span class="z-keyword z-control z-elixir">import</span> <span class="z-entity z-name z-class z-elixir">TestHelpers</span>
+
+  setup <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>use_real_ex_aws</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...
+</span><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h3 id="data-setup-and-teardown"><a class="zola-anchor" href="#data-setup-and-teardown" aria-label="Anchor link for: data-setup-and-teardown">Data Setup and Teardown</a></h3>
+<p>One missing piece of the puzzle here is that, when using Localstack, we need to manually perform some test setup and teardown. When using test doubles, we can decide &quot;on the fly&quot; what to return from the stub or mock functions, without having to <em>prepare</em> the test doubles in any way. With Localstack, we need to perform all the necessary AWS setup and data setup (and teardown) in order for our tests to test something.</p>
+<p>For example, imagine you want to test how your code retrieves a file from AWS S3 and writes its contents to a local file. To do that, you'll have to:</p>
+<ol>
+<li>Create a bucket in Localstack's S3</li>
+<li>Write a file to that bucket</li>
+<li>Exercise your code and run assertions</li>
+<li>Likely, delete the bucket to clean up for other tests to run</li>
+</ol>
+<p>These steps vary for different configurations and test architectures, but you get the idea. To do the setup and teardown, we just use ExAws directly and manually create the topology we want in the AWS services. For the S3 example above, we would do something like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">test <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>reading a file and writing it out<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> Create some random bytes to store in the file.
+</span>  contents <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>crypto</span><span class="z-punctuation z-separator z-method z-elixir">.</span>strong_rand_bytes<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-numeric z-elixir">100</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> We set up an on_exit callback to empty and then delete the bucket
+</span><span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> when the test exit, so that the next test has a clean slate.
+</span>  on_exit<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-keyword z-control z-elixir">fn</span> <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+      <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test-bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+      <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-punctuation z-separator z-method z-elixir">.</span>list_objects<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+      <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span>stream!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+      <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Enum</span><span class="z-punctuation z-separator z-method z-elixir">.</span>each<span class="z-punctuation z-section z-function z-elixir">(</span>&amp;<span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-punctuation z-separator z-method z-elixir">.</span>delete_object<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test-bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-capture z-elixir"><span class="z-keyword z-operator z-capture z-elixir">&amp;</span>1</span><span class="z-punctuation z-separator z-method z-elixir">.</span>key<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+      <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-punctuation z-separator z-method z-elixir">.</span>delete_bucket<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test-bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> Create bucket.
+</span>  <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put_bucket<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test-bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>us-west-2<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> Upload a file.
+</span>  <span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">ExAws</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">S3</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put_object<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test-bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my/random/file<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> contents<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> Now, we run our code and assert on its behavior.
+</span>  <span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>download_s3_file!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test-bucket<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my/random/file<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">to<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>localfile<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  assert <span class="z-entity z-name z-class z-elixir">File</span><span class="z-punctuation z-separator z-method z-elixir">.</span>read!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>localfile<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-comparison z-elixir">==</span> contents
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>In this post we saw how ExAws provides the perfect functionality for easily writing integration tests using Localstack as well as defining test doubles for precise controls of behavior in testing. If you want to dig deeper into integration testing with Elixir, test doubles, end-to-end tests, and more, check out <a href="https://pragprog.com/titles/lmelixir/testing-elixir/">Testing Elixir</a>, the book I co-wrote with <a href="https://twitter.com/idlehands">Jeffrey Matthias</a>.</p>
+<p>Remember to check out the <a href="https://github.com/whatyouhide/testing_aws_in_elixir">repository</a> that contains all the code and techniques discussed in this post if you want to see it all in action.</p>
+</div>
+
+    <time class="posted-at" datetime="2022-01-25">
+      Written on January 25, 2022
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

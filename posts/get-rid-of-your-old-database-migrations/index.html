@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Get Rid of Your Old Database Migrations – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="Are database migrations good? Probably, but are we using them in the right way? In this post, I write about how I think about migrations and what I&#x27;m doing to mitigate some of their shortcomings." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Get Rid of Your Old Database Migrations">
+<meta property="og:description" content="Are database migrations good? Probably, but are we using them in the right way? In this post, I write about how I think about migrations and what I&#x27;m doing to mitigate some of their shortcomings.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/get-rid-of-your-old-database-migrations/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/get-rid-of-your-old-database-migrations/cover-image.png">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2022-11-28T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Get Rid of Your Old Database Migrations">
+<meta name="twitter:description" content="Are database migrations good? Probably, but are we using them in the right way? In this post, I write about how I think about migrations and what I&#x27;m doing to mitigate some of their shortcomings.">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/get-rid-of-your-old-database-migrations/cover-image.png">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Get Rid of Your Old Database Migrations</h1>
+
+    <div class="entry"><p>Database migrations are great. I love to be able to change the shape of tables and move data around in a controlled way to avoid issues and downtime. However, lately I started to view migrations more like <em>Git commits</em> than like active pieces of code in my applications. In this post, I want to dig a bit deeper into the topic. I'll start with some context on database migrations, I'll expand on the Git commits analogy, and I'll show you <em>what I've been doing instead</em>.</p>
+<span id="continue-reading"></span>
+<p>I mostly write Elixir, so my examples will be in Elixir. If you're interested in the workflow I’m currently using for Elixir, jump to the last section of the post.</p>
+<p><img src="https://andrealeopardi.com/posts/get-rid-of-your-old-database-migrations/cover-image.png" alt="Cover image of a flock of birds flying, with a sunset sky in the background" /></p>
+<h2 id="what-are-db-migrations"><a class="zola-anchor" href="#what-are-db-migrations" aria-label="Anchor link for: what-are-db-migrations">What Are DB Migrations</a></h2>
+<p>DB migrations are pieces of code that you run to <strong>change the schema (and data, if desired) of your database</strong>. Wikipedia does <a href="https://en.wikipedia.org/wiki/Schema_migration">a great job</a> at explaining migrations, their history, and their use cases. I'll write a few words here for context, but go read that if you want to dig deeper.</p>
+<p>Migrations have a few selling points over executing direct SQL commands.</p>
+<p>First, database migrations usually <em>keep information</em> about the migrations themselves in a dedicated database table. To be precise, the framework that runs the migrations is the one storing information in that table. The framework uses this table to only run migrations that have not been run yet.</p>
+<p>Another benefit is that you'll usually write migrations in a way that makes it possible to <strong>roll them back</strong>. &quot;Rolling back&quot; a migration means executing SQL statements that revert the changes done in that migration. Most database frameworks can infer the rollback steps from the migration definition if the migration is simple enough. This results in concise pieces of code to alter the database schema that can be executed &quot;in both directions&quot;.</p>
+<p>Let's see an example with <a href="https://github.com/elixir-ecto/ecto">Ecto</a>, Elixir's database framework.</p>
+<h3 id="example-with-ecto"><a class="zola-anchor" href="#example-with-ecto" aria-label="Anchor link for: example-with-ecto">Example with Ecto</a></h3>
+<p>Let's say you have a <code>users</code> table with columns <code>email</code> and <code>password</code>. New requirements force you to add two new columns, <code>first_name</code> and <code>last_name</code>. To do that, you can write a migration that looks like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">AddNameToUsers</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Ecto</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Migration</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">change</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    alter table<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>users<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+      add <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>first_name</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>string</span>
+      add <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>last_name</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>string</span>
+    <span class="z-keyword z-control z-elixir">end</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>In this simple example, the framework is able to do what I mentioned above: you can define a single <code>change/0</code> function with migration steps in it, and the framework is able to infer the corresponding rollback steps (in this case, removing the two new columns).</p>
+<p>When you run the migration (with <code>mix ecto.migrate</code> in this case), Ecto adds a row to the <code>schema_migrations</code> table:</p>
+<table><thead><tr><th><code>version</code></th><th><code>inserted_at</code></th></tr></thead><tbody>
+<tr><td><code>20221114232841</code></td><td><code>2022-11-15 21:27:50</code></td></tr>
+</tbody></table>
+<h2 id="why-do-we-keep-migrations-around"><a class="zola-anchor" href="#why-do-we-keep-migrations-around" aria-label="Anchor link for: why-do-we-keep-migrations-around">Why Do We Keep Migrations Around?</a></h2>
+<p>Until recently, I had never worked on an application that did not keep <em>all the migrations</em> around. I'd always seen the <code>priv/repo/migrations</code> directory in Elixir applications full of files. I want to get one disclaimer out of the way: the many-migrations experience is a personal one, and I might be late to the party here. But hey, here's to hoping someone else is too and that this write-up is gonna help them out.</p>
+<p>At one point, I started working on an older unfamiliar codebase. The experience made me think of two things.</p>
+<p>The first one is reading the <strong>complete, up-to-date database schema structure</strong>. I'd constantly fire up a Postgres GUI (I use <a href="https://tableplus.com">TablePlus</a>) to look at the structure of the database, since it was hard to navigate old migrations and piece together what their end result is.</p>
+<p>The second one revolves around <strong>searching through code</strong>. Working on the new codebase involved <em>a lot</em> of searching all around the code to understand the structure of the application. Function names, modules, database columns, and what have you. However, database columns stuck with me: I'd always find a bunch of misleading search results in old migrations. For example, I'd see a few results for a column name that was created, then modified, and then dropped.</p>
+<p>So I started wondering: why do we keep old migrations around? Don't get me wrong, I know why we <em>write</em> migrations in the first place. They're great, no doubts. But why not <strong>throw them away</strong> after they've done their job? How many times did you roll back <em>more than one migration</em>? I have never done that. It's hard to imagine rolling back many changes, especially when they involve not only the schema but also the data in the database itself. There must be a better way.</p>
+<h3 id="analogy-with-git-commits"><a class="zola-anchor" href="#analogy-with-git-commits" aria-label="Anchor link for: analogy-with-git-commits">Analogy with Git Commits</a></h3>
+<p>I started to think of database migrations more like Git commits. You apply commits to get to the current state of your application. You apply database migrations to get to the current schema of your database. But after some time, Git commits become a tool for keeping track of history more than an active tool for moving back and forth between versions of the code. I'm now leaning towards treating database migrations the same way. I want them to stick around for a bit, and then &quot;archive&quot; them away. They're always going to be in the Git history, so I’m never really losing the source file, only the ability to apply the migrations.</p>
+<p>So, how do we deal with this in practice?</p>
+<h3 id="dumping-and-loading"><a class="zola-anchor" href="#dumping-and-loading" aria-label="Anchor link for: dumping-and-loading">Dumping and Loading</a></h3>
+<p>It turns out that this is something others have already thought about.</p>
+<p>Database frameworks that provide migration functionality usually provide ways to <strong>dump</strong> and <strong>load</strong> a database schema. If they don't, fear not: major databases provide that themselves. In fact, in Elixir Ecto's dump and load tasks only really act as proxies on top of tools provided by the underlying databases (such as <code>pg_dump</code> and <code>psql</code> for PostgreSQL).</p>
+<p>The idea is always the same: to get the current state of the database, you'll run the <strong>dumping task</strong>. With Ecto and other frameworks, this produces an SQL file of instructions that you can feed to your database when you want to load the schema again.</p>
+<p>Some frameworks provide a way to <em>squash migrations</em> instead. Django, for example, has the <a href="https://docs.djangoproject.com/en/4.1/topics/migrations/#migration-squashing"><code>squashmigrations</code> command</a>. However, the concept is almost the same. <a href="https://rubyonrails.org">Ruby on Rails</a>'s <code>ActiveRecord</code> framework has a unique approach: it can <a href="https://edgeguides.rubyonrails.org/active_record_migrations.html">generate a <strong>Ruby</strong> schema file from migrations</a>. It can also generate the SQL schema file mentioned above via the database, but the Ruby approach is interesting. Its power is limited, however, since the Ruby schema file might not be able to reconstruct the exact schema of the database. From the documentation:</p>
+<blockquote>
+<p>While migrations may use execute to create database constructs that are not supported by the Ruby migration DSL, these constructs may not be able to be reconstituted by the schema dumper.</p>
+</blockquote>
+<p>Dumping and loading the database schema works well in local development and testing, but <em>not in production</em> though, right? You don't want to load a big old SQL file in a running production database. I think. Well, you don't really have to. Production databases tend to be reliable and (hopefully) backed up, so &quot;restoring&quot; a schema is not something you really do in production. It'd be analogous to re-running all the migrations: you just never do it.</p>
+<h3 id="advantages-and-disadvantages-of-ditching-old-migrations"><a class="zola-anchor" href="#advantages-and-disadvantages-of-ditching-old-migrations" aria-label="Anchor link for: advantages-and-disadvantages-of-ditching-old-migrations">Advantages and Disadvantages of Ditching Old Migrations</a></h3>
+<p>I find that dumping old migrations and loading an up-to-date SQL file has a few <strong>advantages</strong>.</p>
+<ol>
+<li>
+<p><strong>You get a complete view of the schema</strong> — The SQL file with the database schema now represents a complete look at the structure of the database. You can see all the tables, indexes, default values, constraints, and so on. Sometimes, you'll still need to create migrations and run them, but they're going to live in your codebase only temporarily, and it's only going to be a handful of them at a time, instead of tens (or hundreds) of files.</p>
+</li>
+<li>
+<p><strong>Speed</strong>: A minor but not irrelevant advantage of this approach is that it speeds up resetting the database for local development and tests. Applying migrations can do many unnecessary operations in the database, such as creating tables only to delete them just after. When loading the database dump, you're really doing the <em>smallest possible set of commands</em> to get to the desired state.</p>
+</li>
+</ol>
+<p>However, it's not all great here. There are some <strong>disadvantages</strong> as well:</p>
+<ol>
+<li>
+<p><strong>Digging through Git</strong> — there are going to be situations in which you look at the migration table in your database and want to figure out the migration that corresponds to a given row. This approach makes this use case slightly more annoying, because you'll have to dig through your Git history to find the original migration. Not a big deal in my opinion, I don't really do this that much.</p>
+</li>
+<li>
+<p><strong>Deploying without running migrations</strong> — make sure to deploy and run migrations. With this approach, that's not something to give for granted. You might get a bit too comfortable dumping the current database schema and deleting migration files. You might end up in situations where you create a migration, run it locally, and then dump the schema and delete the migration, all without deploying. This would result in the migration not running in production.</p>
+</li>
+</ol>
+<h2 id="workflow-in-elixir"><a class="zola-anchor" href="#workflow-in-elixir" aria-label="Anchor link for: workflow-in-elixir">Workflow in Elixir</a></h2>
+<p>Now for a small section specific to Elixir. Ecto provides the dump and load tasks mentioned above, <a href="https://hexdocs.pm/ecto_sql/Mix.Tasks.Ecto.Dump.html"><code>mix ecto.dump</code></a> and <a href="https://hexdocs.pm/ecto_sql/Mix.Tasks.Ecto.Load.html"><code>mix ecto.load</code></a> respectively.</p>
+<p>In my applications, I've been doing something like this:</p>
+<ol>
+<li>
+<p>I updated the common Mix aliases for dealing with migrations to take dumping/loading into account. Those aliases look something like this now:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">aliases</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-punctuation z-section z-array z-elixir">[</span>
+    <span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-begin z-regexp z-elixir">&quot;</span>ecto.setup<span class="z-punctuation z-definition z-constant z-end z-regexp z-elixir">&quot;:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.create<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.load<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.migrate<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-begin z-regexp z-elixir">&quot;</span>ecto.reset<span class="z-punctuation z-definition z-constant z-end z-regexp z-elixir">&quot;:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.drop<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.setup<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-keywords z-elixir">test<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span>
+      <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.create --quiet<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.load --quiet --skip-if-loaded<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.migrate --quiet<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>test<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+    <span class="z-punctuation z-section z-array z-elixir">]</span>
+  <span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>As you can see, the aliases now always run <code>mix ecto.load</code> before calling <code>mix ecto.migrate</code>. The <code>--skip-if-loaded</code> flag in the <code>test</code> alias ensures that the command is <em>idempotent</em>, that is, can be run multiple times without changing the result.</p>
+</li>
+<li>
+<p>I added a Mix alias to &quot;dump migrations&quot;, that is, dump the current database structure and delete all the current migration files. It looks like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">aliases</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-constant z-other z-keywords z-elixir">dump_migrations<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ecto.dump<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-variable z-other z-capture z-elixir"><span class="z-keyword z-operator z-capture z-elixir">&amp;</span>delete_migration_files</span><span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">delete_migration_files</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_args<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> Match all files in the 21st century (year is 20xx).
+</span>  <span class="z-entity z-name z-class z-elixir">Enum</span><span class="z-punctuation z-separator z-method z-elixir">.</span>each<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">Path</span><span class="z-punctuation z-separator z-method z-elixir">.</span>wildcard<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>priv/repo/migrations/20*.exs<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-keyword z-control z-elixir">fn</span> migration_file <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+    <span class="z-entity z-name z-class z-elixir">File</span><span class="z-punctuation z-separator z-method z-elixir">.</span>rm!<span class="z-punctuation z-section z-function z-elixir">(</span>migration_file<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-entity z-name z-class z-elixir">Mix</span><span class="z-punctuation z-separator z-method z-elixir">.</span>shell<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-method z-elixir">.</span>info<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>bright</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Deleted: <span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>reset</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>red</span><span class="z-punctuation z-separator z-object z-elixir">,</span> migration_file<span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The path wildcard could be improved, or you could have logic that reads the files and checks that they're migrations. However, this does a good-enough job.</p>
+</li>
+</ol>
+<h2 id="conclusions"><a class="zola-anchor" href="#conclusions" aria-label="Anchor link for: conclusions">Conclusions</a></h2>
+<p>If you start to look at database migrations as analogous to Git commits, you can start to treat them that way. We saw how to use the &quot;dumping&quot; and &quot;loading&quot; functionality provided by many database and database frameworks. We saw the advantages and disadvantages of this approach. Finally, I showed you the approach I use in Elixir.</p>
+</div>
+
+    <time class="posted-at" datetime="2022-11-28">
+      Written on November 28, 2022
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

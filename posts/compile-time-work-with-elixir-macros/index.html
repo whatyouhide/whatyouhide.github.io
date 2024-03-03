@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Compile-time work with Elixir macros – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="An overview of possible things to do through Elixir macros at compile time." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Compile-time work with Elixir macros">
+<meta property="og:description" content="An overview of possible things to do through Elixir macros at compile time.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/compile-time-work-with-elixir-macros/">
+<meta property="og:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2015-10-10T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Compile-time work with Elixir macros">
+<meta name="twitter:description" content="An overview of possible things to do through Elixir macros at compile time.">
+<meta name="twitter:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Compile-time work with Elixir macros</h1>
+
+    <div class="entry"><p>Macros are a very common way to do metaprogramming in Elixir. There are many
+resources that explain what macros are and how to use them (much better than I
+could): there's the <a href="https://elixir-lang.org/getting-started/meta/macros.html" title="Chapter on macros from Elixir's &quot;Getting Started&quot; guide">Macro chapter</a> from the
+&quot;Getting Started&quot; guide on Elixir's website, an awesome
+<a href="https://www.theerlangelist.com/article/macros_1" title="Understanding Elixir Macros by Saša Jurić">series of articles</a> by Saša Jurić, and even a
+book (<a href="https://pragprog.com/book/cmelixir/metaprogramming-elixir" title="Metaprogramming Elixir">Metaprogramming Elixir</a>) by Chris McCord. In this
+article, I'll assume you are familiar with macros and how they work, and I'll
+talk about another use case of macros that is rarely examined: doing
+compile-time things in macros.</p>
+<span id="continue-reading"></span><h2 id="macro-expansion"><a class="zola-anchor" href="#macro-expansion" aria-label="Anchor link for: macro-expansion">Macro expansion</a></h2>
+<p>Macros are often used as tools to manipulate the AST (Abstract Syntax Tree,
+the representation of Elixir code) and transform it into new AST. For example, the
+definition of the <code>if</code> macro looks something like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defmacro</span> <span class="z-entity z-name z-function z-public z-elixir">if</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>condition<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">do:</span></span> do_block<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">else<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> else_block<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+  <span class="z-keyword z-control z-elixir">quote</span> <span class="z-keyword z-control z-elixir">do</span>
+    <span class="z-keyword z-control z-elixir">case</span> <span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>condition<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+      x <span class="z-keyword z-operator z-elixir">when</span> x <span class="z-keyword z-operator z-elixir">in</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-language z-elixir">false</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-section z-array z-elixir">]</span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>else_block<span class="z-punctuation z-section z-function z-elixir">)</span>
+      _                        <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>do_block<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-keyword z-control z-elixir">end</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p><code>if</code> just <em>expands</em> to a <code>case</code> statement that checks whether the condition is
+false-y (<code>nil</code> or <code>false</code>) or truthy (anything else), executing the correct block
+of code.</p>
+<p>The key concept here is <strong>expansion</strong>: a macro call just gets transformed to
+other code. It's easy to see this process using
+<a href="https://hexdocs.pm/elixir/Macro.html#expand/2" title="Docs for Macro.expand/2"><code>Macro.expand/2</code></a> (or
+<a href="https://hexdocs.pm/elixir/Macro.html#expand_once/2" title="Docs for Macro.expand_once/2"><code>Macro.expand_once/2</code></a>). Let's work with a simple
+macro so that our examples are straightforward:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">SimpleMacro</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">defmacro</span> <span class="z-entity z-name z-function z-public z-elixir">plus</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>x<span class="z-punctuation z-separator z-object z-elixir">,</span> y<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-keyword z-control z-elixir">quote</span> <span class="z-constant z-other z-keywords z-elixir">do<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>x<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-arithmetic z-elixir">+</span> <span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>y<span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Seeing the expansion of this macro is trivial:</p>
+<pre class="z-code"><code><span class="z-text z-plain">iex&gt; import SimpleMacro
+iex&gt; ast = quote do: plus(x, 23)
+iex&gt; ast |&gt; Macro.expand(__ENV__) |&gt; Macro.to_string
+&quot;x + 23&quot;
+</span></code></pre>
+<p>Expanding a macro means executing the code inside the macro and replacing the
+macro call with the AST (the quoted code) it returns. This expansion step
+happens at compile time: a macro is executed at compile time and replaced with
+the code it returns, which is expanded recursively (searching for nested macros)
+but not executed until runtime. Turns out, we can take advantage of this! We can
+write macros that do not transform the AST they receive, but that perform some
+operation at compile time using this AST.</p>
+<h2 id="working-at-compile-time"><a class="zola-anchor" href="#working-at-compile-time" aria-label="Anchor link for: working-at-compile-time">Working at compile time</a></h2>
+<p>Usually, macros are described as functions that take code instead of data and
+return code instead of data; in this description, we describe macros in terms of
+functions. However, we can also define functions in terms of macros: each
+function is just a macro that does nothing at compile time.</p>
+<p>Say we have this code:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MacroPhilosophy</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">hello</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>name<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello </span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-punctuation z-section z-interpolation z-begin z-elixir">#{</span></span></span></span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-source z-elixir z-embedded">name</span><span class="z-punctuation z-section z-interpolation z-end z-elixir">}</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir">!<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<pre class="z-code"><code><span class="z-text z-plain">iex&gt; hello &quot;Elixir&quot;
+&quot;Hello Elixir!&quot;
+</span></code></pre>
+<p>We can turn <code>hello/1</code> into a macro without changing any of the existing code
+that relies on it, except for having to <code>require</code> the <code>MacroPhilosophy</code>
+module. The only thing we have to change about the definition of <code>hello/1</code> is
+that we have to return the quoted code instead of executing the code: luckily
+this change is trivial if we take advantage of the <code>:bind_quoted</code> option for
+<code>quote</code>.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MacroPhilosophy</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">defmacro</span> <span class="z-entity z-name z-function z-public z-elixir">hello</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>name<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-keyword z-control z-elixir">quote</span> <span class="z-constant z-other z-keywords z-elixir">bind_quoted<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> binding<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+      <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello </span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-punctuation z-section z-interpolation z-begin z-elixir">#{</span></span></span></span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-source z-elixir z-embedded">name</span><span class="z-punctuation z-section z-interpolation z-end z-elixir">}</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir">!<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+    <span class="z-keyword z-control z-elixir">end</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<pre class="z-code"><code><span class="z-text z-plain">iex&gt; require MacroPhilosophy
+iex&gt; hello &quot;Elixir&quot;
+&quot;Hello Elixir&quot;
+</span></code></pre>
+<p>As you can see, the actual body of the function (the string interpolation) is
+the same both in the function and in the macro.</p>
+<p>This lets us see functions from a different perspective, but also highlights
+something about macros: they can be used to do work at compile time. We can
+execute any code inside the macro at compile time, as long as we return valid
+quoted code. Furthermore, the code we execute before returning the quoted code
+will just disappear at runtime. Poof!</p>
+<h3 id="a-useless-expression-counting-macro"><a class="zola-anchor" href="#a-useless-expression-counting-macro" aria-label="Anchor link for: a-useless-expression-counting-macro">A useless expression-counting macro</a></h3>
+<p>To stay true to the ancient tradition of making useless example with absolutely
+no connection to the real world, let's build a macro that logs the number of
+Elixir expressions (and sub-expressions) in some given code:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">UselessExamplesAreFun</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">defmacro</span> <span class="z-entity z-name z-function z-public z-elixir">log_number_of_expressions</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>code<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>_<span class="z-punctuation z-separator z-sequence z-elixir">,</span> counter<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Macro</span><span class="z-punctuation z-separator z-method z-elixir">.</span>prewalk code<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">0</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-keyword z-control z-elixir">fn</span><span class="z-punctuation z-section z-function z-elixir">(</span>expr<span class="z-punctuation z-separator z-object z-elixir">,</span> counter<span class="z-punctuation z-definition z-parameters z-elixir">)</span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+      <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>expr<span class="z-punctuation z-separator z-sequence z-elixir">,</span> counter <span class="z-keyword z-operator z-arithmetic z-elixir">+</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+    <span class="z-keyword z-control z-elixir">end</span>
+
+    <span class="z-entity z-name z-class z-elixir">IO</span><span class="z-punctuation z-separator z-method z-elixir">.</span>puts <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>You passed me </span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-punctuation z-section z-interpolation z-begin z-elixir">#{</span></span></span></span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-source z-elixir z-embedded">counter</span><span class="z-punctuation z-section z-interpolation z-end z-elixir">}</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"> expressions/sub-expressions<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+
+    code
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Let's walk through the macro. First, we count the expressions and
+sub-expressions by using <a href="https://hexdocs.pm/elixir/Macro.html#prewalk/3" title="Docs for Macro.prewalk/3"><code>Macro.prewalk/3</code></a>. Then, we
+print this number: this is our compile time work. Finally, we just return the
+argument code (which is already an AST). This macro effectively does nothing at
+runtime: in fact, it won't leave a trace in the compiled code. This is great for
+performance because, well, the compile-time logging code just disappears.</p>
+<h3 id="a-real-world-example-there-is-one-this-time"><a class="zola-anchor" href="#a-real-world-example-there-is-one-this-time" aria-label="Anchor link for: a-real-world-example-there-is-one-this-time">A real-world example (there is one this time!)</a></h3>
+<p>I realized macros can be used to do compile-time work after José Valim proposed
+to use this technique while we were building
+<a href="https://github.com/elixir-lang/gettext" title="gettext for Elixir">gettext for Elixir</a>. Gettext provides a <code>mix gettext.extract</code> task which is used to extract translations from source files
+and write them to <code>.po</code> files. Translations are just calls to gettext macros
+with strings as arguments:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> in lib/greetings.ex
+</span><span class="z-keyword z-control z-elixir">import</span> <span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span>
+gettext <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello people of Gotham!<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>fr<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span></code></pre>
+<p>Running <code>mix gettext.extract</code> results in a <code>.po</code> file with this content:</p>
+<pre data-lang="txt" class="language-txt z-code"><code class="language-txt" data-lang="txt"><span class="z-text z-plain">#: lib/greetings.ex:2
+msgid &quot;Hello people of Gotham!&quot;
+msgstr &quot;&quot;
+</span></code></pre>
+<p>What most gettext bindings for other languages (such as Python) do to extract
+translations is parsing the code and looking for calls to <code>gettext()</code>
+functions. In Elixir, instead, we just have to register the string to extract
+inside the macro, at compile-time, and then force-recompile the project to
+expand the macros and extract the translations. Awesome!</p>
+<p>This is what the definition of <code>gettext</code> roughly looks like
+(and the <a href="https://github.com/elixir-lang/gettext/blob/v0.6.1/lib/gettext/compiler.ex#L40-L60" title="Implementation of a gettext macro">actual implementation</a>):</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defmacro</span> <span class="z-entity z-name z-function z-public z-elixir">gettext</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>msgid<span class="z-punctuation z-separator z-object z-elixir">,</span> locale<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  extract<span class="z-punctuation z-section z-function z-elixir">(</span>msgid<span class="z-punctuation z-section z-function z-elixir">)</span>
+
+  <span class="z-keyword z-control z-elixir">quote</span> <span class="z-keyword z-control z-elixir">do</span>
+    translate<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>msgid<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-keyword z-control z-elixir">unquote</span><span class="z-punctuation z-section z-function z-elixir">(</span>locale<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>When we call <code>extract/2</code>, we register the <code>msgid</code> by pushing it to an agent that
+we started before recompiling. When the compilation is done, we just dump the
+state of this agent. This has no impact whatsoever on the expanded code that is
+executed at runtime: calls to <code>gettext/2</code> are just calls to <code>translate/2</code> at
+runtime.</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>Deeply understanding macros and how they work is fundamental in order to be able
+to meta-program, optimize, and understand Elixir code. In this article, we
+experimented with using macros to do compile-time work. We saw a non-real-world
+example and then a real-world example taken from the gettext Elixir library.</p>
+</div>
+
+    <time class="posted-at" datetime="2015-10-10">
+      Written on October 10, 2015
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

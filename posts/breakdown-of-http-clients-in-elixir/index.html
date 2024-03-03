@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>A Breakdown of HTTP Clients in Elixir – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="This is an overview of the HTTP clients we have available in Elixir, as well as when to use each one.
+" />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="A Breakdown of HTTP Clients in Elixir">
+<meta property="og:description" content="This is an overview of the HTTP clients we have available in Elixir, as well as when to use each one.
+">
+<meta property="og:url" content="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/cover-image.png">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2023-07-24T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="A Breakdown of HTTP Clients in Elixir">
+<meta name="twitter:description" content="This is an overview of the HTTP clients we have available in Elixir, as well as when to use each one.
+">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/cover-image.png">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>A Breakdown of HTTP Clients in Elixir</h1>
+
+    <div class="entry"><p>Elixir's ecosystem has quite a few <strong>HTTP clients</strong> at this point. But what's
+the <em>best one</em>? In this post, I want to break down a bunch of the clients we
+have available. I'll give an overview of the clients I personally like the most,
+and I'll talk about which clients are the best choice in different use cases.
+I'll also share some advice with library authors.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/cover-image.png" alt="Cover image of a futuristic-looking box ring with a metallic snake inside of it" /></p>
+<p><span class="image-caption">This is AI generated, just to be clear</span></p>
+<h2 id="all-your-clients-are-belong-to-us"><a class="zola-anchor" href="#all-your-clients-are-belong-to-us" aria-label="Anchor link for: all-your-clients-are-belong-to-us">All Your Clients Are Belong to Us</a></h2>
+<p>So, let's take a whirlwind tour of some HTTP clients available in Elixir. We'll
+talk about these:</p>
+<ul>
+<li><a href="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/#mint">Mint</a></li>
+<li><a href="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/#finch">Finch</a></li>
+<li><a href="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/#req">Req</a></li>
+<li><a href="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/#httpc">httpc</a></li>
+</ul>
+<p>This is not a comprehensive list of all the Elixir HTTP clients, but rather a
+list of clients that I think make sense in different situation. At the end of
+this post, you'll also find a mention of other well-known clients, as well as
+advice for library authors.</p>
+<h3 id="mint"><a class="zola-anchor" href="#mint" aria-label="Anchor link for: mint">Mint</a></h3>
+<p>Let's start with <a href="https://github.com/elixir-mint/mint">Mint</a>. Mint is arguably the lowest-level HTTP client
+we've got in Elixir. It's essentially a <em>wrapper</em> around a raw TCP or SSL
+socket. Its job is to make the socket <strong>aware of the network protocol</strong>. It's
+stateless, meaning that all you deal with is a &quot;connection&quot; data structure, and
+it's process-less, meaning that it doesn't impose any process architecture on
+you.</p>
+<p>Think about a <code>:gen_tcp</code> or a <code>:ssl</code> socket. Their job is to allow you to
+connect servers and clients on the TCP and TLS network protocols, respectively.
+When you're using one of these directly, you usually have to do most of the
+encoding of decoding of the data that you're sending or receiving, because the
+sockets carry just binary data.</p>
+<p>Mint introduces an abstraction layer <em>around</em> raw sockets, rather than <em>on top</em>
+of them. Here's a visual representation:</p>
+<img src="./sketch-mint.png" alt="Drawing of Mint surrounding a raw socket" width="70%">
+<p>When you use Mint, you have an API that is similar to the one provided by the
+<code>:gen_tcp</code> and <code>:ssl</code> modules, and you're using a socket underneath. Mint
+provides a <em>data structure</em> that it calls a <strong>connection</strong>, which wraps the
+underlying socket. A Mint connection is aware of the HTTP protocol, so you don't
+send and receive raw binary data here, but rather data that makes sense in the
+semantics of HTTP.</p>
+<p>For example, let's see how you'd make a request using Mint. First, you'd want to
+open a connection. Mint itself is <strong>stateless</strong>, and it stores all the
+connection information inside the connection data structure itself.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> conn<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Mint</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">HTTP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>connect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>http</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>httpbin.org<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">80</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Then, you'd use <a href="https://hexdocs.pm/mint/Mint.HTTP.html#request/5"><code>Mint.HTTP.request/5</code></a> to send a
+request.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> conn<span class="z-punctuation z-separator z-sequence z-elixir">,</span> request_ref<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Mint</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">HTTP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request<span class="z-punctuation z-section z-function z-elixir">(</span>conn<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>GET<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>/<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Sending a request is analogous to sending raw binary data on a <code>:gen_tcp</code> or
+<code>:ssl</code> socket: it's <em>not blocking</em>. The call to <code>request/5</code> returns right away,
+giving you a <strong>request reference</strong> back. The underlying socket will eventually
+receive a response as an Erlang message. At that point, you can use
+<code>Mint.HTTP.stream/2</code> to turn that message into something that makes sense in
+HTTP.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">receive</span> <span class="z-keyword z-control z-elixir">do</span>
+  message <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> conn<span class="z-punctuation z-separator z-sequence z-elixir">,</span> responses<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Mint</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">HTTP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>stream<span class="z-punctuation z-section z-function z-elixir">(</span>conn<span class="z-punctuation z-separator z-object z-elixir">,</span> message<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-entity z-name z-class z-elixir">IO</span><span class="z-punctuation z-separator z-method z-elixir">.</span>inspect<span class="z-punctuation z-section z-function z-elixir">(</span>responses<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-control z-elixir">end</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; [
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt;   {:status, #Reference&lt;...&gt;, 200},
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt;   {:headers, #Reference&lt;...&gt;, [{&quot;connection&quot;, &quot;keep-alive&quot;}, ...},
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt;   {:data, #Reference&lt;...&gt;, &quot;&lt;!DOCTYPE html&gt;...&quot;},
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt;   {:done, #Reference&lt;...&gt;}
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; ]
+</span></span></code></pre>
+<p>Mint supports HTTP/1.1 and HTTP/2 out of the box, as well as WebSocket through
+<a href="https://github.com/elixir-mint/mint_web_socket">mint_web_socket</a>.</p>
+<h4 id="when-to-use-mint"><a class="zola-anchor" href="#when-to-use-mint" aria-label="Anchor link for: when-to-use-mint">When to Use Mint</a></h4>
+<p>Generally, <em><strong>don't use Mint</strong></em>. Seriously. You know I mean this advice, because
+I'm one of the <a href="https://github.com/whatyouhide">two</a> <a href="https://github.com/ericmj">people</a> who maintain and
+originally created Mint itself! For most use cases, Mint is too low
+level. When you use it, you'll have to care about things such as pooling
+connections, process architecture, keeping the connection structs around, and so
+on. It's a bit like what you'd do in other cases, after all. For example, you're
+unlikely to use <code>:gen_tcp</code> to communicate directly with your PostgreSQL
+database. Instead, you'd probably reach <em>at least</em> for something like
+<a href="https://github.com/elixir-ecto/postgrex">Postgrex</a> to abstract a lot of the complexity away.</p>
+<p>Still, there are some use cases where Mint can make a lot of sense. First and
+foremost, you can use it to build higher-level abstractions. That's exactly what
+a library called Finch does, which we'll talk about in a bit. Mint can also be
+useful in cases where you need fine-grained control over the performance and
+process architecture of your application. For example, say you have a fine-tuned
+<a href="https://github.com/elixir-lang/gen_stage">GenStage</a> pipeline where you need to make some HTTP calls at some
+point. GenStage stages are already processes, so having an HTTP client based on
+a process might introduce an unnecessary layer of processes in your application.
+Mint being processless solves exactly that.</p>
+<p><img src="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/./sketch-genstage.png" alt="Drawing of a GenStage pipeline with a traditional process-based HTTP client on the left, and the same pipeline but with Mint as the HTTP client on the right" /></p>
+<p>A few years ago, I worked at a company where we would've likely used Mint in
+exactly this way. At the time, I wrote <a href="https://tech.forzafootball.com/blog/maximizing-http2-performance-with-genstage">a blog
+post</a> that goes into more detail in case you're
+interested.</p>
+<h4 id="bonus-why-isn-t-mint-in-the-elixir-standard-library"><a class="zola-anchor" href="#bonus-why-isn-t-mint-in-the-elixir-standard-library" aria-label="Anchor link for: bonus-why-isn-t-mint-in-the-elixir-standard-library">Bonus: Why Isn't Mint in the Elixir Standard Library?</a></h4>
+<p>That's a great question! When we introduced Mint back in 2019, we <a href="https://elixir-lang.org/blog/2019/02/25/mint-a-new-http-library-for-elixir/">posted about
+it</a> on Elixir's website. Our original intention was to ship Mint
+with Elixir's standard library. This is also one of the reasons why we wrote
+Mint in Elixir, instead of Erlang. However, we then realized that it worked well
+as a standalone library, and including it into the standard library would
+increase the cost of maintaining the language as well as potentially slow down
+the development of Mint itself.</p>
+<p>That said, I think of Mint as the &quot;standard-library HTTP client&quot;, that is, the
+low-level client that you'd expect in the standard library of a language like
+Elixir.</p>
+<h3 id="finch"><a class="zola-anchor" href="#finch" aria-label="Anchor link for: finch">Finch</a></h3>
+<p><a href="https://github.com/sneako/finch">Finch</a> is a client built on top of Mint. It serves an important job in
+the &quot;pyramid of abstractions&quot; of HTTP clients listed in this post: <strong>pooling</strong>.
+Finch provides pooling for Mint connections. Using Mint on its own means
+implementing some sort of strategy to store and pool connections, which is what
+Finch provides.</p>
+<p>Finch is quite smart about its pooling. It uses <a href="https://github.com/dashbitco/nimble_pool">nimble_pool</a> when pooling
+HTTP/1.1 connections. The nimble_pool library is a tiny resource-pool
+implementation heavily focused on a small resource-usage footprint as well as on
+performance. Since HTTP/2 works quite differently from HTTP/1.1 and the former
+is capable of multiplexing requests, Finch uses a completely different strategy
+for HTTP/2, without any pooling. All of this is transparent to users.</p>
+<p>The API that Finch provides is still quite low-level, with manual request
+building and such:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Finch</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-keywords z-elixir">name<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-entity z-name z-class z-elixir">MyFinch</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-entity z-name z-class z-elixir">Finch</span><span class="z-punctuation z-separator z-method z-elixir">.</span>build<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>get</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://hex.pm<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Finch</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">MyFinch</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; {:ok, %Finch.Response{...}}
+</span></span></code></pre>
+<p>However, but the convenience of pooling and reconnections that Finch provides is
+fantastic.</p>
+<p>Okay, when to use Finch then? Personally, I think Finch is a fantastic library
+whenever you have performance-sensitive applications where you're ready to
+sacrifice some of the convenience provided by &quot;higher-level&quot; clients. It's also
+great when you know you'll have to make a lot of requests to the same host,
+since you can specify dedicated connection pools per host. This is especially
+useful when communicating across internal services, or talking to third-party
+APIs.</p>
+<h3 id="req"><a class="zola-anchor" href="#req" aria-label="Anchor link for: req">Req</a></h3>
+<p><a href="https://github.com/wojtekmach/req">Req</a> is a relatively-new kid on the block when it comes to HTTP clients in
+Elixir. It's one of my favorite Elixir libraries out there.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://api.github.com/repos/wojtekmach/req<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-method z-elixir">.</span>body<span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>description<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; &quot;Req is a batteries-included HTTP client for Elixir.&quot;
+</span></span></code></pre>
+<p>It's built on top of Finch, and it takes a quite &quot;functional-programming&quot;
+approach to HTTP. What I mean by that is that Req revolves around a
+<a href="https://hexdocs.pm/req/Req.Request.html"><code>Req.Request</code></a> <em>data structure</em>, which you manipulate to add
+options, callbacks, headers, and more before making an HTTP request.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">req <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+  <span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Request</span><span class="z-punctuation z-separator z-method z-elixir">.</span>new<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-keywords z-elixir">method<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>get</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">url<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://github.com/...<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Request</span><span class="z-punctuation z-separator z-method z-elixir">.</span>append_request_steps<span class="z-punctuation z-section z-function z-elixir">(</span>
+    <span class="z-constant z-other z-keywords z-elixir">put_user_agent<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> &amp;<span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Steps</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put_user_agent<span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span>
+  <span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Request</span><span class="z-punctuation z-separator z-method z-elixir">.</span>append_response_steps<span class="z-punctuation z-section z-function z-elixir">(</span>
+    <span class="z-constant z-other z-keywords z-elixir">decompress_body<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> &amp;<span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Steps</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decompress_body<span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+    <span class="z-constant z-other z-keywords z-elixir">decode_body<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> &amp;<span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Steps</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode_body<span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span>
+  <span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Request</span><span class="z-punctuation z-separator z-method z-elixir">.</span>append_error_steps<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-keywords z-elixir">retry<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> &amp;<span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Steps</span><span class="z-punctuation z-separator z-method z-elixir">.</span>retry<span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>req<span class="z-punctuation z-separator z-sequence z-elixir">,</span> resp<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Request</span><span class="z-punctuation z-separator z-method z-elixir">.</span>run_request<span class="z-punctuation z-section z-function z-elixir">(</span>req<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Req is extensively customizable, since you can <a href="https://hexdocs.pm/req/Req.Request.html#module-writing-plugins">write
+plugins</a> for it in order to build HTTP clients that
+are tailored to your application.</p>
+<h4 id="when-to-use-req"><a class="zola-anchor" href="#when-to-use-req" aria-label="Anchor link for: when-to-use-req">When To Use Req</a></h4>
+<p>First and foremost, Req is <em>fantastic</em> for scripting. With the introduction of
+<a href="https://hexdocs.pm/mix/Mix.html#install/1"><code>Mix.install/2</code></a> in Elixir 1.12, using libraries in Elixir
+scripts is a breeze, and Req fits like a glove.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Mix</span><span class="z-punctuation z-separator z-method z-elixir">.</span>install<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span>
+  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>req</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>~&gt; 0.3.0<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-entity z-name z-class z-elixir">Req</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://andrealeopardi.com<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-method z-elixir">.</span>headers
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; [
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt;   {&quot;connection&quot;, &quot;keep-alive&quot;},
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt;   ...
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; ]
+</span></span></code></pre>
+<p>Req is also a great fit to use in your applications. It provides a ton of
+features and plugins to use for things like encoding and decoding request
+bodies, instrumentation, authentication, and so much more. I'll take a quote
+straight from Finch's README here:</p>
+<blockquote>
+<p>Most developers will most likely prefer to use the fabulous HTTP client
+<a href="https://github.com/wojtekmach/req">Req</a> which takes advantage of Finch's pooling and provides an extremely
+friendly and pleasant to use API.</p>
+</blockquote>
+<p>So, yeah. In your applications, unless you have some of the needs that we
+described so far, just go with Req.</p>
+<h3 id="httpc"><a class="zola-anchor" href="#httpc" aria-label="Anchor link for: httpc">httpc</a></h3>
+<p>While Mint is the lowest-level HTTP client I know of, there's another client
+worth mentioning alongside it: <a href="https://www.erlang.org/doc/man/httpc.html"><code>httpc</code></a>. <code>httpc</code> ships with the Erlang
+standard library, making it the <strong>only</strong> HTTP client in the ecosystem that
+<em>doesn't require any additional dependencies</em>. This is so appealing! There are
+cases where not having dependencies is a huge bonus. For example, if you're a
+library author, being able to make HTTP requests without having to bring in
+additional dependencies can be great, because those additional dependencies
+would trickle down (as transitive dependencies) to all users of your library.</p>
+<p>However, <code>httpc</code> has major drawbacks. One of them is that it provides little
+control over connection pooling. This is usually fine in cases where you need a
+few one-off HTTP requests or where your throughput needs are low, but it can be
+problematic if you need to make a lot of HTTP requests. Another drawback is that
+its API is, how to put it, <em>awkward</em>.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>version<span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">200</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> reason_phrase<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> headers<span class="z-punctuation z-separator z-sequence z-elixir">,</span> body<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+  <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>httpc</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>get</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-storage z-type z-string z-elixir">~c</span></span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span></span><span class="z-string z-quoted z-other z-literal z-lower z-elixir">http://www.erlang.org</span><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>The API is quite low level in some aspects, since it can make it hard to compose
+functionality and requires you to write custom code for common functionality
+such as authentication, compression, instrumentation, and so on.</p>
+<p>That said, the main drawback of <code>httpc</code> in my opinion is <em>security</em>. While all
+HTTP clients on the BEAM use <a href="https://erlang.org/doc/man/ssl.html"><code>ssl</code></a> sockets under the hood (when
+using TLS), some are much better at providing <strong>secure defaults</strong>.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>httpc</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>get</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-storage z-type z-string z-elixir">~c</span></span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span></span><span class="z-string z-quoted z-other z-literal z-lower z-elixir">https://wrong.host.badssl.com</span><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-constant z-numeric z-elixir">09</span>:<span class="z-constant z-numeric z-elixir">01</span>:<span class="z-constant z-numeric z-elixir">35.967</span> <span class="z-punctuation z-section z-array z-elixir">[</span>warning<span class="z-punctuation z-section z-array z-elixir">]</span> <span class="z-constant z-other z-keywords z-elixir">Description<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-storage z-type z-string z-elixir">~c</span></span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span></span><span class="z-string z-quoted z-other z-literal z-lower z-elixir">Server authenticity is not verified since certificate path validation is not enabled</span><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+     <span class="z-constant z-other z-keywords z-elixir">Reason<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-storage z-type z-string z-elixir">~c</span></span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span></span><span class="z-string z-quoted z-other z-literal z-lower z-elixir">The option {verify, verify_peer} and one of the options &#39;cacertfile&#39; or &#39;cacerts&#39; are required to enable this.</span><span class="z-string z-quoted z-other z-literal z-lower z-elixir"><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span></code></pre>
+<p>While you do get a warning regarding the bad SSL certificate here, the request
+still goes through. The good news is that this is mostly going away from OTP 26
+onward, since OTP 26 <a href="https://www.erlang.org/blog/otp-26-highlights/#ssl-safer-defaults">made SSL defaults <strong>significantly
+safer</strong></a>.</p>
+<h4 id="when-to-use-httpc"><a class="zola-anchor" href="#when-to-use-httpc" aria-label="Anchor link for: when-to-use-httpc">When to Use <code>httpc</code></a></h4>
+<p>So, when to use <code>httpc</code>? I would personally recommend <code>httpc</code> only when the most
+important goal is to not have any external dependencies. The perfect example for
+this is Elixir's package manager itself, <a href="https://hex.pm">Hex</a>. Hex <a href="https://github.com/hexpm/hex/blob/1881f9fe8e0571ba7fdcfc86ecf484913125dc37/lib/hex/http.ex">uses
+<code>httpc</code></a> because, if you think about it, what would be the
+alternative? You need Hex to fetch dependencies in your Elixir projects, so it
+would be a nasty chicken-and-egg problem to try to use a third-party HTTP client
+to fetch libraries over HTTP (including that client!).</p>
+<p>Other libraries that use <code>httpc</code> are <a href="https://github.com/phoenixframework/tailwind">Tailwind</a> and
+<a href="https://github.com/phoenixframework/esbuild">Esbuild</a>. Both of these use <code>httpc</code> to download artifacts the first
+time they run, so using a more complex HTTP client (at the cost of additional
+dependencies) isn't really necessary.</p>
+<h2 id="choosing-the-right-client"><a class="zola-anchor" href="#choosing-the-right-client" aria-label="Anchor link for: choosing-the-right-client">Choosing the Right Client</a></h2>
+<p>I've tried to write a bit about when to use each client so far, but to recap,
+these are my loose recommendations:</p>
+<table><thead><tr><th style="text-align: left">Client</th><th style="text-align: left">When</th></tr></thead><tbody>
+<tr><td style="text-align: left"><em>Mint</em></td><td style="text-align: left">You need 100% control on connections and request lifecycle</td></tr>
+<tr><td style="text-align: left"><em>Mint</em></td><td style="text-align: left">You already have a process architecture, and don't want to introduce any more processes</td></tr>
+<tr><td style="text-align: left"><em>Mint</em></td><td style="text-align: left">You're a library author, and you want to force as few dependencies as possible on your users while being mindful of performance and security (so no <code>httpc</code>)</td></tr>
+<tr><td style="text-align: left"><em>Finch</em></td><td style="text-align: left">You need a low-level client with high performance, transparent support for HTTP/1.1 (with pooling) and HTTP/2 (with multiplexing)</td></tr>
+<tr><td style="text-align: left"><em>Req</em></td><td style="text-align: left">Most applications that make HTTP calls</td></tr>
+<tr><td style="text-align: left"><em>Req</em></td><td style="text-align: left">Scripting</td></tr>
+<tr><td style="text-align: left"><em>httpc</em></td><td style="text-align: left">You're a (hardcore) library author who needs a few HTTP requests in their library, but you don't want to add unnecessary transitive dependencies for your users</td></tr>
+</tbody></table>
+<p>Some of the HTTP clients I've talked about here form sort of an abstraction
+pyramid.</p>
+<p><img src="https://andrealeopardi.com/posts/breakdown-of-http-clients-in-elixir/./sketch-pyramid.png" alt="A drawing of a pyramid (like the food pyramid thing) but for HTTP clients" /></p>
+<h3 id="library-authors"><a class="zola-anchor" href="#library-authors" aria-label="Anchor link for: library-authors">Library Authors</a></h3>
+<p>I want to also talk about library authors here. If you're the author of a
+library that needs to make HTTP calls, you have the options we talked about. If
+you're only making a handful of one-off HTTP calls, then I'd go with <code>httpc</code>, so
+that you don't have any impact on downstream code that depends on your library.
+However, if making HTTP requests is central to your library, I would really
+recommend you use the &quot;adapter behaviour&quot; technique.</p>
+<p>What I mean by <em>adapter behaviour technique</em> is that ideally you'd build an
+interface for what you need your HTTP client to do in your library. For example,
+if you're building a client for an error-reporting service (such as
+<a href="https://sentry.io">Sentry</a>), you might only care about making synchronous <code>POST</code> requests.
+In those cases, you can define a behaviour in your library:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">SentryClient</span>.<span class="z-entity z-name z-class z-elixir">HTTPClientBehaviour</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>type</span> status<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> :: <span class="z-constant z-numeric z-elixir">100</span><span class="z-keyword z-operator z-range z-elixir">..</span><span class="z-constant z-numeric z-elixir">599</span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>type</span> headers<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> :: <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-entity z-name z-class z-elixir">String</span><span class="z-punctuation z-separator z-method z-elixir">.</span>t<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">String</span><span class="z-punctuation z-separator z-method z-elixir">.</span>t<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>type</span> body<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> :: binary<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>callback</span> post<span class="z-punctuation z-section z-function z-elixir">(</span>url :: <span class="z-entity z-name z-class z-elixir">String</span><span class="z-punctuation z-separator z-method z-elixir">.</span>t<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> headers<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> body<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span> ::
+              <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> status<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> headers<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> body<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> term<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This would be a <em>public</em> interface, allowing your users to implement their own
+clients. This allows users to choose a client that they're already using in
+their codebase, for example. You can still provide a default implementation that
+ships with your library and uses the client of your choice. Incidentally, this
+is exactly what the Sentry library for Elixir does: it ships with <a href="https://hexdocs.pm/sentry/Sentry.HackneyClient.html">a default
+client</a> based on Hackney. If you go with this
+approach, remember to make the HTTP client an <strong>optional dependency</strong> of your
+library:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> In mix.exs
+</span><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">deps</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-punctuation z-section z-array z-elixir">[</span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...,
+</span>    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>hackney</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>~&gt; 1.0<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">optional<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="what-about-the-others"><a class="zola-anchor" href="#what-about-the-others" aria-label="Anchor link for: what-about-the-others">What About the Others?</a></h2>
+<p>These are not all the HTTP clients available in Elixir, let alone on the BEAM! I
+have not mentioned well-known Elixir clients such as <a href="https://github.com/edgurgel/httpoison">HTTPoison</a> and
+<a href="https://github.com/elixir-tesla/tesla">Tesla</a>, nor Erlang clients such as <a href="https://github.com/benoitc/hackney">hackney</a>.</p>
+<h3 id="httpoison"><a class="zola-anchor" href="#httpoison" aria-label="Anchor link for: httpoison">HTTPoison</a></h3>
+<p>HTTPoison is an Elixir wrapper on top of hackney:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">HTTPoison</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://example.com<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; %HTTPoison.Response{...}
+</span></span></code></pre>
+<p>Because of this, I tend to not really use HTTPoison and, if necessary, go
+straight to hackney.</p>
+<h3 id="hackney"><a class="zola-anchor" href="#hackney" aria-label="Anchor link for: hackney">Hackney</a></h3>
+<p>hackney is a widely-used Erlang client which provides a nice and modern API and
+has support for streaming requests, compression, encoding, file uploads, and
+more. If your project is an Erlang project (which is not the focus of this
+post), hackney can be a good choice.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>hackney</span><span class="z-punctuation z-separator z-method z-elixir">.</span>request<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>get</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://example.com<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; {:ok, 200, [...], &quot;...&quot;}
+</span></span></code></pre>
+<p>However, hackney presents some issues in my opinion. The first is that hackney
+had questionable <em>security defaults</em>. It uses good defaults, but when changing
+even a single SSL option, then it drops all those defaults. This is prone to
+security flaws, because users don't always fill in secure options. While not
+technically a fault of the library itself, the API makes it easy to mess up:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> Secure defaults:
+</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>hackney</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://wrong.host.badssl.com<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; {:error, {:tls_alert, {:handshake_failure, ...
+</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> When changing any SSL options, no secure defaults anymore:
+</span>ssl_options <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-keywords z-elixir">reuse_sessions<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>hackney</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>https://wrong.host.badssl.com<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">ssl_options<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> ssl_options<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> 11:52:32.033 [warning] Description: ~c&quot;Server authenticity is not verified ...
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; {:ok, 200, ...}
+</span></span></code></pre>
+<p>In the second example above, where I changed the <code>reuse_sessions</code> SSL options,
+you get a warning about the host's authenticity, but the request goes through.</p>
+<p>Another thing that I think could be improved in hackney is that it brings in a
+whopping <em>seven</em> dependencies. They're all pertinent to what hackney does, but
+it's quite a few in my opinion.</p>
+<p>Last but not least, hackney doesn't use the standard <a href="https://github.com/beam-telemetry/telemetry">telemetry</a> library to
+report metrics, which can make it a bit of a hassle to wire in metrics (since
+many Elixir applications, at this point, use telemetry for instrumentation).</p>
+<p>One important thing to mention: while HTTPoison is a wrapper around hackney, its
+<a href="https://github.com/edgurgel/httpoison#upgrading-to-2xx">version 2.0.0</a> fixes the potentially-unsecure SSL behavior
+that we just described for hackney.</p>
+<h3 id="tesla"><a class="zola-anchor" href="#tesla" aria-label="Anchor link for: tesla">Tesla</a></h3>
+<p><a href="https://github.com/elixir-tesla/tesla">Tesla</a> is a pretty widely-used HTTP client for Elixir. It provides a
+similar level of abstraction as Req. In my opinion, its main advantage is that
+it provides <strong>swappable HTTP client adapters</strong>, meaning that you can use its
+common API but choose the underlying HTTP client among ones like Mint, hackney,
+and more. Luckily, this feature is in the works for Req as well.</p>
+<p>The reason I tend to not reach for Tesla is mostly that, in my opinion, it
+relies a bit too much on module-based configuration and meta-programming. In
+comparison, I find Req's functional API easier to compose, abstract, and reuse.</p>
+<p>There are <strong>other clients</strong> in Erlang and Elixir: <a href="https://github.com/ninenines/gun">gun</a>, <a href="https://github.com/cmullaparthi/ibrowse">ibrowse</a>, and
+more. But we gotta draw a line at some point!</p>
+<h2 id="conclusions"><a class="zola-anchor" href="#conclusions" aria-label="Anchor link for: conclusions">Conclusions</a></h2>
+<p>We went through a bunch of stuff here. We talked about the clients I personally
+like and recommend for different use cases. You also got a nice little summary
+table for when to use each of those client. Last but not least, I mentioned some
+other clients as well reasons why I prefer the ones in this post.</p>
+<p>That's all. Happy HTTP'ing!</p>
+<h3 id="acknowledgements"><a class="zola-anchor" href="#acknowledgements" aria-label="Anchor link for: acknowledgements">Acknowledgements</a></h3>
+<p>I want to thank a few folks for helping review this post before it went out. Thank you <a href="https://twitter.com/josevalim">José</a>, <a href="http://wojtekmach.pl">Wojtek</a>, and <a href="https://github.com/sabiwara">Jean</a>.</p>
+</div>
+
+    <time class="posted-at" datetime="2023-07-24">
+      Written on July 24, 2023
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

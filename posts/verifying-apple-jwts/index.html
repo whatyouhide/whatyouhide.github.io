@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Verifying JWTs from Apple&#x27;s App Store – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="A quick walkthrough on how to verify JWTs coming from Apple&#x27;s App Store APIs using Elixir.
+" />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Verifying JWTs from Apple&#x27;s App Store">
+<meta property="og:description" content="A quick walkthrough on how to verify JWTs coming from Apple&#x27;s App Store APIs using Elixir.
+">
+<meta property="og:url" content="https://andrealeopardi.com/posts/verifying-apple-jwts/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/verifying-apple-jwts/cover-image.png">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2023-11-29T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Verifying JWTs from Apple&#x27;s App Store">
+<meta name="twitter:description" content="A quick walkthrough on how to verify JWTs coming from Apple&#x27;s App Store APIs using Elixir.
+">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/verifying-apple-jwts/cover-image.png">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Verifying JWTs from Apple&#x27;s App Store</h1>
+
+    <div class="entry"><p>If you've ever had to interact with Apple APIs related to App Store purchases and whatnot (like the <a href="https://developer.apple.com/documentation/appstoreservernotifications/receiving_app_store_server_notifications">App Store Server Notifications</a>), there's a chance you had to <strong>verify JWTs</strong> at some point. I had used, signed, and verified JWTs extensively before this, but Apple uses a bit of a <em>unique</em> way of signing their JWTs that I had never stumbled upon in the past. In this short post, I'll show some code around verifying Apple's JWT signatures in Elixir.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/verifying-apple-jwts/cover-image.jpg" alt="Cover image of a very yellow safe-style lock with yellow background. Minimalistic photograph." /></p>
+<span class="unsplash-credit">
+    Photo by <a href="https:&#x2F;&#x2F;unsplash.com&#x2F;photos&#x2F;green-and-silver-padlock-on-pink-surface-f34K70FGpCg">FLY:D</a> on <a href="https://unsplash.com">Unsplash</a>
+</span>
+<p>At <a href="https://veeps.com">Veeps</a>, we're working on some features connected to the App Store. This involves verifying that the notifications (webhooks) that Apple sends to us are legitimate.</p>
+<p>One note before we start: I'm using the term JWT here mostly out of ignorance and out of desire to bump this blog post's ranking in search engines! What Apple sends to us is a <strong>JWS (JSON Web Signature)</strong>. JWTs are the <em>payload</em> that ships inside a JWS. <a href="https://www.rfc-editor.org/rfc/rfc7519">RFC 7519</a> is the one you want to take a look at if you want to know more about this. Anyway, minutiae.</p>
+<p>Let's first have a look at the general idea of how Apple signs these JWTs. After that, we'll look at some Elixir code.</p>
+<p>The deal with Apple's JWTs is that they are signed via certificates rather than via symmetric or asymmetric signatures. Essentially, Apple signs the JWT's payload with a private key. Then, they include the public key for that in a DER certificate in the JWS itself (the <strong>&quot;leaf&quot; certificate</strong>). That certificate is itself signed by an <strong>intermediate certificate</strong>, which in turn is signed via their <strong>root certificate</strong>. The root certificate and intermediate certificate are public and available through Apple's certificate authority (<a href="https://www.apple.com/certificateauthority/">Apple PKI</a>).</p>
+<img src="sketch.png" alt="TODO" class="invert-in-dark-mode">
+<h2 id="some-elixir-code"><a class="zola-anchor" href="#some-elixir-code" aria-label="Anchor link for: some-elixir-code">Some Elixir Code</a></h2>
+<p>You technically don't really need any third-party Elixir/Erlang libraries for this, but I opted to use two nimble and widely-used ones:</p>
+<ul>
+<li>
+<p><a href="https://github.com/potatosalad/erlang-jose">JOSE</a> is a foundational Erlang library (with an Elixir API as well) that implements many of the components described in the series of <a href="https://datatracker.ietf.org/group/jose/documents/">RFCs around JOSE (Javascript Object Signing and Encryption)</a>. I've used this library many times in the past for signing and verifying JWTs.</p>
+</li>
+<li>
+<p><a href="https://github.com/voltone/x509">X509</a> is an Elixir library that simplifies working with X.509 certificates. It's built by <a href="https://github.com/voltone">Bram Verburg</a>, who I consider to be the most knowledgeable person around web security in the Erlang and Elixir communities.</p>
+</li>
+</ul>
+<p>Let's get into it.</p>
+<aside class="callout callout-info">
+    <h5>Error Handling</h5>
+    <div class="callout-content">
+        <p>In the code I'll show, I don't do any error handling that I would consider worthy of production code. I just match on stuff with <code>=</code> or in function heads. That leads to horrible <code>MatchError</code>s and <code>FunctionClauseError</code>s and whatnot, which are hard to debug and don't really provide context on what went wrong. In production, I'd never want that! The real-world code I wrote uses the <code>throw</code>/<code>catch</code> pattern, where I use <a href="https://hexdocs.pm/elixir/Kernel.html#throw/1"><code>throw/1</code></a> to throw errors that I <code>catch</code> at the end of the top-level function and return as <code>{:error, reason}</code> tuples.</p>
+<p><code>throw</code>/<code>catch</code> is a &quot;dangerous&quot; pattern because it uses non-local returns. However, it's a pattern that I've reached for several times in this type of situations. The trick is to never let a thrown term get out of a local function, or module at most. That way, users of the functions that throw don't have to know that those functions use <code>throw</code>/<code>catch</code> internally.</p>
+
+    </div>
+</aside>
+<h3 id="decoding-the-jws-s-header"><a class="zola-anchor" href="#decoding-the-jws-s-header" aria-label="Anchor link for: decoding-the-jws-s-header">Decoding the JWS's Header</a></h3>
+<p>The first thing you want to do when verifying one of these JWTs is to peek at its header. This doesn't do any verification, but the header contains the certificate chain that we need to verify the JWT's signature, so we gotta look at it. JOSE provides a <code>JOSE.JWT.peek_protected/1</code> function that returns the JWT's header as a raw JSON-encoded string:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">decoded_header <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+  signed_payload
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">JOSE</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">JWS</span><span class="z-punctuation z-separator z-method z-elixir">.</span>peek_protected<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Jason</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Right. The algorithm should be <code>ES256</code>, so why not throw in a check for that:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">%<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>alg<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-operator z-map-pair z-elixir">=&gt;</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>ES256<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> decoded_header
+</span></code></pre>
+<h3 id="extracting-and-verifying-the-certificates"><a class="zola-anchor" href="#extracting-and-verifying-the-certificates" aria-label="Anchor link for: extracting-and-verifying-the-certificates">Extracting and Verifying the Certificates</a></h3>
+<p>Next, we need to look at the <code>x5c</code> in the header. The <code>x5c</code> header field <a href="https://datatracker.ietf.org/doc/html/rfc7515#section-4.1.6">is documented in the JWT RFC (RFC 7515, sec. 4.1.6)</a>. It's a JSON array of base-64-encoded DER PKIX certificates. Those are complex acronyms that you and I really don't have to care about. The RFC (and Apple) says that you must validate the certificate chain.</p>
+<p>First, let's extract the certificate chain:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> We pattern match on [_ | _] to make sure that the list of certs
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> isn&#39;t empty.
+</span>%<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>x5c<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-operator z-map-pair z-elixir">=&gt;</span> <span class="z-punctuation z-section z-array z-elixir">[</span>_ <span class="z-keyword z-operator z-other z-elixir">|</span> _<span class="z-punctuation z-section z-array z-elixir">]</span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> base64_cert_chain<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> decoded_header
+cert_chain <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Enum</span><span class="z-punctuation z-separator z-method z-elixir">.</span>map<span class="z-punctuation z-section z-function z-elixir">(</span>base64_cert_chain<span class="z-punctuation z-separator z-object z-elixir">,</span> &amp;<span class="z-entity z-name z-class z-elixir">Base</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode64!<span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Now, we can <em>verify</em> the certificate chain. We'll follow the process that I described above:</p>
+<ol>
+<li>We'll check that the root certificate is the same as the certificate that Apple offers on <a href="https://www.apple.com/certificateauthority/">Apple PKI</a>.</li>
+<li>We'll check that the certificate chain is <em>valid</em>, meaning that each certificate was used to sign the next one in the chain.</li>
+</ol>
+<p>The code below assumes that you downloaded the Apple root certificate (<a href="https://www.apple.com/certificateauthority/AppleRootCA-G3.cer"><code>AppleRootCA-G3</code></a> in particular). It reads it at compile time and embeds it in the bytecode of the module, so that you don't have to ship the file with your production application or release.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>apple_root_cert</span> <span class="z-entity z-name z-class z-elixir">File</span><span class="z-punctuation z-separator z-method z-elixir">.</span>read!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>certs/AppleRootCA-G3.cer<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">valid_certificate_chain?</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>
+      <span class="z-punctuation z-section z-array z-elixir">[</span>raw_leaf<span class="z-punctuation z-separator z-object z-elixir">,</span> raw_intermediate<span class="z-punctuation z-separator z-object z-elixir">,</span> _raw_root <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>apple_root_cert</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+    <span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">case</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>public_key</span><span class="z-punctuation z-separator z-method z-elixir">.</span>pkix_path_validation<span class="z-punctuation z-section z-function z-elixir">(</span>
+         <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>apple_root_cert</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+         <span class="z-punctuation z-section z-array z-elixir">[</span>raw_intermediate<span class="z-punctuation z-separator z-object z-elixir">,</span> raw_leaf<span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+         <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+       <span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-constant z-language z-elixir">true</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-constant z-language z-elixir">false</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">valid_certificate_chain?</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_x5c_certs<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-constant z-language z-elixir">false</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p><a href="https://github.com/voltone">Bram</a> basically hand-held me through this code, so thank you, Bram! We can use the <code>valid_certificate_chain?/1</code> helper function to verify the certificate chain and blow up if it doesn't look right:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">if</span> <span class="z-keyword z-operator z-logical z-elixir">not</span> valid_certificate_chain?<span class="z-punctuation z-section z-function z-elixir">(</span>cert_chain<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+  <span class="z-keyword z-control z-elixir">raise</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>certificate chain is invalid<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h3 id="verifying-the-jws-s-signature"><a class="zola-anchor" href="#verifying-the-jws-s-signature" aria-label="Anchor link for: verifying-the-jws-s-signature">Verifying the JWS's Signature</a></h3>
+<p>Lastly, the final (and fundamental) step: we need to check that the X.509 key in the leaf certificate was used to sign the whole JWT. JOSE provides the <a href="https://hexdocs.pm/jose/1.11.6/JOSE.JWK.html#from_key/1"><code>JOSE.JWK.from_key/1</code></a> function to build a JWK struct from a public key:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">jwk <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+  leaf_cert
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">X509</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Certificate</span><span class="z-punctuation z-separator z-method z-elixir">.</span>from_der!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">X509</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Certificate</span><span class="z-punctuation z-separator z-method z-elixir">.</span>public_key<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">JOSE</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">JWK</span><span class="z-punctuation z-separator z-method z-elixir">.</span>from_key<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Now, the easiest part of all of this: we just use JOSE's <code>verify/2</code> function to verify the signature in the JWT:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"> <span class="z-keyword z-control z-elixir">case</span> <span class="z-entity z-name z-class z-elixir">JOSE</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">JWT</span><span class="z-punctuation z-separator z-method z-elixir">.</span>verify<span class="z-punctuation z-section z-function z-elixir">(</span>jwk<span class="z-punctuation z-separator z-object z-elixir">,</span> signed_payload<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+   <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>_valid_signature? <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> jwt<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _jws<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> jwt<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+   <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>_valid_signature? <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-language z-elixir">false</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> _jwt<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _jws<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>invalid_signature</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+   <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> reason<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> reason<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+ <span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>There's not much else to say about this. I spent a bunch of time on it and how to do it in Elixir after finding several pieces of code to do this in other languages. For example, Apple provides &quot;App Store libraries&quot; for a bunch of languages (take a look at the <a href="https://github.com/apple/app-store-server-library-python">Python one</a>). Apple also provides a useful <a href="https://developer.apple.com/videos/play/wwdc2022/10040/">video</a> that explains this process.</p>
+<p>Well, hope this helps someone. Thanks for stopping by!</p>
+</div>
+
+    <time class="posted-at" datetime="2023-11-29">
+      Written on November 29, 2023
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

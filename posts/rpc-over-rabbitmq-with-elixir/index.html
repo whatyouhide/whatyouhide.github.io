@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>RPC over RabbitMQ (with Elixir) – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="A look into the RabbitMQ topology (exchanges, queues, bindings) and Elixir architecture that we use to perform RPCs over RabbitMQ." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="RPC over RabbitMQ (with Elixir)">
+<meta property="og:description" content="A look into the RabbitMQ topology (exchanges, queues, bindings) and Elixir architecture that we use to perform RPCs over RabbitMQ.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/cover-image.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2020-11-23T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="RPC over RabbitMQ (with Elixir)">
+<meta name="twitter:description" content="A look into the RabbitMQ topology (exchanges, queues, bindings) and Elixir architecture that we use to perform RPCs over RabbitMQ.">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/cover-image.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>RPC over RabbitMQ (with Elixir)</h1>
+
+    <div class="entry"><p>At <a href="https://www.community.com">Community</a>, we use <a href="https://www.rabbitmq.com">RabbitMQ</a>, a lot. It's the infrastructure backbone that allows our services (over forty at this point) to communicate with each other. That mostly happens through <strong>events</strong> (since we have an event-sourced system), but in some cases what we need is a <em>request-response</em> interaction between two services. This is the best tool in a few use cases, like retrieving data on the fly or asking a service to do something and return a response. An industry standard for such interactions is HTTP, but we are not big fans of that. Instead, since RabbitMQ is so ubiquitous in our system, we settled on using it for request-response interactions as well in the form of <strong>Remote Procedure Calls</strong> (RPCs). In this post, I'll go over the architecture of such interactions. I'll talk about the RabbitMQ topologies we use to make them work, the benefits around reliability, the compromises around performance, and finally how this all implemented to be as fault-tolerant as possible with Elixir.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/cover-image.jpg" alt="Cover image people queuing" /></p>
+<span class="unsplash-credit">
+    Photo by <a href="https:&#x2F;&#x2F;unsplash.com&#x2F;@amandazi_photography?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">amandazi photography</a> on <a href="https://unsplash.com">Unsplash</a>
+</span>
+<h2 id="what-is-an-rpc"><a class="zola-anchor" href="#what-is-an-rpc" aria-label="Anchor link for: what-is-an-rpc">What is an RPC</a></h2>
+<p>An RPC can be seen as a function call across system boundaries, instead of at the code execution level. An RPC allows you to call a <em>procedure</em> on another service and treat it mostly like a local function call (with the additional error handling to account for the network interaction).</p>
+<p><img src="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/sketch-rpc-definition.png" alt="Sketch of caller and receiver of an RPC" /></p>
+<p>I won't go into too much detail about RPCs themselves, but you're probably familiar with a common form of RPC: HTTP. HTTP request-response interactions between services in a service-oriented architecture are essentially RPCs, they're just less explicit on the fact that they're <em>calling a procedure</em>. One of the benefits of RPCs is, like HTTP, that they are agnostic of technologies. A services written in Elixir can make an RPC (or HTTP request) to a service written in Go, for example. If you want to read more about RPCs, their definition, their benefits, and more, guess where I'll link you to? Exactly, <a href="https://en.wikipedia.org/wiki/Remote_procedure_call">Wikipedia</a>.</p>
+<p>Throughout this post, I will refer to the services involved in an RPC as the <strong>caller service</strong> and the <strong>receiver service</strong>.</p>
+<h2 id="why-rpcs-over-rabbitmq"><a class="zola-anchor" href="#why-rpcs-over-rabbitmq" aria-label="Anchor link for: why-rpcs-over-rabbitmq">Why RPCs over RabbitMQ</a></h2>
+<p>At Community, we chose to do RPCs over RabbitMQ, instead of the common service-to-service communication via HTTP, for a few reasons.</p>
+<p>The main reason is that we want to use message queues as often as possible. When you have a queue-based message broker between services that talk to each other, the availability requirements of the services can be less demanding. If you have two services that communicate over HTTP, then if the receiver service is down it means that the requester service will not get a response. Instead, the requester service will have to implement request retries in order to increase the chances of a successful request. With RabbitMQ in the middle, if the receiver is down then the RPC is queued and can be picked up once the receiver comes back up.</p>
+<p>Another important reason that influenced our decision is that we make heavy use of RabbitMQ for all sorts of things. This means our engineer know it well, our infrastructure is solid, and we have good systems to trace and observe messages flowing through it.</p>
+<p>One compromise we had to make is that, generally speaking, RPCs over RabbitMQ tend to be <em>slower</em> than direct service-to-service communication (such as HTTP). This is hard to avoid given that in our case we have a message broker sitting between the caller service and the receiver service. That means that you'll <em>at least</em> have twice the RTT (round-trip time) on the network, since the messages you're sending and receiving need to jump through one more hop than if you do direct service-to-service communication. However, when we do RPCs the bottleneck is rarely the network or the message broker, and instead tends to be the processing of the RPC itself. So, we're fine with the compromise here.</p>
+<h2 id="rabbitmq-topology"><a class="zola-anchor" href="#rabbitmq-topology" aria-label="Anchor link for: rabbitmq-topology">RabbitMQ topology</a></h2>
+<p>Let's talk about the <strong>RabbitMQ topology</strong> that powers our RPC system. We have the following components in place:</p>
+<ul>
+<li>
+<p>A <em>headers</em> exchange called <code>rpc</code>. Caller services publish RPCs to this exchange with two headers, <code>destination</code> (the receiver service name) and <code>procedure</code> (the procedure name).</p>
+</li>
+<li>
+<p>Per-service queues where RPCs end up. Their name usually looks like <code>receiver_service.rpcs</code>. Multiple <em>instances</em> (nodes) of the same service share a single queue. All the running instances of the receiver service consume from this queue.</p>
+</li>
+<li>
+<p>A binding between each per-service queue and the <code>rpc</code> exchange. Since <code>rpc</code> is a headers exchange, the binding happens on the headers. Most commonly, receiver services bind their queue to the <code>rpc</code> exchange on the <code>destination: receiver_service_name</code> header, but sometimes we can be more flexible and specific by also using the <code>procedure</code> header.</p>
+</li>
+<li>
+<p>A per-instance <em>response queue</em> where responses to RPCs are published by the receiver service. Each <em>instance</em> of the caller service consumes from its dedicated response queue.</p>
+</li>
+</ul>
+<p>Below is an artistic representation of the RabbitMQ topology. This one is for you, my visual friends.</p>
+<p><img src="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/sketch-rabbitmq-topology.png" alt="Sketch of RabbitMQ topology" /></p>
+<h2 id="caller-architecture"><a class="zola-anchor" href="#caller-architecture" aria-label="Anchor link for: caller-architecture">Caller architecture</a></h2>
+<p>Our focus when designing this architecture <em>was not</em> performance. Since our system is event-sourced, when services need to access data <em>fast</em>, we usually have alternatives to RPCs. In those cases, instead of fetching data from another service via RPC, a service can usually build a &quot;local&quot; data store (usually Redis, but whatever fits best) by consuming events and have fast access to that data store. However, this doesn't cover use cases where a service wants to ask another service to do something and return a result. This can be usually also be done via asynchronous events, but sometimes it really can't and in any case we like the agility of RPCs for when we're moving fast and don't want to commit to particular data exchanges in the long term.</p>
+<p>Instead, we heavily focused on reliability and resource utilization. We want our RPCs to succeed whenever they can. We also want to limit RabbitMQ resource utilization as much as possible, since the message broker architecture shares the broker between all the services that use it.</p>
+<p>With these goals in mind, we came up with the topology described above. In the sketch below, I'm focusing on the caller service perspective.</p>
+<p><img src="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/sketch-caller-architecture.png" alt="Sketch of the architecture of the sender service" /></p>
+<p>This is what happens, step by step, when a service makes an RPC:</p>
+<ul>
+<li>
+<p>The caller assigns a new UUID to the request and encodes the request (we happen to use Protobuf, but anything would work).</p>
+</li>
+<li>
+<p>The caller includes the name of the <em>response queue</em> in the <code>reply_to</code> metadata field of the RabbitMQ message.</p>
+</li>
+<li>
+<p>The caller publishes the request on the main RPC exchange (<code>rpc</code>) using headers to specify the <code>destination</code> and <code>procedure</code> to call.</p>
+</li>
+<li>
+<p>If publishing the request is successful, the caller stores the request in an in-memory key-value store (ETS for Elixir and Erlang folks), storing the mapping from request ID to caller process. This is used to map responses back to requests when they come back.</p>
+</li>
+<li>
+<p>The caller has a pool of AMQP channels also consuming from the response queue. When the response comes back on such queue, a consumer channel picks it up, finds the corresponding caller process from the in-memory key-value store, and hands the caller process the response.</p>
+</li>
+</ul>
+<p>From a code standpoint, an RPC really does look like a function call. The main difference is that an RPC can <em>definitely</em> fail due to the network interaction, so we always make sure to return a successful value or an error value. In Elixir, that translates to <code>{:ok, response}</code> or <code>{:error, reason}</code> tuples. In a typed language (say Haskell) it would be the &quot;either&quot; type. This is what an RPC looks like from the caller side (in Elixir-flavored pseudocode):</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">case</span> <span class="z-entity z-name z-class z-elixir">RPCPool</span><span class="z-punctuation z-separator z-method z-elixir">.</span>call<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my_receiver_svc<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>add<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>args<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-operator z-map-pair z-elixir">=&gt;</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-numeric z-elixir">4</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">9</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>result<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-operator z-map-pair z-elixir">=&gt;</span> result<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    result <span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; 13
+</span>
+  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> reason<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    <span class="z-keyword z-control z-elixir">raise</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>failed because: </span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-punctuation z-section z-interpolation z-begin z-elixir">#{</span></span></span></span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-source z-elixir z-embedded">inspect<span class="z-punctuation z-section z-function z-elixir">(</span>reason<span class="z-punctuation z-section z-function z-elixir">)</span></span><span class="z-punctuation z-section z-interpolation z-end z-elixir">}</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; such as :timeout
+</span><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h3 id="the-response-queue"><a class="zola-anchor" href="#the-response-queue" aria-label="Anchor link for: the-response-queue">The response queue</a></h3>
+<p>It's worth focusing on the <strong>response queue</strong>. All AMQP channels in the caller pool declare this queue when they start up. This is a common pattern in RabbitMQ since declaring resources (queues, exchanges, and bindings) is <em>idempotent</em>, that is, you can do it as many times as you want with the resource being declared only once.</p>
+<p>The response queue is declared with a key property: <code>auto_delete</code>. When this property is present, RabbitMQ deletes the queue as soon as there are no channels consuming from it anymore. This is exactly the behavior we want: as long as a caller pool is &quot;up and running&quot;, there's going to be at least one channel consuming from the queue and handing responses over to caller processes. However, if the whole pool or the whole node for the caller goes down then the queue will be deleted. This works perfectly, because if the caller node goes down, then we likely lost the &quot;context&quot; of the requests, and even if the node will come back up then it won't know what to do with the responses anymore. As <a href="https://www.rabbitmq.com/direct-reply-to.html">one RabbitMQ documentation page</a> puts it:</p>
+<blockquote>
+<p>Reply messages sent using [RPC] are in general not fault-tolerant; they will be discarded if the client that published the original request subsequently disconnects. The assumption is that an RPC client will reconnect and submit another request in this case.</p>
+</blockquote>
+<p>In this way, we allow RabbitMQ to clean itself up and avoid leaving garbage in it, without writing any code to do so.</p>
+<p>The code for each AMQP channel that consumes responses goes something like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">channel <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Channel</span><span class="z-punctuation z-separator z-method z-elixir">.</span>open<span class="z-punctuation z-section z-function z-elixir">(</span>amqp_connection<span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> &quot;response_queue&quot; is determined per-pool.
+</span><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> Usually it looks like: &quot;caller_service.#{UUID.generate()}&quot;
+</span><span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Queue</span><span class="z-punctuation z-separator z-method z-elixir">.</span>declare<span class="z-punctuation z-section z-function z-elixir">(</span>channel<span class="z-punctuation z-separator z-object z-elixir">,</span> response_queue<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">auto_delete<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Basic</span><span class="z-punctuation z-separator z-method z-elixir">.</span>consume<span class="z-punctuation z-section z-function z-elixir">(</span>channel<span class="z-punctuation z-separator z-object z-elixir">,</span> response_queue<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>When a response comes back, the caller does a key lookup on the response's request ID in the in-memory key-value data store to retrieve the original request and moreover the process that's waiting on the response. It looks like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_rabbitmq_message</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>message<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  response <span class="z-keyword z-operator z-assignment z-elixir">=</span> decode!<span class="z-punctuation z-section z-function z-elixir">(</span>message<span class="z-punctuation z-section z-function z-elixir">)</span>
+  caller_process <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">KVStore</span><span class="z-punctuation z-separator z-method z-elixir">.</span>fetch<span class="z-punctuation z-section z-function z-elixir">(</span>response<span class="z-punctuation z-separator z-method z-elixir">.</span>request_id<span class="z-punctuation z-section z-function z-elixir">)</span>
+  send<span class="z-punctuation z-section z-function z-elixir">(</span>caller_process<span class="z-punctuation z-separator z-object z-elixir">,</span> response<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h3 id="elixir-process-architecture"><a class="zola-anchor" href="#elixir-process-architecture" aria-label="Anchor link for: elixir-process-architecture">Elixir process architecture</a></h3>
+<p>The Elixir process architecture and supervision tree structure we use for the caller is based on the properties of the response queue described above. We have the following constraints:</p>
+<ul>
+<li>
+<p>If the in-memory key-value store that holds the mappings between request IDs and caller processes (ETS) crashes, we want the whole pool to crash. We wouldn't be able to map responses back to requests in any case at that point, and it's better to let RabbitMQ delete the whole response queue in such cases.</p>
+</li>
+<li>
+<p>If a connection or a channel goes down, we don't want to delete the response queue. As long as there's at least one channel consuming from the response queue, we'll be able to hand responses back to the corresponding caller processes.</p>
+</li>
+</ul>
+<p>With these constraints, we designed this supervision tree:</p>
+<p><img src="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/sketch-supervision-tree.png" alt="Sketch of the supervision tree" /></p>
+<p>It's pretty deep and nested, but a lot of it is dancing to use the right supervision strategies. We have a main supervisor for the whole caller architecture. Then, we have a pool supervisor that supervises the connections and channels. That supervisor's children are supervisors that each look over one AMQP connection and one &quot;channel supervisor&quot;. The channel supervisor supervises AMQP channels. That was hard to type, but hopefully it makes sense?</p>
+<p>I won't go into detail here, but the point of this design is that if anything in that supervisor fails, the failures bubble up and cascade correctly. If there's really nothing more fun that you could do (I hardly believe that), play &quot;kill the process&quot; in your head and see what happens when you kill any process above. It's fun, if this sort of stuff is fun for you (which is a tautology).</p>
+<p>The registry shown in the diagram is an Elixir <code>Registry</code> that all AMQP channels register themselves to. This allows us to access AMQP channels fast, without going through a single pool process. I talked more about Registry-based process pools in Elixir in <a href="https://andrealeopardi.com/posts/process-pools-with-elixirs-registry">another blog post</a>.</p>
+<p>All the code in there is build on top of the <a href="https://github.com/pma/amqp">AMQP</a> Elixir library.</p>
+<h2 id="receiver-architecture-and-topology"><a class="zola-anchor" href="#receiver-architecture-and-topology" aria-label="Anchor link for: receiver-architecture-and-topology">Receiver architecture and topology</a></h2>
+<p>The receiver architecture, compared to the caller, is straightforward. Every service sets up a pool of RabbitMQ connections (and channels), declares a queue, and binds it to the main RPC exchange (<code>rpc</code>). That exchange is a <em>headers</em> exchange, and each service usually binds the queue with the <code>destination</code> header matching that service. For example, here's the pseudocode for the <code>receiver_svc</code> service:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Queue</span><span class="z-punctuation z-separator z-method z-elixir">.</span>declare<span class="z-punctuation z-section z-function z-elixir">(</span>channel<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>receiver_svc.rpcs<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">durable<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Queue</span><span class="z-punctuation z-separator z-method z-elixir">.</span>bind<span class="z-punctuation z-section z-function z-elixir">(</span>
+  channel<span class="z-punctuation z-separator z-object z-elixir">,</span>
+  <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>receiver_svc.rpcs<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+  <span class="z-constant z-other z-keywords z-elixir">exchange<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>rpc<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+  <span class="z-constant z-other z-keywords z-elixir">headers<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>destination<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>receiver_svc<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Basic</span><span class="z-punctuation z-separator z-method z-elixir">.</span>consume<span class="z-punctuation z-section z-function z-elixir">(</span>channel<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>receiver_svc.rpcs<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>All AMQP channels over all nodes of the receiver service declare the queue and bind it <em>on every startup</em>. Idempotency, friends!</p>
+<p>From here, it's all downhill: when a request comes in on a channel, the node decodes it, processes it, produces a response, and publishes it back on RabbitMQ. Where does it publish it? Well, good question. That's why all requests have the <code>reply_to</code> RabbitMQ metadata field set to the reply queue of the caller. We take advantage of the default <code>amqp.direct</code> exchange, which is pre-declared by all RabbitMQ nodes, to publish the response directly to the reply queue. The pseudocode to handle a request is this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">response <span class="z-keyword z-operator z-assignment z-elixir">=</span> process_request<span class="z-punctuation z-section z-function z-elixir">(</span>request<span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Basic</span><span class="z-punctuation z-separator z-method z-elixir">.</span>publish<span class="z-punctuation z-section z-function z-elixir">(</span>
+  <span class="z-constant z-other z-keywords z-elixir">exchange<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>amqp.direct<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+  <span class="z-constant z-other z-keywords z-elixir">routing_key<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> request<span class="z-punctuation z-separator z-method z-elixir">.</span>metadata<span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>reply_to<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Below is a nice artsy drawing focusing on the RabbitMQ topology and interactions of the receiver service.</p>
+<p><img src="https://andrealeopardi.com/posts/rpc-over-rabbitmq-with-elixir/sketch-receiver-architecture.png" alt="Sketch of the pool supervision tree" /></p>
+<h3 id="in-elixir-as-always-the-answer-is-broadway"><a class="zola-anchor" href="#in-elixir-as-always-the-answer-is-broadway" aria-label="Anchor link for: in-elixir-as-always-the-answer-is-broadway">In Elixir, as always, the answer is Broadway</a></h3>
+<p>As far as Elixir specifics goes, we use <a href="https://github.com/dashbitco/broadway">Broadway</a> to consume RPCs, hooking it up with the <a href="https://github.com/dashbitco/broadway_rabbitmq"><code>broadway_rabbitmq</code></a> producer.</p>
+<p>I personally made enough changes to <code>broadway_rabbitmq</code> by now that, look at that, it perfectly fits our use case! This is how a typical Broadway pipeline to consume RPCs looks like in our services:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyService</span>.<span class="z-entity z-name z-class z-elixir">RPCConsumer</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Broadway</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">start_link</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    broadway_rabbitmq_options <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span>
+      <span class="z-constant z-other z-keywords z-elixir">queue<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my_service.rpcs<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">declare<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-keywords z-elixir">durable<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">bindings<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span>
+        <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>rpc<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">arguments<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>destination<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>longstr</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>my_service<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+      <span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">metadata<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>reply_to</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+    <span class="z-punctuation z-section z-array z-elixir">]</span>
+
+    <span class="z-entity z-name z-class z-elixir">Broadway</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">name<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">producer<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-entity z-name z-class z-elixir">BroadwayRabbitMQ</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Producer</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> broadway_rabbitmq_options<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">processors<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-keywords z-elixir">default<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-keywords z-elixir">concurrency<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-numeric z-elixir">10</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+    <span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_message</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_<span class="z-punctuation z-separator z-object z-elixir">,</span> %<span class="z-entity z-name z-class z-elixir">Broadway</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Message</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> message<span class="z-punctuation z-separator z-object z-elixir">,</span> _context<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    response <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+      request
+      <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> decode_request!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+      <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> process_request<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+      <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> encode_response!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> This is where we publish the response.
+</span>    <span class="z-entity z-name z-class z-elixir">AMQP</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Basic</span><span class="z-punctuation z-separator z-method z-elixir">.</span>publish<span class="z-punctuation z-section z-function z-elixir">(</span>
+      message<span class="z-punctuation z-separator z-method z-elixir">.</span>metadata<span class="z-punctuation z-separator z-method z-elixir">.</span>amqp_channel<span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">exchange<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>amqp.direct<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">routing_key<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> message<span class="z-punctuation z-separator z-method z-elixir">.</span>metadata<span class="z-punctuation z-separator z-method z-elixir">.</span>reply_to<span class="z-punctuation z-separator z-object z-elixir">,</span>
+      <span class="z-constant z-other z-keywords z-elixir">payload<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> response
+    <span class="z-punctuation z-section z-function z-elixir">)</span>
+
+    message
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>As you can see, <code>broadway_rabbitmq</code> exposes the AMQP channel it uses to consume under the hood in the message metadata. We use that to send replies. Easy-peasy.</p>
+<p>Small disclaimer: we have a wrapper library around Broadway that makes this slightly boilerplate-y code a bit simpler and more tailored to our use case. It also provides us with some nice additions such as round-robin connection attempts over a list of RabbitMQ URLs (for reliability), automatic decoding of requests (so that the decoding is done under the hood), metrics, error reporting, and so on. However, the gist of it is exactly the code above.</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>We saw how we architected a system to make service-to-service RPCs over RabbitMQ. Then, we went over the RabbitMQ topology we use, showing all the queues, exchanges, and bindings involved. Finally, we also covered the Elixir-specific implementation of this system, to sprinkle some practical examples on top of this stuff.</p>
+<p>Here's some more resources on RPCs over RabbitMQ:</p>
+<ul>
+<li>
+<p><a href="https://www.rabbitmq.com/tutorials/tutorial-six-python.html">RabbitMQ's tutorial</a> shows a nice step-by-step implementation of RPCs over RabbitMQ using the Python client. It's a bit less complex than our architecture since the response queue doesn't get deleted when the caller stops, but it can still go a long way. They do make it clear that this is not a totally production-ready solution.</p>
+</li>
+<li>
+<p><a href="https://www.rabbitmq.com/direct-reply-to.html">RabbitMQ's &quot;direct reply-to&quot; documentation</a>, which shows an alternative way to do RPCs over RabbitMQ that's built-in into RabbitMQ. This solution is simpler than ours as it doesn't allow multiple consumers to get messages from a shared <em>response queue</em>, but it's pretty cool. I learned about it while writing this blog post.</p>
+</li>
+<li>
+<p><a href="https://medium.com/swlh/scalable-microservice-architecture-using-rabbitmq-rpc-d07fa8faac32">A nice blog post</a> about RPC over RabbitMQ. Lots of Python code to look at.</p>
+</li>
+</ul>
+<h2 id="acknowledgements"><a class="zola-anchor" href="#acknowledgements" aria-label="Anchor link for: acknowledgements">Acknowledgements</a></h2>
+<p>I need to thank my coworker and friend Tom Patterer, who designed and implemented the system with me and helps me maintain it while our architecture and needs to keep growing. I also need to thank <a href="https://twitter.com/josevalim">José</a> because he pushed me to write this blog post when I chatted with him about all of this.</p>
+</div>
+
+    <time class="posted-at" datetime="2020-11-23">
+      Written on November 23, 2020
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

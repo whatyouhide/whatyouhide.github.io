@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Using C from Elixir with NIFs – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="An in-depth look at how to use NIFs from Elixir to run native code in the Erlang VM." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Using C from Elixir with NIFs">
+<meta property="og:description" content="An in-depth look at how to use NIFs from Elixir to run native code in the Erlang VM.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/using-c-from-elixir-with-nifs/">
+<meta property="og:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2015-12-05T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Using C from Elixir with NIFs">
+<meta name="twitter:description" content="An in-depth look at how to use NIFs from Elixir to run native code in the Erlang VM.">
+<meta name="twitter:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Using C from Elixir with NIFs</h1>
+
+    <div class="entry"><p>Erlang supports a way to implement functions in C and use them transparently from Erlang. These functions are called NIFs (native implemented functions). There are two scenarios where NIFs can turn out to be the perfect solution: when you need raw computing speed and when you need to interface to existing C bindings from Erlang. In this article, we're going to take a look at both use cases.</p>
+<span id="continue-reading"></span>
+<p>Note that if we want to use C bindings (i.e., we want to interface with an existing C program), then NIFs are not our only choice. Erlang has other ways to do foreign-function interface in order to talk to other languages. One example is ports; Saša Jurić wrote an excellent <a href="https://theerlangelist.com/article/outside_elixir">blog post</a> about ports if you want to know more about them.</p>
+<p>Here, we'll take a look at all-things-NIFs. First, we'll see how to write simple NIFs that perform calculations; then, we'll see how to use those NIFs from Elixir. Later on, we will see how to interface with existing C bindings from NIFs. Finally, we'll see how to integrate the C compilation step into the compilation of our Elixir code.</p>
+<p>Most of the things I'll talk about here can be read in more detail in the Erlang <a href="https://www.erlang.org/doc/man/erl_nif.html">documentation for the <code>erl_nif</code> C library</a>.</p>
+<p>The things discussed in this article apply both to Erlang and Elixir with minimal tweaking. I'll show all my examples in Elixir, but I'll refer to Erlang and Elixir indifferently.</p>
+<h2 id="canonical-nif-warning"><a class="zola-anchor" href="#canonical-nif-warning" aria-label="Anchor link for: canonical-nif-warning">Canonical NIF warning</a></h2>
+<p>NIFs are <strong>dangerous</strong>. I bet you've heard about how Erlang (and Elixir) are reliable and fault-tolerant, how processes are isolated and a crash in a process only takes that process down, and other resiliency properties. You can kiss all that good stuff goodbye when you start to play with NIFs. A crash in a NIF (such as a dreaded segmentation fault) will <strong>crash the entire Erlang VM</strong>. No supervisors to the rescue, no fault-tolerance, no isolation. This means you need to be extremely careful when writing NIFs, and you should always make sure that you have a good reason to use them.</p>
+<p>Another thing worth noting is that NIFs are not preempted by the Erlang scheduler: a NIF runs as a single unit of computation and cannot be interrupted. This means your NIFs should strive to be as fast as possible; as the Erlang documentation for NIFs suggest, a good rule of thumb is to keep NIFs under a millisecond of execution time. Check out the Erlang documentation for suggestions on what to do when your NIFs need more time to finish.</p>
+<h2 id="the-basics"><a class="zola-anchor" href="#the-basics" aria-label="Anchor link for: the-basics">The basics</a></h2>
+<p>The way NIF works is simple: you write a C file and export a bunch of functions with the help of some Erlang-provided facilities, then compile that file. Then, you define an Erlang/Elixir module and call <code>:erlang.load_nif/2</code> in it. This function will define all the NIFs in the C file as functions in the calling module.</p>
+<p>It's easier to see this in practice.</p>
+<p>Let's start easy: let's write a NIF with no side effects that only takes a value in and returns a value out. For the purpose of this example, we'll write <code>fast_compare</code>, a function that takes two integers and compares them, returning <code>0</code> if they're equal, <code>-1</code> if the first is smaller than the second and <code>1</code> otherwise.</p>
+<h3 id="defining-a-nif"><a class="zola-anchor" href="#defining-a-nif" aria-label="Anchor link for: defining-a-nif">Defining a NIF</a></h3>
+<p>Let's start with the C side of things: we'll work on <code>fast_compare.c</code>. The first thing we have to do is include the <code>erl_nif.h</code> header file, which contains all the stuff we need (types, functions, and macros) to work with NIFs.</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-meta z-preprocessor z-include z-c"><span class="z-keyword z-control z-import z-include z-c">#include</span> <span class="z-string z-quoted z-double z-include z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>erl_nif.h<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span>
+</span></span></code></pre>
+<p>The C compiler won't know where <code>erl_nif.h</code> is so we'll have to specify that when we compile our program later on.</p>
+<p>Now, every C file defining NIFs has a similar structure: there's a list of C functions, then a list of which of these C functions should be exported to Erlang/Elixir (and with what name), and finally a call to the <code>ERL_NIF_INIT</code> macro, which performs all the magic needed to actually hook things up.</p>
+<p>For our example, the list of C function will only include the <code>fast_compare</code> function. The signature of this function looks like this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-modifier z-c">static</span> ERL_NIF_TERM
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">fast_compare</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-variable z-parameter z-c">argc</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">argv</span><span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> cool stuff here
+</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></code></pre>
+<p>There are two NIF-specific types here: <code>ERL_NIF_TERM</code> and <code>ErlNifEnv</code>. <code>ERL_NIF_TERM</code> is a &quot;wrapper&quot; type that represents all Erlang types (like binary, list, tuple, and so on) in C. We'll have to use functions provided by <code>erl_nif.h</code> in order to convert a <code>ERL_NIF_TERM</code> to a C value (or multiple C values) and vice versa. <code>ErlNifEnv</code> is just the Erlang environment the NIF is executed in, and we'll mostly just pass this around without actually doing anything with it.</p>
+<p>Let's take a look at the arguments for <code>fast_compare</code> (which are the same for all NIFs):</p>
+<ul>
+<li><code>env</code>, as mentioned above, is just the Erlang environment the NIF is executed in and we won't care too much about it;</li>
+<li><code>argc</code> is the number of arguments passed to the NIF when called from Erlang. We'll expand on this later;</li>
+<li><code>argv</code> is the array of arguments passed to the NIF.</li>
+</ul>
+<h3 id="reading-erlang-elixir-values-into-c-values"><a class="zola-anchor" href="#reading-erlang-elixir-values-into-c-values" aria-label="Anchor link for: reading-erlang-elixir-values-into-c-values">Reading Erlang/Elixir values into C values</a></h3>
+<p>We'll call <code>fast_compare</code> from Elixir like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">fast_compare<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-numeric z-elixir">99</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">100</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; -1
+</span></span></code></pre>
+<p>When executing <code>fast_compare</code>, <code>argc</code> will be <code>2</code> and <code>argv</code> will be an array with the <code>99</code> and <code>100</code> values. These arguments however are of type <code>ERL_NIF_TERM</code>, so we have to &quot;convert&quot; them to C terms before being able to manipulate them. <code>erl_nif.h</code> provides functions to &quot;get&quot; Erlang terms into C terms; in this case, we need <code>enif_get_int</code>. The signature for <code>enif_get_int</code> is this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-type z-c">int</span> <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">enif_get_int</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">term</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">ip</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<p>We have to pass in the environment <code>env</code>, the Erlang term we want to &quot;get&quot; (which we'll take from <code>argv</code>) and the address of an integer pointer that will be filled with the Erlang integer value. It will return 0 if <code>term</code> is not an integer.</p>
+<h3 id="turning-c-values-to-erlang-values"><a class="zola-anchor" href="#turning-c-values-to-erlang-values" aria-label="Anchor link for: turning-c-values-to-erlang-values">Turning C values to Erlang values</a></h3>
+<p><code>erl_nif.h</code> provides several <code>enif_make_*</code> functions to convert C values back to Erlang values. They all have a similar signature (which is adapted to the type each function has to convert) and they all return a <code>ERL_NIF_TERM</code> value. In our case, we'll need <code>enif_make_int</code>, which has this signature:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c">ERL_NIF_TERM <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">enif_make_int</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-variable z-parameter z-c">i</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<h3 id="writing-the-nif"><a class="zola-anchor" href="#writing-the-nif" aria-label="Anchor link for: writing-the-nif">Writing the NIF</a></h3>
+<p>Now that we know how to go back and forth between Erlang values and C values, writing the NIF is straightforward.</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-modifier z-c">static</span> ERL_NIF_TERM
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">fast_compare</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-variable z-parameter z-c">argc</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">argv</span><span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  <span class="z-storage z-type z-c">int</span> a<span class="z-punctuation z-separator z-c">,</span> b<span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> Fill a and b with the values of the first two args
+</span>  <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-keyword z-operator z-arithmetic z-c">!</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_get_int</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> argv<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>a</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span> <span class="z-keyword z-operator z-arithmetic z-c">||</span>
+      <span class="z-keyword z-operator z-arithmetic z-c">!</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_get_int</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> argv<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">1</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>b</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+      <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_make_badarg</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> Usual C unreadable code because this way is more true
+</span>  <span class="z-storage z-type z-c">int</span> result <span class="z-keyword z-operator z-assignment z-c">=</span> a <span class="z-keyword z-operator z-comparison z-c">==</span> b <span class="z-keyword z-operator z-ternary z-c">?</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span> <span class="z-keyword z-operator z-ternary z-c">:</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>a <span class="z-keyword z-operator z-comparison z-c">&gt;</span> b <span class="z-keyword z-operator z-ternary z-c">?</span> <span class="z-constant z-numeric z-integer z-decimal z-c">1</span> <span class="z-keyword z-operator z-ternary z-c">:</span> <span class="z-keyword z-operator z-arithmetic z-c">-</span><span class="z-constant z-numeric z-integer z-decimal z-c">1</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-punctuation z-terminator z-c">;</span>
+
+  <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_make_int</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> result</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></code></pre>
+<h3 id="wiring-our-c-up"><a class="zola-anchor" href="#wiring-our-c-up" aria-label="Anchor link for: wiring-our-c-up">Wiring our C up</a></h3>
+<p>We now have to export the function we wrote to Erlang. We'll have to use the <code>ERL_NIF_INIT</code> macro. It looks like this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-meta z-assumed-macro z-c"><span class="z-variable z-function z-assumed-macro z-c">ERL_NIF_INIT</span><span class="z-punctuation z-section z-group z-begin z-c">(</span>erl_module<span class="z-punctuation z-separator z-c">,</span> functions<span class="z-punctuation z-separator z-c">,</span> load<span class="z-punctuation z-separator z-c">,</span> upgrade<span class="z-punctuation z-separator z-c">,</span> unload<span class="z-punctuation z-separator z-c">,</span> reload<span class="z-punctuation z-section z-group z-end z-c">)</span></span>
+</span></code></pre>
+<p>where:</p>
+<ul>
+<li><code>erl_module</code> is the Erlang module where the NIFs we export will be defined; it shouldn't be surrounded by quotes as it will be string-ified by the <code>ERL_NIF_INIT</code> macro (for example, <code>my_module</code> instead of <code>&quot;my_module&quot;</code>);</li>
+<li><code>functions</code> is an array of <code>ErlNifFunc</code> structs that defines which NIFs will be exported, along with the name to use as their Erlang counterpart and the arity;</li>
+<li><code>load</code>, <code>upgrade</code>, <code>unload</code>, and <code>reload</code> are function pointers that point to hook functions that will be called when the NIF module is loaded, unloaded, and so on; we won't pay too much attention to these hooks right now, setting all of them to <code>NULL</code>.</li>
+</ul>
+<p>We have all the ingredients we need. The complete C file looks like this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-meta z-preprocessor z-include z-c"><span class="z-keyword z-control z-import z-include z-c">#include</span> <span class="z-string z-quoted z-double z-include z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>erl_nif.h<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span>
+</span>
+<span class="z-storage z-modifier z-c">static</span> ERL_NIF_TERM
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">fast_compare</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-variable z-parameter z-c">argc</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">argv</span><span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  <span class="z-storage z-type z-c">int</span> a<span class="z-punctuation z-separator z-c">,</span> b<span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-keyword z-operator z-arithmetic z-c">!</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_get_int</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> argv<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>a</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span> <span class="z-keyword z-operator z-arithmetic z-c">||</span>
+      <span class="z-keyword z-operator z-arithmetic z-c">!</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_get_int</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> argv<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">1</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>b</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+      <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_make_badarg</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+
+  <span class="z-storage z-type z-c">int</span> result <span class="z-keyword z-operator z-assignment z-c">=</span> a <span class="z-keyword z-operator z-comparison z-c">==</span> b <span class="z-keyword z-operator z-ternary z-c">?</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span> <span class="z-keyword z-operator z-ternary z-c">:</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>a <span class="z-keyword z-operator z-comparison z-c">&gt;</span> b <span class="z-keyword z-operator z-ternary z-c">?</span> <span class="z-constant z-numeric z-integer z-decimal z-c">1</span> <span class="z-keyword z-operator z-ternary z-c">:</span> <span class="z-keyword z-operator z-arithmetic z-c">-</span><span class="z-constant z-numeric z-integer z-decimal z-c">1</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_make_int</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> result</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+
+<span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> Let&#39;s define the array of ErlNifFunc beforehand:
+</span><span class="z-storage z-modifier z-c">static</span> ErlNifFunc nif_funcs<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span> <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> {erl_function_name, erl_function_arity, c_function}
+</span>  <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span><span class="z-string z-quoted z-double z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>fast_compare<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-numeric z-integer z-decimal z-c">2</span><span class="z-punctuation z-separator z-c">,</span> fast_compare<span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+<span class="z-punctuation z-section z-block z-end z-c">}</span></span><span class="z-punctuation z-terminator z-c">;</span>
+
+<span class="z-meta z-assumed-macro z-c"><span class="z-variable z-function z-assumed-macro z-c">ERL_NIF_INIT</span><span class="z-punctuation z-section z-group z-begin z-c">(</span>Elixir<span class="z-punctuation z-accessor z-c">.</span><span class="z-variable z-other z-member z-c">FastCompare</span><span class="z-punctuation z-separator z-c">,</span> nif_funcs<span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-language z-c">NULL</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-language z-c">NULL</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-language z-c">NULL</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-language z-c">NULL</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span>
+</span></code></pre>
+<p>Remember we have to use the full Elixir module name atom in the <code>ERL_NIF_INIT</code> macro (<code>Elixir.FastCompare</code> instead of just <code>FastCompare</code>).</p>
+<h3 id="compiling-our-c-code"><a class="zola-anchor" href="#compiling-our-c-code" aria-label="Anchor link for: compiling-our-c-code">Compiling our C code</a></h3>
+<p>NIF files should be compiled to <code>.so</code> shared objects. The compilation flags vary between different systems and compilers, but they should look something like this:</p>
+<pre data-lang="bash" class="language-bash z-code"><code class="language-bash" data-lang="bash"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">$</span></span><span class="z-meta z-function-call z-arguments z-shell"> cc<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>fPIC</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>I<span class="z-meta z-group z-expansion z-command z-parens z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-parens z-begin z-shell">(</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ERL_INCLUDE_PATH</span></span><span class="z-punctuation z-section z-parens z-end z-shell">)</span></span></span> <span class="z-punctuation z-separator z-continuation z-line z-shell">\
+</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell">     -</span>dynamiclib</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>undefined</span> dynamic_lookup <span class="z-punctuation z-separator z-continuation z-line z-shell">\
+</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell">     -</span>o</span> fast_compare.so fast_compare.c</span>
+</span></code></pre>
+<p>With this command, we're compiling <code>fast_compare.c</code> into <code>fast_compare.so</code> (<code>-o fast_compare.so</code>), using some flags for dynamic code along the way. Note how we're including <code>$(ERL_INCLUDE_PATH)</code> in the &quot;include paths&quot;: this is the directory that contains the <code>erl_nif.h</code> header file. This path is usually in the Erlang's installation directory, under <code>lib/erts-VERSION/include</code>.</p>
+<h3 id="loading-nifs-in-elixir"><a class="zola-anchor" href="#loading-nifs-in-elixir" aria-label="Anchor link for: loading-nifs-in-elixir">Loading NIFs in Elixir</a></h3>
+<p>The only thing we have left to do is load the NIF we defined in the Elixir <code>FastCompare</code> module. As the Erlang documentation for NIFs suggests, the <code>@on_load</code> hook is a great place to do this.</p>
+<p>Note that for each NIF we want to define, we need to define the corresponding Erlang/Elixir function in the loading module as well. This can be taken advantage of in order to define, for example, fallback code in case NIFs aren't available.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> fast_compare.ex
+</span><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">FastCompare</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>on_load</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>load_nifs</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">load_nifs</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>erlang</span><span class="z-punctuation z-separator z-method z-elixir">.</span>load_nif<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>./fast_compare<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">0</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">fast_compare</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_a<span class="z-punctuation z-separator z-object z-elixir">,</span> _b<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-keyword z-control z-elixir">raise</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>NIF fast_compare/2 not implemented<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The second term for <code>:erlang.load_nif/2</code> can be anything and it will be passed to the <code>load</code> hook we mentioned above. You can have a look at the <a href="https://www.erlang.org/doc/man/erlang.html#load_nif-2">docs for <code>:erlang.load_nif/2</code></a> for more information.</p>
+<p>We're done! We can test our module in IEx:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> c <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>fast_compare.ex<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-entity z-name z-class z-elixir">FastCompare</span><span class="z-punctuation z-separator z-method z-elixir">.</span>fast_compare<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-numeric z-elixir">99</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">100</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-operator z-arithmetic z-elixir">-</span><span class="z-constant z-numeric z-elixir">1</span>
+</span></code></pre>
+<h3 id="examples-in-the-wild"><a class="zola-anchor" href="#examples-in-the-wild" aria-label="Anchor link for: examples-in-the-wild">Examples in the wild</a></h3>
+<p>Writing &quot;pure&quot; NIFs (with no side effects, just transformations) is extremely useful. One example of this that I like a lot is the <a href="https://github.com/devinus/markdown">devinus/markdown</a> Elixir library: this library wraps a C Markdown parser in a bunch of NIFs. This use case is perfect as turning Markdown into HTML can be an expensive task, and a lot can be gained by delegating that work to C.</p>
+<h2 id="something-useful-resources"><a class="zola-anchor" href="#something-useful-resources" aria-label="Anchor link for: something-useful-resources">Something useful: resources</a></h2>
+<p>As I mentioned above, a great use of NIFs is wrapping existing C libraries. Often, however, these libraries provide their own data abstractions and data structures. For example, a C database driver could export a <code>db_conn_t</code> type to represent a database connection, defined like this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-type z-c">typedef</span> <span class="z-storage z-type z-c">struct</span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> fields
+</span><span class="z-punctuation z-section z-block z-end z-c">}</span></span> <span class="z-entity z-name z-type z-typedef z-c">db_conn_t</span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<p>alongside functions to initialize a connection, issue queries, and free a connection, like this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c">db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_init_conn</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+db_type <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_query</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">conn</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> <span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">query</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+<span class="z-storage z-type z-c">void</span> <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_free_conn</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">conn</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<p>It would be useful if we were able to handle <code>db_conn_t</code> values in Erlang/Elixir and pass them around between NIF calls. The NIF API has something just like that: <strong>resources</strong>. No better way to quickly explain what resources do than the Erlang documentation:</p>
+<blockquote>
+<p>The use of resource objects is a safe way to return pointers to native data structures from a NIF. A resource object is just a block of memory […].</p>
+</blockquote>
+<p>Resources are blocks of memory, and we can build and return safe pointers to that memory <em>as Erlang terms</em>.</p>
+<p>Let's explore how we could wrap the simple API sketched above inside NIFs. We're going to start with this skeleton C file:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-meta z-preprocessor z-include z-c"><span class="z-keyword z-control z-import z-include z-c">#include</span> <span class="z-string z-quoted z-double z-include z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>db.h<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span>
+</span><span class="z-meta z-preprocessor z-include z-c"><span class="z-keyword z-control z-import z-include z-c">#include</span> <span class="z-string z-quoted z-double z-include z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>erl_nif.h<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span>
+</span>
+<span class="z-storage z-type z-c">typedef</span> <span class="z-storage z-type z-c">struct</span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> fields here
+</span><span class="z-punctuation z-section z-block z-end z-c">}</span></span> <span class="z-entity z-name z-type z-typedef z-c">db_conn_t</span><span class="z-punctuation z-terminator z-c">;</span>
+
+db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_init_conn</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+db_type <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_query</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">conn</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> <span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">query</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+<span class="z-storage z-type z-c">void</span> <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_free_conn</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">conn</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<h3 id="creating-resources"><a class="zola-anchor" href="#creating-resources" aria-label="Anchor link for: creating-resources">Creating resources</a></h3>
+<p>To create a resource, we have to allocate some memory with the help of the <code>enif_alloc_resource</code> function. This function is similar (in principle) to <code>malloc</code>, as you can tell by its signature:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-type z-c">void</span> <span class="z-keyword z-operator z-c">*</span><span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">enif_alloc_resource</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifResourceType <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">res_type</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">unsigned</span> <span class="z-variable z-parameter z-c">size</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<p><code>enif_alloc_resource</code> takes a resource type (which is just something we use to distinguish resources of different types) and the size of the memory to allocate, and returns a pointer to the allocated memory.</p>
+<h4 id="resource-types"><a class="zola-anchor" href="#resource-types" aria-label="Anchor link for: resource-types">Resource types</a></h4>
+<p>Resource types are created with the <code>enif_open_resource_type</code> function. We can declare resource types as global variables in our C files and take advantage of the <code>load</code> hook passed to <code>ERL_NIF_INIT</code> to create the resource types and assign them to the global variables. It goes something like this:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c">ErlNifResourceType <span class="z-keyword z-operator z-c">*</span>DB_RES_TYPE<span class="z-punctuation z-terminator z-c">;</span>
+
+<span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> This is called everytime a resource is deallocated (which happens when
+</span><span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> enif_release_resource is called and Erlang garbage collects the memory)
+</span><span class="z-storage z-type z-c">void</span>
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_res_destructor</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">void</span> <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">res</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-keyword z-operator z-c">*</span>conn_res <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>db_conn_t<span class="z-keyword z-operator z-c">*</span><span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> res<span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">db_free_conn</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-keyword z-operator z-c">*</span>conn_res</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+
+<span class="z-storage z-type z-c">int</span>
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">load</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">void</span> <span class="z-keyword z-operator z-c">*</span><span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">priv_data</span><span class="z-punctuation z-separator z-c">,</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">load_info</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  <span class="z-storage z-type z-c">int</span> flags <span class="z-keyword z-operator z-assignment z-c">=</span> ERL_NIF_RT_CREATE <span class="z-keyword z-operator z-arithmetic z-c">|</span> ERL_NIF_RT_TAKEOVER<span class="z-punctuation z-terminator z-c">;</span>
+  DB_RES_TYPE <span class="z-keyword z-operator z-assignment z-c">=</span>
+    <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_open_resource_type</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-language z-c">NULL</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-string z-quoted z-double z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>db<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-separator z-c">,</span> db_res_destructor<span class="z-punctuation z-separator z-c">,</span> flags<span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-language z-c">NULL</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></code></pre>
+<h4 id="creating-the-resource"><a class="zola-anchor" href="#creating-the-resource" aria-label="Anchor link for: creating-the-resource">Creating the resource</a></h4>
+<p>We can now wrap <code>db_init_conn</code> and create our resource.</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-modifier z-c">static</span> ERL_NIF_TERM
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_init_conn_nif</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-variable z-parameter z-c">argc</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">argv</span><span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> Let&#39;s allocate the memory for a db_conn_t * pointer
+</span>  db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-keyword z-operator z-c">*</span>conn_res <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_alloc_resource</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">DB_RES_TYPE<span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-word z-c">sizeof</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span><span class="z-meta z-group z-c">db_conn_t <span class="z-keyword z-operator z-c">*</span></span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> Let&#39;s create conn and let the resource point to it
+</span>  db_conn_t <span class="z-keyword z-operator z-c">*</span>conn <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">db_init_conn</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-keyword z-operator z-c">*</span>conn_res <span class="z-keyword z-operator z-assignment z-c">=</span> conn<span class="z-punctuation z-terminator z-c">;</span>
+
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> We can now make the Erlang term that holds the resource...
+</span>  ERL_NIF_TERM term <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_make_resource</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> conn_res</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> ...and release the resource so that it will be freed when Erlang garbage collects
+</span>  <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_release_resource</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">conn_res</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+
+  <span class="z-keyword z-control z-flow z-return z-c">return</span> term<span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></code></pre>
+<h3 id="retrieving-the-resource"><a class="zola-anchor" href="#retrieving-the-resource" aria-label="Anchor link for: retrieving-the-resource">Retrieving the resource</a></h3>
+<p>In order to wrap <code>db_query</code>, we'll need to retrieve the resource that we returned in <code>db_init_conn_nif</code>. To do that, we'll use <code>enif_get_resource</code>.</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-storage z-modifier z-c">static</span> ERL_NIF_TERM
+<span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">db_query_nif</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c">ErlNifEnv <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">env</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-type z-c">int</span> <span class="z-variable z-parameter z-c">argc</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-storage z-modifier z-c">const</span> ERL_NIF_TERM <span class="z-variable z-parameter z-c">argv</span><span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+  db_conn_t <span class="z-keyword z-operator z-c">*</span><span class="z-keyword z-operator z-c">*</span>conn_res<span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-keyword z-operator z-arithmetic z-c">!</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_get_resource</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env<span class="z-punctuation z-separator z-c">,</span> argv<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-separator z-c">,</span> DB_RES_TYPE<span class="z-punctuation z-separator z-c">,</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">void</span> <span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-keyword z-operator z-c">&amp;</span>conn_res</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+    <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">enif_make_badarg</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">env</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+  <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+
+  db_conn_t <span class="z-keyword z-operator z-c">*</span>conn <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-keyword z-operator z-c">*</span>conn_res<span class="z-punctuation z-terminator z-c">;</span>
+
+  <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> We can now run our query
+</span>  <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">db_query</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">conn<span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-variadic z-c">...</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+
+  <span class="z-keyword z-control z-flow z-return z-c">return</span> argv<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></code></pre>
+<h3 id="using-resources-in-elixir"><a class="zola-anchor" href="#using-resources-in-elixir" aria-label="Anchor link for: using-resources-in-elixir">Using resources in Elixir</a></h3>
+<p>Let's skip the part where we export the NIFs we created to a <code>DB</code> module and jump right into IEx, assuming the C code is compiled and loaded by <code>DB</code>. As I mentioned above, resources are completely opaque terms when returned to Erlang/Elixir. They're represented as references:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> conn_res <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">DB</span><span class="z-punctuation z-separator z-method z-elixir">.</span>db_conn_init<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>Reference&lt;0.3569050097.3772514305.191818&gt;
+</span>iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-entity z-name z-class z-elixir">DB</span><span class="z-punctuation z-separator z-method z-elixir">.</span>db_query<span class="z-punctuation z-section z-function z-elixir">(</span>conn_res<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-keyword z-operator z-range z-elixir">..</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-keyword z-operator z-range z-elixir">..</span><span class="z-punctuation z-separator z-method z-elixir">.</span>
+</span></code></pre>
+<p>Since resources are opaque, you can't really do anything with them in Erlang/Elixir other than passing them back to other NIFs. They act and look like references. My advice is to wrap resources inside structs. This way, we can limit our public API to only handle structs and handle resources internally. We also get the benefit of being able to implement the <code>Inspect</code> protocol for structs, which means we can safely inspect resources, hiding the fact that they look like references.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">DBConn</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">defstruct</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>resource</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+
+<span class="z-meta z-protocol-implementation z-elixir">  <span class="z-keyword z-control z-protocol z-elixir">defimpl</span> <span class="z-entity z-name z-protocol z-elixir">Inspect</span> <span class="z-keyword z-control z-protocol z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...
+</span>  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="compiling-with-mix"><a class="zola-anchor" href="#compiling-with-mix" aria-label="Anchor link for: compiling-with-mix">Compiling with Mix</a></h2>
+<p>Mix provides a feature called <a href="https://hexdocs.pm/mix/Mix.html#compilers/0">Mix compilers</a>. Each Mix project can specify a list of compilers to run when the project is compiled. A new Mix compiler the perfect place to automate the compilation of our C source code. For the scope of this section, let's say we're building a <code>:my_nifs</code> Elixir application that will use NIFs from the <code>my_nifs.c</code> C source file.</p>
+<p>First, let's create a <code>Makefile</code> to compile the C source (as we would probably do anyway).</p>
+<pre data-lang="make" class="language-make z-code"><code class="language-make" data-lang="make"><span class="z-source z-makefile"><span class="z-variable z-other z-makefile">ERL_INCLUDE_PATH</span><span class="z-keyword z-operator z-assignment z-makefile">=</span></span><span class="z-source z-makefile"><span class="z-meta z-string z-makefile"><span class="z-string z-unquoted z-makefile"><span class="z-variable z-parameter z-makefile"><span class="z-keyword z-other z-block z-begin z-makefile">$(</span>...<span class="z-keyword z-other z-block z-end z-makefile">)</span></span></span></span>
+
+<span class="z-meta z-function z-makefile"><span class="z-entity z-name z-function z-makefile">all</span></span><span class="z-keyword z-operator z-assignment z-makefile">:</span> <span class="z-meta z-function z-arguments z-makefile"><span class="z-string z-unquoted z-makefile">priv/my_nifs.so</span></span><span class="z-meta z-function z-body z-makefile">
+</span>
+<span class="z-meta z-function z-makefile"><span class="z-entity z-name z-function z-makefile">priv/my_nifs.so</span></span><span class="z-keyword z-operator z-assignment z-makefile">:</span> <span class="z-meta z-function z-arguments z-makefile"><span class="z-string z-unquoted z-makefile">my_nifs.c</span></span><span class="z-meta z-function z-body z-makefile">
+</span><span class="z-meta z-function z-body z-makefile">  <span class="z-source z-shell"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">cc</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>fPIC</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>I<span class="z-variable z-parameter z-makefile"><span class="z-keyword z-other z-block z-begin z-makefile">$(</span>ERL_INCLUDE_PATH<span class="z-keyword z-other z-block z-end z-makefile">)</span></span></span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>dynamiclib</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>undefined</span> dynamic_lookup<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>o</span> my_nifs.so my_nifs.c</span></span>
+</span></span></code></pre>
+<p>This Makefile assumes <code>my_nifs.c</code> is stored in the root of your Mix project. We're going to put the <code>.so</code> shared object in the <code>priv</code> directory of our application so that it will be available in releases. Now, whenever we change <code>my_nifs.c</code> and run <code>$ make</code>, then <code>priv/my_nifs.so</code> will be recompiled.</p>
+<p>We can now hook up a new Mix compiler that just calls <code>make</code>. Let's do this at the top of <code>mix.exs</code>:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">Mix</span>.<span class="z-entity z-name z-class z-elixir">Tasks</span>.<span class="z-entity z-name z-class z-elixir">Compile</span>.<span class="z-entity z-name z-class z-elixir">MyNifs</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">run</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_args<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>result<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _errcode<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">System</span><span class="z-punctuation z-separator z-method z-elixir">.</span>cmd<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>make<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">stdout_to_stderr<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">true</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-entity z-name z-class z-elixir">IO</span><span class="z-punctuation z-separator z-method z-elixir">.</span>binwrite<span class="z-punctuation z-section z-function z-elixir">(</span>result<span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>We call <code>IO.binwrite/1</code> in order to write whatever was the output of <code>$ make</code> on the terminal. In a real-world application, we obviously would want to check the result of the <code>make</code> command, as well as make sure that <code>cc</code> and <code>make</code> are installed on the system and available in the path; here, we're just omitting those parts for simplicity.</p>
+<p>We now need to add the <code>:my_nifs</code> compiler to the list of compilers for the <code>:my_nifs</code> application:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> in mix.exs
+</span><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyNifs</span>.<span class="z-entity z-name z-class z-elixir">Mixfile</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Mix</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Project</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">project</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-keywords z-elixir">app<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_nifs</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+     <span class="z-constant z-other z-keywords z-elixir">compilers<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_nifs</span><span class="z-punctuation z-section z-array z-elixir">]</span> <span class="z-keyword z-operator z-list-manipulation z-elixir">++</span> <span class="z-entity z-name z-class z-elixir">Mix</span><span class="z-punctuation z-separator z-method z-elixir">.</span>compilers<span class="z-punctuation z-separator z-object z-elixir">,</span>
+     <span class="z-keyword z-operator z-range z-elixir">..</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Now, whenever we run <code>$ mix compiler</code>, our C code will be recompiled (if necessary) automatically. This will also work when other libraries list <code>:my_nifs</code> as a dependency, as now running <code>make</code> is part of the compilation process for the <code>:my_nifs</code> project.</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>This was a long post, but I hope I covered most of the NIF universe in it. As you saw, using NIFs in Erlang/Elixir turns out to be fairly straightforward. As mentioned at the beginning of this article, NIFs are to be used carefully and are not always the right tool for the job because of their fragility (remember that NIFs can cause the entire Erlang VM to crash) and speed requirements.</p>
+<p>Thanks for making it this far!</p>
+<h3 id="updates"><a class="zola-anchor" href="#updates" aria-label="Anchor link for: updates">Updates</a></h3>
+<h4 id="undefined-reference-errors-on-debian-jesse"><a class="zola-anchor" href="#undefined-reference-errors-on-debian-jesse" aria-label="Anchor link for: undefined-reference-errors-on-debian-jesse">Undefined reference errors on Debian Jesse</a></h4>
+<p>Brent Shaffer commmented that this was helpful:</p>
+<pre data-lang="bash" class="language-bash z-code"><code class="language-bash" data-lang="bash"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">cc</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>fPIC</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>I</span>/usr/local/lib/erlang/usr/include <span class="z-punctuation z-separator z-continuation z-line z-shell">\
+</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell">    -</span>Wl</span>,-undefined<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>Wl</span>,dynamic_lookup<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>shared</span> <span class="z-punctuation z-separator z-continuation z-line z-shell">\
+</span><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell">    -</span>o</span> fast_compare.so fast_compare.c</span>
+</span></code></pre>
+</div>
+
+    <time class="posted-at" datetime="2015-12-05">
+      Written on December  5, 2015
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
