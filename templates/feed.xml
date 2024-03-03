@@ -1,14 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
-{# The line above needs to be the first line, otherwise the feed will be invalid #}
-{# Spec: https://validator.w3.org/feed/docs/atom.html #}
 {% set is_community = taxonomy is defined and taxonomy.name == "tags" and term.name == "community" %}
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
-  <id>{{ config.base_url }}</id>
-  <title>{{ config.title }}{% if is_community %} - Community{% endif %}</title>
+  <title type="text">{{ config.title }}{% if is_community %} - Community{% endif %}</title>
+  <subtitle type="text">{{ config.description }}</subtitle>
   <updated>{{ now() | date(format="%+") }}</updated>{# Needs to be ISO8601, https://docs.rs/chrono/0.4.23/chrono/format/strftime/index.html #}
-  <subtitle>{{ config.description }}</subtitle>
-  <link rel="self" type="application/rss+xml" href="{{ feed_url | safe }}" />
+  <link rel="self" type="application/atom+xml" href="{{ feed_url | safe }}" />
   <link rel="alternate" type="text/html" href="{{ config.base_url | safe }}" />
+  <id>{{ config.base_url | safe }}</id>
   <author>
     <name>{{ config.extra.full_name }}</name>
     <uri>{{ config.base_url }}</uri>
@@ -23,28 +20,19 @@
   {% for post in pages %}
     <entry>
       <id>{{ post.permalink }}</id>
-      <title type="html">{{ post.title }}</title>
+      <title type="html"><![CDATA[ {{ post.title }} ]]></title>
       <link rel="alternate"
             type="text/html"
             href="{{ post.permalink | safe }}"
             title="{{ post.title }}" />
-      <summary type="html">
-        {% if post.summary %}
-          {{ post.summary | trim | spaceless | escape_xml }}
-        {% else %}
-          {{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}
-        {% endif %}
-      </summary>
-
       <published>{{ post.date | date(format="%+")}}</published>
-      <updated>{{ post.updated | default(value=post.date) | date(format="%+")}}</updated>
-
       <author>
         <name>{{ config.extra.full_name }}</name>
         <uri>{{ config.base_url }}</uri>
         <email>{{ config.extra.email }}</email>
       </author>
-
+      <updated>{{ post.updated | default(value=post.date) | date(format="%+")}}</updated>
+      <summary type="html">{% if post.summary %}{{ post.summary | trim | spaceless | escape_xml }}{% else %}{{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}{% endif %}</summary>
     {% if is_community %}
       <content type="html">{{ post.content | trim | spaceless | escape_xml | safe }}
 
