@@ -13,8 +13,8 @@
   </author>
   {# <category term="technology"/> #}
   <generator uri="https://www.getzola.org">Zola</generator>
-  <icon>{{ get_url(path="favicons/apple-touch-icon.png") | regex_replace(pattern=`http://`, rep=`https://`) | regex_replace(pattern=`:1111`, rep=``) }}</icon>
-  <logo>{{ get_url(path="favicons/apple-touch-icon.png") | regex_replace(pattern=`http://`, rep=`https://`) | regex_replace(pattern=`:1111`, rep=``) }}</logo>
+  <icon>{{ get_url(path="favicons/apple-touch-icon.png") }}</icon>
+  <logo>{{ get_url(path="favicons/apple-touch-icon.png") }}</logo>
   {# <rights>©️ 2015 Andrea Leopardi</rights> #}
 
   {% for post in pages %}
