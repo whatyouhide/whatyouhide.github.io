@@ -4,9 +4,11 @@
 {% set is_community = taxonomy is defined and taxonomy.name == "tags" and term.name == "community" %}
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
   <id>{{ config.base_url }}</id>
-  <title type="text">{{ config.title }}{% if is_community %} - Community{% endif %}</title>
+  <title>{{ config.title }}{% if is_community %} - Community{% endif %}</title>
   <updated>{{ now() | date(format="%+") }}</updated>{# Needs to be ISO8601, https://docs.rs/chrono/0.4.23/chrono/format/strftime/index.html #}
   <subtitle>{{ config.description }}</subtitle>
+  <logo>{{ get_url(path="/favicons/apple-touch-icon.png") }}</logo>
+  <icon>{{ get_url(path="/favicons/apple-touch-icon.png") }}</icon>
   <link rel="self" type="application/rss+xml" href="{{ feed_url | safe }}" />
   <link rel="alternate" type="text/html" href="{{ config.base_url | safe }}" />
   <author>
