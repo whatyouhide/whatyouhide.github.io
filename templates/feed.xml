@@ -30,7 +30,7 @@
         <email>{{ config.extra.email }}</email>
       </author>
       <updated>{{ post.updated | default(value=post.date) | date(format="%+")}}</updated>
-      {# <summary type="html">{% if post.summary %}{{ post.summary | trim | spaceless | escape_xml }}{% else %}{{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}{% endif %}</summary> #}
+      <summary type="html">{% if post.summary %}{{ post.summary | trim | spaceless | escape_xml | safe }}{% else %}{{ throw(message="Post is missing a summary. Use <!-- more --> to delimitate the summary.") }}{% endif %}</summary>
     {% if is_community %}
       <content type="html">{{ post.content | trim | spaceless | escape_xml | safe }}
 
