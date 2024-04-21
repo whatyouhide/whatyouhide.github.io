@@ -177,7 +177,6 @@ defmodule Redis do
   end
 end
 ```
-{% endraw %}
 
 ## Messages on demand
 
@@ -208,7 +207,7 @@ Lots of real-world libraries use the pattern I talked about: for example, [eredi
 
 We happily ignored an annoying thing to deal with throughout this article: error handling!
 
-We'll keep happily ignoring a subset of the errors that can happen, for example, an empty client queue (which fails the {% raw %}`{{:value, val}, new_queue}`{% endraw %} pattern match) or an incomplete message from the TCP socket. However, a common set of errors that can happen when dealing with TCP connections are, well, TCP errors like dropped connections or timeouts.
+We'll keep happily ignoring a subset of the errors that can happen, for example, an empty client queue (which fails the `{{:value, val}, new_queue}` pattern match) or an incomplete message from the TCP socket. However, a common set of errors that can happen when dealing with TCP connections are, well, TCP errors like dropped connections or timeouts.
 
 We could try to handle this kind of errors ourselves, but, luckily for us, Elixir core team member James Fish (a.k.a. [fishcakez][fishcakez]) did most of the work in its awesome library [connection][connection]. While this library is quite young at the time of writing, it's already being used in the [MongoDB driver][mongodb] I mentioned before and in the OrientDB driver I'm working on.
 
