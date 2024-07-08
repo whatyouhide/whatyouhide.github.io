@@ -10,8 +10,7 @@ can't find a link about this anywhere now.
 
 ## Hardware
 
-  * I use a 2023 14-inch M2 MacBook Pro. It's the one my job gives me, but I'd
-    probably use something similar anyway.
+  * I use a 2021 14-inch M1 Pro MacBook Pro. Love it.
   * I have an iPad Air that I use to draw slides (with the Apple Pencil) and
     watch movies, and sometimes do some shopping.
   * My phone is an iPhone 15 Pro Max. I don't really care about which computer
@@ -38,13 +37,12 @@ I use macOS as my main OS.
     everything. Just awesome.
   * [Obsidian] for taking notes.
   * **Mail.app** (the default) for email.
-  * **Calendar.app** (the default) for calendars.
-  * **Reminders.app** (the default) for reminders.
+  * [Fantastical] for calendars. I pay for a subscription for this and love it.
   * **Keynote.app** for giving talks.
   * [TablePlus] for talking to databases.
-  * [Alfred] to do *a lot of stuff*. I launch apps with it, run little scripts
+  * [Raycast] to do *a lot of stuff*. I launch apps with it, run little scripts
     that I wrote as extensions, use it for clipboard management, for snippets,
-    as a calculator, and probably more.
+    as a calculator, and probably more. I used to use [Alfred] for this but nowadays Raycast has a bunch more extensions.
 
 I also use a lot of little utilities here and there to make life on macOS more
 pleasant.
@@ -52,6 +50,13 @@ pleasant.
   * I use [Magnet] to move my windows around.
   * [AltTab] lets me command-tab my way around much better than the default.
   * [CleanShot X][cleanshot] to take screenshots. I'm a nerd for screenshots.
+  * [Klack] (and this is silly) for having mechanical-keyboard sound in my
+    headphones when I type on my normal Apple keyboard—which I prefer for the
+    actual typing.
+  * [Hand Mirror][handmirror] to check that I'm pretty before meetings.
+  * [Timing] to track what I do when looking at screens. This is cool because
+    I'm a nerd for data about what I do, but also a bane because it shows me how
+    much time I just screw around.
 
 [vscode]: https://code.visualstudio.com/
 [iterm]: https://iterm2.com/
@@ -63,28 +68,33 @@ pleasant.
 [AltTab]: https://alt-tab-macos.netlify.app/
 [cleanshot]: https://cleanshot.com/
 [Alfred]: https://www.alfredapp.com/
+[Raycast]: https://www.raycast.com/
+[Fantastical]: https://flexibits.com/fantastical
+[Klack]: https://tryklack.com/
+[handmirror]: https://handmirror.app/
+[Timing]: https://timingapp.com/
 
 #### iOS/macOS/iPadOS Apps
 
 There are a bunch of apps I use cross-device and outside of doing software
 development.
 
-  * [HiCoffee] for tracking caffeine intake. I'm a data nerd.
+  * [HiCoffee] for tracking caffeine intake. I'm a data nerd, again.
   * [Pocket Casts][pocketcasts] for listening to podcasts.
-  * My wife and I have an [AnyList] subscription. We use this for sharing
-    grocery lists. It's a good way to spend ten bucks a year IMO.
-  * We also have a [YNAB] subscription. YNAB is awesome.
-  * Furthermore, we use [Sweepy] to track stuff that needs to be cleaned in the
-    house. I promise we're not just big old nerds that speak through apps, it's
-    just really handy to keep track of this stuff.
-  * I use [Paprika] for storing and archiving recipes. I like to cook.
+  * **Reminders.app** (the default Apple one) for reminders and grocery shopping
+    and house-cleaning chores. I share some lists with my wife.
+  * My wife and I have a [YNAB] subscription. YNAB is awesome.
+  * I use [Mela] for storing and archiving recipes. I like to cook. I used to
+    use [Paprika], but Mela is prettier and seems to be more actively maintained.
+  * [Whering] is pretty great for tracking your wardrobe, how much you use it,
+    and so on.
 
 [HiCoffee]: https://apps.apple.com/us/app/hicoffee-caffeine-tracker/id1507361706
-[AnyList]: https://www.anylist.com/
 [YNAB]: https://www.ynab.com/
 [Paprika]: https://www.paprikaapp.com/
-[Sweepy]: https://sweepy.app/
 [pocketcasts]: https://pocketcasts.com/
+[Mela]: https://mela.recipes/
+[Whering]: https://whering.co.uk/
 
 ## Traveling
 
@@ -96,7 +106,7 @@ My biggest passion in life is probably traveling. I like to optimize the things 
     *all the time*. It's the only place where I trust transportation, reviews,
     and opening times in most places around the world. I don't use it for
     directions much because I rarely drive when traveling. Apple Maps is nicer
-    and doesn't drain battery, but here in Italy it's pretty much useless.
+    and doesn't drain battery, but here in Italy it's pretty much useless. Also, Google Maps recently (and *finally*) added support for custom icons and emojis for custom lists, so now this is also a good database of visited places for me—and restaurants, pubs, whatever.
 
   * [TripIt] is the place where I store all the info about the trips I do. Plane
     tickets, hotels, train tickets, parking, restaurant reservations, whatever.
@@ -110,7 +120,7 @@ My biggest passion in life is probably traveling. I like to optimize the things 
   * When I travel with friends, I love to use [Splid] to track expenses. It
     makes it so easy to just pay for stuff and then figure it out later.
 
-  * I mostly use TikTok (yes TikTok) for finding out places to visit,
+  * I mostly use TikTok (yep, TikTok) for finding out places to visit,
     restaurants, and whatnot. I also Google around, sure, but TikTok has a lot
     of interesting content when it comes to travel.
 
