@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Handling TCP connections in Elixir – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="A look at some strategies to handle TCP connections and data flowing through them." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Handling TCP connections in Elixir">
+<meta property="og:description" content="A look at some strategies to handle TCP connections and data flowing through them.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/handling-tcp-connections-in-elixir/">
+<meta property="og:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2015-06-19T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Handling TCP connections in Elixir">
+<meta name="twitter:description" content="A look at some strategies to handle TCP connections and data flowing through them.">
+<meta name="twitter:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Handling TCP connections in Elixir</h1>
+
+    <div class="entry"><p>Elixir is frequently used in network-aware applications because of the core design of Erlang and the Erlang VM. In this context, there's often the need to connect to external services through the network: for example, a classic web application could connect to a relational database and a key-value store, while an application that runs on embedded systems could connect to other nodes on the network.</p>
+<span id="continue-reading"></span>
+<p>Many times, the connection with the network service will be transparent to the programmer thanks to external libraries (for example, database drivers), but I think it's interesting to know how to handle such connections by hand. This turns out to be useful if there are no external libraries for a particular service but also if we want to understand how these libraries work.</p>
+<p>In this article we will only talk about TCP connections since TCP is probably the most common protocol used in network applications. The principles we describe, however, are very similar for any other type of connection (for example, connections that use the UDP protocol).</p>
+<h2 id="a-semi-realistic-example"><a class="zola-anchor" href="#a-semi-realistic-example" aria-label="Anchor link for: a-semi-realistic-example">A semi-realistic example</a></h2>
+<p>For the sake of this article, we will build an <em>almost</em> working driver for the <a href="https://redis.io">Redis</a> key-value store. A Redis server is just a TCP server sends and receives messages. Redis uses its own protocol (more on this in a while) on top of TCP to exchange data, without relying on common protocols such as HTTP, but we will not focus on that: we will only deal with the TCP connection from Elixir to the Redis server.</p>
+<p>A little side note: obviously, there are several Erlang and Elixir libraries for talking to Redis, but bear with me. Since there's no point in coming up with a clever name for the library we're going to write, we'll just call it <code>Redis</code>.</p>
+<p>Let's get started!</p>
+<h2 id="brief-overview-of-tcp-connections-in-erlang-elixir"><a class="zola-anchor" href="#brief-overview-of-tcp-connections-in-erlang-elixir" aria-label="Anchor link for: brief-overview-of-tcp-connections-in-erlang-elixir">Brief overview of TCP connections in Erlang/Elixir</a></h2>
+<p>In Erlang and Elixir, TCP connections are handled using the <a href="https://www.erlang.org/doc/man/gen_tcp.html"><code>:gen_tcp</code></a> module. In this article we'll only set up clients that connect to an external TCP server, but the <code>:gen_tcp</code> module can also be used to set up TCP servers.</p>
+<p>All messages to the server are sent using <code>:gen_tcp.send/2</code>. Messages sent from the server to the client are usually delivered to the client process as Erlang messages, so it's straightforward to work with them. As we will see later on, we can control how messages are delivered to the client process with the value of the <code>:active</code> option on the TCP socket.</p>
+<p>To establish a connection with a TCP server we use <code>:gen_tcp.connect/3</code> passing the host (as a charlist, damn you Erlang!), the port and a list of options. By default, the process that calls <code>connect/3</code> is the &quot;controlling process&quot; of the TCP connection, which means that TCP messages from the socket will be delivered to it.</p>
+<p>That's all we need to know about TCP connections for now, let's move on.</p>
+<h2 id="first-implementation"><a class="zola-anchor" href="#first-implementation" aria-label="Anchor link for: first-implementation">First implementation</a></h2>
+<p>We'll use a <code>GenServer</code> as the only interface with the TCP connection. We need a GenServer so that we will be able to keep the TCP socket in the GenServer's state and reuse that socket for all communication.</p>
+<h3 id="establishing-the-connection"><a class="zola-anchor" href="#establishing-the-connection" aria-label="Anchor link for: establishing-the-connection">Establishing the connection</a></h3>
+<p>Since the GenServer will be the only interface to the TCP server and it will only hold a single TCP socket in its state, we want it to always be connected to the TCP server. The best strategy for this is establishing the connection when the GenServer is started, in the <code>init/1</code> callback. <code>init/1</code> is called when <code>GenServer.start_link/2</code> is used to start the process, and the GenServer doesn't start to do any work until <code>init/1</code> returns, so it's the perfect place for us.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">Redis</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">GenServer</span>
+
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>initial_state</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">start_link</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>initial_state</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">init</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    opts <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>binary</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">active<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">false</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>connect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>localhost<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">6379</span><span class="z-punctuation z-separator z-object z-elixir">,</span> opts<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>state <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The options we pass to <code>:gen_tcp.connect/3</code> are straightforward. <code>:binary</code> instructs the socket to deliver messages from the TCP server to the GenServer as binaries instead of Erlang strings (charlists): in Elixir this is probably what we want, and it's probably the most efficient choice as well. <code>active: false</code> tells the socket to never deliver TCP messages as Erlang messages to the GenServer process; we will have to manually retrieve those messages using <a href="https://www.erlang.org/doc/man/gen_tcp.html#recv-2"><code>:gen_tcp.recv/2</code></a>. We do this so that the GenServer isn't flooded with messages coming from the TCP server: we only retrieve messages when we're ready to process them.</p>
+<h3 id="sending-messages"><a class="zola-anchor" href="#sending-messages" aria-label="Anchor link for: sending-messages">Sending messages</a></h3>
+<p>We now have a GenServer which is connected to a Redis server. Let's send commands to the Redis server now.</p>
+<h4 id="resp-protocol"><a class="zola-anchor" href="#resp-protocol" aria-label="Anchor link for: resp-protocol">RESP protocol</a></h4>
+<p>At this point, I should mention the Redis binary protocol, RESP: this is the protocol that Redis uses to encode and decode commands and responses. The <a href="https://redis.io/topics/protocol">specification for this protocol</a> is short and simple to understand, so I encourage you to go read it if you want to know more. For the purpose of this article, we'll assume we have a full RESP encoder/decoder (<code>Redis.RESP</code>) which provides two functions:</p>
+<ul>
+<li><code>Redis.RESP.encode/1</code> which encodes a list into a Redis command, like this:</li>
+</ul>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">RESP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>encode<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>GET<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>mykey<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; &lt;&lt;...&gt;&gt;
+</span></span></code></pre>
+<ul>
+<li><code>Redis.RESP.decode/1</code> which decodes a binary into an Elixir term, like this:</li>
+</ul>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">resp_to_get_command <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-binary z-elixir"><span class="z-punctuation z-definition z-binary z-begin z-elixir">&lt;&lt;</span>...<span class="z-punctuation z-definition z-binary z-end z-elixir">&gt;&gt;</span></span>
+<span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">RESP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode<span class="z-punctuation z-section z-function z-elixir">(</span>resp_to_get_command<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; 1
+</span></span></code></pre>
+<h4 id="gen-tcp-send-2"><a class="zola-anchor" href="#gen-tcp-send-2" aria-label="Anchor link for: gen-tcp-send-2"><code>:gen_tcp.send/2</code></a></h4>
+<p>As we mentioned at the beginning of the article, we use <code>:gen_tcp.send/2</code> to send messages through a TCP socket. Our <code>Redis</code> module will provide a single function to send commands to the Redis server: <code>Redis.command/2</code>. The implementation is straightforward:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">Redis</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...as before...
+</span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">command</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>pid<span class="z-punctuation z-separator z-object z-elixir">,</span> cmd<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>call<span class="z-punctuation z-section z-function z-elixir">(</span>pid<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>command</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> cmd<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_call</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>command</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> cmd<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> from<span class="z-punctuation z-separator z-object z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>send<span class="z-punctuation z-section z-function z-elixir">(</span>socket<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">RESP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>encode<span class="z-punctuation z-section z-function z-elixir">(</span>cmd<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> `0` means receive all available bytes on the socket.
+</span>    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> msg<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>recv<span class="z-punctuation z-section z-function z-elixir">(</span>socket<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">0</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>reply</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">RESP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode<span class="z-punctuation z-section z-function z-elixir">(</span>msg<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> state<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This works fine...</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> pid<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span>command<span class="z-punctuation z-section z-function z-elixir">(</span>pid<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>SET<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>mykey<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span>command<span class="z-punctuation z-section z-function z-elixir">(</span>pid<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>GET<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>mykey<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; 1
+</span></span></code></pre>
+<p>...but there's a big problem.</p>
+<h2 id="what-went-wrong"><a class="zola-anchor" href="#what-went-wrong" aria-label="Anchor link for: what-went-wrong">What went wrong</a></h2>
+<p>Long story short: <code>:gen_tcp.recv/2</code> is blocking!</p>
+<p>The code we wrote would work just fine if the GenServer would be used by just one Elixir process. This is what happens when an Elixir process wants to send a command to the Redis server:</p>
+<ol>
+<li>the Elixir process calls <code>command/2</code> on the GenServer and <em>blocks</em>, waiting for the response</li>
+<li>the GenServer sends the command to the Redis server and <em>blocks</em> on <code>:gen_tcp.recv/2</code></li>
+<li>the Redis server responds to the GenServer</li>
+<li>the GenServer responds to the Elixir process</li>
+</ol>
+<p>Can you spot the problem? The GenServer is blocked when it waits for the Redis server to respond. While this is fine when a single Elixir process talks to the GenServer, it instantly becomes terrible when more processes want to communicate with the Redis server through the GenServer. Luckily, we can implement a much better solution.</p>
+<h2 id="queuing-for-the-win"><a class="zola-anchor" href="#queuing-for-the-win" aria-label="Anchor link for: queuing-for-the-win">Queuing for the win</a></h2>
+<p>As you probably know, the <code>handle_call/3</code> callback in a GenServer doesn't have to return a result to the client right away: it can return a <code>{:noreply, state}</code> tuple and then reply to the client using <a href="https://hexdocs.pm/elixir/GenServer.html#reply/2"><code>GenServer.reply/2</code></a>.</p>
+<p>This is exactly what we need here: a way for clients to call a function on the GenServer and block waiting for the response, but at the same time a way for the GenServer to keep doing work until it has a response <strong>for that specific client</strong>.</p>
+<p>In order continue with this strategy, however, we need to ditch <code>:gen_tcp.recv/2</code> in favor of receiving TCP messages as Erlang messages. We can do that using the <code>active: true</code> instead of <code>active: false</code> when connecting to the Redis server: when <code>:active</code> is <code>true</code>, all messages from a TCP socket are delivered as Erlang messages in the form of <code>{:tcp, socket, message}</code>.</p>
+<p>What will happen is this:</p>
+<ol>
+<li>the Elixir process calls <code>command/2</code> on the GenServer and <strong>blocks</strong>, waiting for the response</li>
+<li>the GenServer sends the command to the Redis server and returns <code>{:noreply, state}</code> so that it doesn't block</li>
+<li>the Redis server responds to the GenServer, which receives a <code>{:tcp, socket, message}</code> message</li>
+<li>the GenServer handles the message in the <code>handle_info/2</code> callback, responding to the appropriate client</li>
+</ol>
+<p>As you can see, the main difference is that from the moment the GenServer sends a command to the Redis server to the moment it receives a response, the GenServer is not blocked and it can send other commands to the server. This is great!</p>
+<p>The last thing we need to deal with is how the GenServer is supposed to respond to the <strong>right</strong> request: when it receives a <code>{:tcp, ...}</code> message, how does it know who to send it back with <code>GenServer.reply/2</code>? Since we're sure Redis responds to requests <em>sequentially</em> (first in, first out), we can use a simple queue to keep a list of Elixir processes waiting for a response. We'll keep this queue in the GenServer's state, enqueuing clients when they make a request and dequeuing them when a response is delivered.</p>
+<p>{% raw %}</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">Redis</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>initial_state</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">queue<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>queue</span><span class="z-punctuation z-separator z-method z-elixir">.</span>new<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...as before...
+</span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_call</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>command</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> cmd<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> from<span class="z-punctuation z-separator z-object z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">queue<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> queue<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> We send the command...
+</span>    <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>send<span class="z-punctuation z-section z-function z-elixir">(</span>state<span class="z-punctuation z-separator z-method z-elixir">.</span>socket<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">RESP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>encode<span class="z-punctuation z-section z-function z-elixir">(</span>cmd<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...enqueue the client...
+</span>    state <span class="z-keyword z-operator z-assignment z-elixir">=</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>state <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-constant z-other z-keywords z-elixir">queue<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>queue</span><span class="z-punctuation z-separator z-method z-elixir">.</span>in<span class="z-punctuation z-section z-function z-elixir">(</span>from<span class="z-punctuation z-separator z-sequence z-elixir">,</span> queue<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...and we don&#39;t reply right away.
+</span>    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>noreply</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> state<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_info</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>tcp</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> socket<span class="z-punctuation z-separator z-sequence z-elixir">,</span> msg<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> We dequeue the next client:
+</span>    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>value</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> client<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> new_queue<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>queue</span><span class="z-punctuation z-separator z-method z-elixir">.</span>out<span class="z-punctuation z-section z-function z-elixir">(</span>state<span class="z-punctuation z-separator z-method z-elixir">.</span>queue<span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> We can finally reply to the right client.
+</span>    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>reply<span class="z-punctuation z-section z-function z-elixir">(</span>client<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">RESP</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode<span class="z-punctuation z-section z-function z-elixir">(</span>msg<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>noreply</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>state <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-constant z-other z-keywords z-elixir">queue<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> new_queue<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-invalid z-illegal z-stray-closing-brace z-elixir">}</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="messages-on-demand"><a class="zola-anchor" href="#messages-on-demand" aria-label="Anchor link for: messages-on-demand">Messages on demand</a></h2>
+<p>In the sections above, we moved from a <code>active: false</code> socket to a <code>active: true</code> socket in order to receive TCP data as Erlang messages. This works fine, but can lead to problems if the TCP server sends the GenServer <em>a lot</em> of data: since Erlang has no limit on the message queue of a process, the GenServer can be easily flooded with messages; after all, we chose to use <code>active: false</code> for this reason in the first place. To avoid that, we can change <code>active: true</code> to the more conservative <code>active: :once</code>: this way, only one TCP messages is delivered as an Erlang message, and then the socket goes back to <code>active: false</code>. We can set <code>active: :once</code> again to receive the next message, and so on. We can process TCP data as Erlang messages but one at the time, so that we're sure we're able to process them.</p>
+<p>We just have to remember to reactivate the socket when we receive a <code>{:tcp, ...}</code> message in the <code>handle_info/2</code> callback. We can do that using <a href="https://www.erlang.org/doc/man/inet.html#setopts-2"><code>:inet.setopts/2</code></a>.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">Redis</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...as before...
+</span>
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_info</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>tcp</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> socket<span class="z-punctuation z-separator z-sequence z-elixir">,</span> msg<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> Allow the socket to send us the next message.
+</span>    <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>inet</span><span class="z-punctuation z-separator z-method z-elixir">.</span>setopts<span class="z-punctuation z-section z-function z-elixir">(</span>socket<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">active<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>once</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> exactly as before
+</span>  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="plot-twist"><a class="zola-anchor" href="#plot-twist" aria-label="Anchor link for: plot-twist">Plot twist</a></h2>
+<p>I didn't think of the pattern I wrote about. That's a shocker, right? The pattern I described here is very common and is shared by a number of Erlang and Elixir applications. This pattern applies nicely to any connection with a TCP server (or with anything similar for that matter), and it's often used in drivers for databases: that's why I went with Redis in the example.</p>
+<p>Lots of real-world libraries use the pattern I talked about: for example, <a href="https://github.com/wooga/eredis">eredis</a> (one of the most used Redis drivers for Erlang) is built very similarly to our example: just look at <a href="https://github.com/wooga/eredis/blob/770f828918db710d0c0958c6df63e90a4d341ed7/src/eredis_client.erl#L1-L21">this comment</a> in the eredis source, which is basically a summary of this article (or is this article an expanded version of that comment? Who knows!). Other examples of libraries that roughly follow this pattern are the Elixir drivers for PostgreSQL (<a href="https://github.com/ericmj/postgrex">Postgrex</a>) and MongoDB (<a href="https://github.com/ericmj/mongodb">mongodb</a>). Currently I'm working on an Elixir driver for <a href="https://orientdb.org">OrientDB</a> (still not public) which uses this pattern as well. So, it must work right?</p>
+<h2 id="better-handling-of-the-tcp-connection"><a class="zola-anchor" href="#better-handling-of-the-tcp-connection" aria-label="Anchor link for: better-handling-of-the-tcp-connection">Better handling of the TCP connection</a></h2>
+<p>We happily ignored an annoying thing to deal with throughout this article: error handling!</p>
+<p>We'll keep happily ignoring a subset of the errors that can happen, for example, an empty client queue (which fails the <code>{{:value, val}, new_queue}</code> pattern match) or an incomplete message from the TCP socket. However, a common set of errors that can happen when dealing with TCP connections are, well, TCP errors like dropped connections or timeouts.</p>
+<p>We could try to handle this kind of errors ourselves, but, luckily for us, Elixir core team member James Fish (a.k.a. <a href="https://github.com/fishcakez">fishcakez</a>) did most of the work in its awesome library <a href="https://github.com/fishcakez/connection">connection</a>. While this library is quite young at the time of writing, it's already being used in the <a href="https://github.com/ericmj/mongodb">MongoDB driver</a> I mentioned before and in the OrientDB driver I'm working on.</p>
+<h3 id="handling-connections-with-connection"><a class="zola-anchor" href="#handling-connections-with-connection" aria-label="Anchor link for: handling-connections-with-connection">Handling connections with... Connection</a></h3>
+<p>The connection library defines the <code>Connection</code> behaviour: the API specified by this behaviour is a superset of the <code>GenServer</code> API, so it's easy to understand and integrate into existing projects.</p>
+<p>The <a href="https://hexdocs.pm/connection">docs</a> explain what <code>Connection</code> does in great detail, but the gist of it is this: it helps implement a process that has a peer it connects to and has to deal with that peer being possibly unavailable. To do this, the <code>Connection</code> behaviour defines two additional functions (other than the <code>GenServer</code> ones) and revises the return values of some <code>GenServer</code> callbacks.</p>
+<p>We will only look at some of the functionality provided by <code>Connection</code> here, but make sure to read the docs if you want to know more.</p>
+<h3 id="connecting-on-startup"><a class="zola-anchor" href="#connecting-on-startup" aria-label="Anchor link for: connecting-on-startup">Connecting on startup</a></h3>
+<p>Our <code>Redis.init/1</code> callback implementation performs the connection to the Redis server, blocking the process that called <code>Redis.start_link/0</code> until it returns. This may be fine as we don't want our GenServer to be able to do anything before it's connected to the Redis server. However, <code>start_link/0</code> may be called by a supervisor or by a process specifically designed to just <em>start</em> the GenServer: in these cases, we'd like <code>start_link/0</code> to return <code>{:ok, pid}</code> as soon as possible, handling the process of establishing the TCP connection in the background. We'd also like the GenServer to queue messages until it's connected to the Redis server. This behaviour would enable us to start the GenServer without blocking the process that called <code>start_link/0</code>, but blocking all subsequent requests until the GenServer is connected to Redis.</p>
+<p>With <code>Connection</code> we can do exactly this. Returning <code>{:connect, info, state}</code> from the <code>init/1</code> callback (instead of <code>{:ok, state}</code>) makes <code>init/1</code> return <code>{:ok, pid}</code> instantly, but also calls the <code>connect/2</code> callback on the GenServer and stops the GenServer from processing incoming messages until the connection is complete. The <code>info</code> element in the <code>{:connect, info, state}</code> tuple should contain any information needed to connect to the peer but that we don't want to keep in the GenServer's state.</p>
+<p>Let's change our code to take advantage of this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">Redis</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Connection</span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>initial_state</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">start_link</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> We need Connection.start_link/2 now,
+</span><span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> not GenServer.start_link/2
+</span>    <span class="z-entity z-name z-class z-elixir">Connection</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>initial_state</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">init</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> We use `nil` as we don&#39;t need any additional info
+</span><span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> to connect
+</span>    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>connect</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> state<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">connect</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_info<span class="z-punctuation z-separator z-object z-elixir">,</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    opts <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>binary</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">active<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>once</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>connect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>localhost<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">6379</span><span class="z-punctuation z-separator z-object z-elixir">,</span> opts<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>state <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This is a big improvement over what we had before, but <code>Connection</code> allows us to make our library even better.</p>
+<h3 id="back-off"><a class="zola-anchor" href="#back-off" aria-label="Anchor link for: back-off">Back off!</a></h3>
+<p>The line where we connect to the Redis server using <code>:gen_tcp.connect/3</code> should raise a loud alarm bell in your head: <code>{:ok, socket} = ...</code> is not very responsible. In case the connection fails for any reason, the pattern match will fail and, instead of handling the error, the whole GenServer blows up. The obvious thing to do is to handle the result of <code>:gen_tcp.connect/3</code> with a case statement:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">case</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>connect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>localhost<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">6379</span><span class="z-punctuation z-separator z-object z-elixir">,</span> opts<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>state <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+
+  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> reason<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> now what?
+</span><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Now we have to decide what we want to do in case there's an error. Blowing up the GenServer or returning the error to the client is trivial, but in real-world™ code we would probably want to try to reconnect to the TCP server. <code>Connection</code> to the rescue! We can make <code>connect/2</code> return a <code>{:backoff, timeout, state}</code> tuple: <code>connect/2</code> will be called again after <code>timeout</code> in an attempt to reconnect to the peer. Our <code>connect/2</code> would look like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">connect</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>_info<span class="z-punctuation z-separator z-object z-elixir">,</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  opts <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>binary</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">active<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>once</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+
+  <span class="z-keyword z-control z-elixir">case</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>gen_tcp</span><span class="z-punctuation z-separator z-method z-elixir">.</span>connect<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>localhost<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">6379</span><span class="z-punctuation z-separator z-object z-elixir">,</span> opts<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+      <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>state <span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-constant z-other z-keywords z-elixir">socket<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> socket<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>error</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> reason<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+      <span class="z-entity z-name z-class z-elixir">IO</span><span class="z-punctuation z-separator z-method z-elixir">.</span>puts<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>TCP connection error: </span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-punctuation z-section z-interpolation z-begin z-elixir">#{</span></span></span></span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-source z-elixir z-embedded">inspect reason</span><span class="z-punctuation z-section z-interpolation z-end z-elixir">}</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir">      <span class="z-punctuation z-definition z-comment z-elixir">#</span> Try again in one second:
+</span>      <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>backoff</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1000</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> state<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The great thing about <code>Connection</code> is that you can return <code>{:backoff, timeout, state}</code> from almost every callback function, so handling connection failures become straightforward.</p>
+<p>When <code>{:backoff, timeout, state}</code> is returned, <code>connect/2</code> is called with <code>:backoff</code> as its first argument: this lets us easily detect <strong>re</strong>-connections (instead of first connections) and deal with them appropriately. For example, we may want to implement exponential back-off, that is, we retry after one second, then after two seconds, then after four seconds and so on, possibly with a maximum number of retries.</p>
+<h2 id="pooling"><a class="zola-anchor" href="#pooling" aria-label="Anchor link for: pooling">Pooling</a></h2>
+<p>Just one last tip: the GenServer we built can be used smoothly with pooling libraries like the famous <a href="https://github.com/devinus/poolboy">poolboy</a>. There's plenty of literature about poolboy around the web, so I'm not going to describe how it works here. I will just show you a small example.</p>
+<p>First, we can create a pool of a given number of our GenServers using <code>:poolboy.start_link/2</code>.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">poolboy_opts <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-keywords z-elixir">worker_module<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">size<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-numeric z-elixir">50</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+redis_opts <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> pool<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>poolboy</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span>poolboy_opts<span class="z-punctuation z-separator z-object z-elixir">,</span> redis_opts<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Then, we can just check out worker processes (which are our <code>Redis</code> GenServers) out of the pool, perform operations on Redis through them, and then check them back in the pool.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">worker <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>poolboy</span><span class="z-punctuation z-separator z-method z-elixir">.</span>checkout<span class="z-punctuation z-section z-function z-elixir">(</span>pool<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-entity z-name z-class z-elixir">Redis</span><span class="z-punctuation z-separator z-method z-elixir">.</span>command<span class="z-punctuation z-section z-function z-elixir">(</span>worker<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>SET<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>mykey<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>poolboy</span><span class="z-punctuation z-separator z-method z-elixir">.</span>checkin<span class="z-punctuation z-section z-function z-elixir">(</span>pool<span class="z-punctuation z-separator z-object z-elixir">,</span> worker<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Nothing smoother than that!</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>We saw how to implement a GenServer that works as an interface to a TCP server. We built a non-blocking GenServer that queues clients in order to send multiple commands to the TCP server while waiting for responses from the server. We used the <a href="https://github.com/fishcakez/connection">connection</a> library to deal with TCP errors (for example, the server being temporarily unavailable) by implementing a back-off strategy. Finally, we briefly looked at how <a href="https://github.com/devinus/poolboy">poolboy</a> can be used to make a pool of our GenServers.</p>
+<p>Thanks for reading!</p>
+</div>
+
+    <time class="posted-at" datetime="2015-06-19">
+      Written on June 19, 2015
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

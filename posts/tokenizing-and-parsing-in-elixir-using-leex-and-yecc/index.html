@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Tokenizing and parsing in Elixir with yecc and leex – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="A showcase of these two Erlang builtin tools and how they can be used from Elixir." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Tokenizing and parsing in Elixir with yecc and leex">
+<meta property="og:description" content="A showcase of these two Erlang builtin tools and how they can be used from Elixir.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/tokenizing-and-parsing-in-elixir-using-leex-and-yecc/">
+<meta property="og:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2015-06-05T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Tokenizing and parsing in Elixir with yecc and leex">
+<meta name="twitter:description" content="A showcase of these two Erlang builtin tools and how they can be used from Elixir.">
+<meta name="twitter:image" content="https://andrealeopardi.com/assets/media/website-overlay-cover.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Tokenizing and parsing in Elixir with yecc and leex</h1>
+
+    <div class="entry"><p>Lexical analysis (tokenizing) and parsing are very important concepts in computer science and programming. There is a lot of theory behind these concepts, but I won't be talking about any of that here because, well, it's <em>a lot</em>. Also, I feel like approaching these topics in a &quot;scientific&quot; way makes them look a bit scary; however, using them in practice turns out to be pretty straightforward. If you want to know more about the theory, head over to Wikipedia (<a href="https://en.wikipedia.org/wiki/Lexical_analysis">lexical analysis</a> and <a href="https://en.wikipedia.org/wiki/Parsing">parsing</a>) or read the amazing <a href="https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools">dragon book</a> (which I recommend to all programmers, it's fantastic).</p>
+<span id="continue-reading"></span>
+<p>Usually people tend to avoid using lexers and parsers in favor of manual string manipulation and <strong>regular expressions</strong>. I think this may happen because of the inherent complexity that is generally associated with these tools. In this post, we'll try to make this complexity go away!</p>
+<h2 id="why"><a class="zola-anchor" href="#why" aria-label="Anchor link for: why">Why</a></h2>
+<p>First, lexers and parser are usually used together, but they don't <em>need</em> to be. You can use a lexer to tokenize some string into a flat list of tokens, and you can use a parser to understand a grammar of anything.</p>
+<p>A little side note before we begin. I said people often choose regular expressions to &quot;parse&quot; and understand text. While this is fine for very simple parsing tasks, most of the time it results in cryptic and fragile code. Also, regular expressions are limited in what type of grammars they can parse (try <a href="https://stackoverflow.com/questions/1732348/regex-match-open-tags-except-xhtml-self-contained-tags">parsing HTML with regexps</a>), so at times you will <em>need</em> something more powerful.</p>
+<h2 id="enter-leex-and-yecc"><a class="zola-anchor" href="#enter-leex-and-yecc" aria-label="Anchor link for: enter-leex-and-yecc">Enter <code>leex</code> and <code>yecc</code></a></h2>
+<p>Erlang provides two modules that greatly simplify the task of writing lexers and parsers: <a href="https://erlang.org/doc/man/leex.html"><code>leex</code></a> and <a href="https://erlang.org/doc/man/yecc.html"><code>yecc</code></a>. The <code>leex</code> module is a lexer <em>generator</em>: it reads a file written in a special syntax and spits out an Erlang module (in a <code>.erl</code> file) that you can compile and use for the actual tokenizing. <code>yecc</code> behaves in the same way, except it generates parsers instead of lexers.</p>
+<p>Since these modules are available in the Erlang standard distribution (in the &quot;Parse tools&quot; application group), I think there are little to no downsides in using them whenever there's a problem they could help to solve.</p>
+<h2 id="the-small-contrived-and-unrealistic-example"><a class="zola-anchor" href="#the-small-contrived-and-unrealistic-example" aria-label="Anchor link for: the-small-contrived-and-unrealistic-example">The small, contrived and unrealistic example</a></h2>
+<p>Every post explaining something needs one of these examples, so let's make up ours: we're going to tokenize and parse Elixir lists of atoms and integers dumped as strings. The final goal will be to be able to read an Elixir list expressed as a string and convert it back to an Elixir string, like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-entity z-name z-class z-elixir">ListParser</span><span class="z-punctuation z-separator z-method z-elixir">.</span>parse<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>[1, 2, [:foo, [:bar]]]<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">2</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>foo</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>bar</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span></code></pre>
+<p>That's small, contrived, and unrealistic, so we should be good to go.</p>
+<h2 id="the-lexer"><a class="zola-anchor" href="#the-lexer" aria-label="Anchor link for: the-lexer">The lexer</a></h2>
+<p>The first thing we have to do is <strong>tokenize</strong> the string: tokenizing just means turning a string into a list of tokens, which are just things a bit more structured than a flat list of characters.</p>
+<p>For example, a single token could be an integer like <code>4917</code>: the <em>integer</em> <code>4917</code> has &quot;more structure&quot; than the list of characters <code>[?4, ?9, ?1, ?7]</code> because we can treat it as a whole.</p>
+<p>Tokenizing our lists is straightforward: we only tokenize parentheses (left <code>[</code> and right <code>]</code>), commas, integers, and atoms. We're going to tokenize only simple atoms, like <code>:foo</code> or <code>:foo_bar</code>, ignoring atoms that have to use double or single quotes, like <code>:'foo bar'</code> or <code>:&quot;hello world!&quot;</code>.</p>
+<p>Rolling our own tokenizer for this basic syntax would be easy, but <code>leex</code> greatly simplifies the job by letting us write a lexer with a very straightforward syntax. Basically, you identify tokens with regular expressions, and you associate an Erlang expression to each regular expression in order to create a token. I mentioned before that regular expressions aren't cut for this job: well, they're not a great tool for parsing because of the recursive nature of the task, but they're great for splitting things in a flat structure.</p>
+<p>The syntax of a <code>leex</code> <strong>rule</strong> is this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Regular expression : Erlang code.
+</span></code></pre>
+<p>In the &quot;Erlang code&quot;, we have to return a <code>{:token, value}</code> tuple if we want the lexer to return that token to us (actually, a <code>{token, Value}</code> tuple since we have to use Erlang syntax, not Elixir).</p>
+<p>Our lexer is simple:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Rules.
+
+[0-9]+   : {token, {int,  TokenLine, TokenChars}}.
+:[a-z_]+ : {token, {atom, TokenLine, TokenChars}}.
+\[       : {token, {&#39;[&#39;,  TokenLine}}.
+\]       : {token, {&#39;]&#39;,  TokenLine}}.
+,        : {token, {&#39;,&#39;,  TokenLine}}.
+</span></code></pre>
+<p>We return a <code>{:token, value}</code> to tell <code>leex</code> we're interested in the matched token (that's why the first element of the tuple is <code>:token</code>) and we want to include it in the output of the lexical analysis.</p>
+<p><code>TokenLine</code> and <code>TokenChars</code> are variables that <code>leex</code> makes available in the Erlang expression following each regexp. These variables contain the line of the matching token and the matched token's contents (as a char list).</p>
+<p>We always use two- or three-element tuples as the value of tokens because this is the format <code>yecc</code> wants. As you can see, sometimes we're interested in the token value, so we return a three-element tuple but sometimes the token itself is its value (for example, the comma) so a two-element tuple is enough. The token line is mandatory so that <code>yecc</code> can spit out accurate error messages.</p>
+<p>We don't have to keep all the tokens we find: we can discard them by returning the atom <code>:skip_token</code> instead of a <code>{:token, value}</code> tuple. A common use case is skipping whitespace:</p>
+<pre class="z-code"><code><span class="z-text z-plain">[\s\t\n\r]+ : skip_token.
+</span></code></pre>
+<p>Regular expressions can quickly become nasty, but we can extract them into <em>definitions</em> in the form <code>ALIAS = REGEX</code>. We put definitions at the top of the file, before the list of rules. To use these definitions in the regexps, we have to surround them with curly braces.</p>
+<pre class="z-code"><code><span class="z-text z-plain">Definitions.
+
+INT        = [0-9]+
+ATOM       = :[a-z_]+
+WHITESPACE = [\s\t\n\r]
+
+Rules.
+
+{INT}         : {token, {int,  TokenLine, TokenChars}}.
+{ATOM}        : {token, {atom, TokenLine, TokenChars}}.
+\[            : {token, {&#39;[&#39;,  TokenLine}}.
+\]            : {token, {&#39;]&#39;,  TokenLine}}.
+,             : {token, {&#39;,&#39;,  TokenLine}}.
+{WHITESPACE}+ : skip_token.
+</span></code></pre>
+<p>We're ready to try out our lexer. First, we have to write it to a file with the <code>.xrl</code> extension. Then, we can turn the <code>.xrl</code> file into a <code>.erl</code> file with <code>:leex.file/1</code>. Finally, we can compile the newly generated Erlang module. Remember that most Erlang modules accept char lists instead of binaries, so we have to surround them in single quotes instead of double quotes. (Side note: Erlang uses single quotes to express complex atoms like <code>'foo bar'</code> that can't be expressed using the <code>regular</code> syntax, but you remembered that, right?)</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>leex</span><span class="z-punctuation z-separator z-method z-elixir">.</span>file<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>list_lexer.xrl<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> c<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>list_lexer.erl<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> tokens<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_lexer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>string<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>[1, [:foo]]<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> tokens
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>[<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>int</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>1<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>,<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>[<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>atom</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>:foo<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>]<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>]<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span></code></pre>
+<p>Nice! <code>leex</code> also provides the possibility to define some Erlang code associated with the lexer: this is done in the <code>Erlang code.</code> section at the bottom of the <code>.xrl</code> file. We could take advantage of this to convert atom tokens to atoms:</p>
+<pre class="z-code"><code><span class="z-text z-plain">...
+
+{INT}  : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
+{ATOM} : {token, {atom, TokenLine, to_atom(TokenChars)}}.
+
+...
+
+Erlang code.
+
+to_atom([$:|Chars]) -&gt;
+  list_to_atom(Chars).
+</span></code></pre>
+<p><code>to_atom/1</code> just strips the first character of an atom token (which is a colon, <code>$:</code> in Erlang land) and converts the rest to an atom. We also used <code>list_to_integer/1</code> to convert integer tokens to integers.</p>
+<p>Our full lexer looks like this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Definitions.
+
+INT        = [0-9]+
+ATOM       = :[a-z_]+
+WHITESPACE = [\s\t\n\r]
+
+Rules.
+
+{INT}         : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
+{ATOM}        : {token, {atom, TokenLine, to_atom(TokenChars)}}.
+\[            : {token, {&#39;[&#39;,  TokenLine}}.
+\]            : {token, {&#39;]&#39;,  TokenLine}}.
+,             : {token, {&#39;,&#39;,  TokenLine}}.
+{WHITESPACE}+ : skip_token.
+
+Erlang code.
+
+to_atom([$:|Chars]) -&gt;
+    list_to_atom(Chars).
+</span></code></pre>
+<p>It works like we expect it to:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> tokens<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_lexer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>string<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>[1, :foo]<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> tokens
+<span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>[<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>int</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>,<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>atom</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>foo</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>]<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span></code></pre>
+<h2 id="the-parser"><a class="zola-anchor" href="#the-parser" aria-label="Anchor link for: the-parser">The parser</a></h2>
+<p>We now have a flat list of tokens. We want to give structure to those tokens and turn them into Elixir lists: we need to <strong>parse</strong> the list of tokens. A parser works based on a <strong>grammar</strong>, which is a set of rules that describe how tokens should be structured.</p>
+<p>While we could hand-roll our own parser as well (which is a bit harder than rolling out our own lexer), it's easy to use <code>yecc</code>: it lets you write very <em>declarative</em> grammars and it's as easy to use as <code>leex</code>.</p>
+<p>Small side note: at this point, you might think these names make no sense. They do (more or less). They're both inspired by two very famous pieces of software: the <a href="https://en.wikipedia.org/wiki/Lex_(software)"><code>lex</code></a> lexer generator and the <a href="https://en.wikipedia.org/wiki/Yacc"><code>yacc</code></a> parser generator. Turns out these Erlang people aren't just crazy, uh?</p>
+<p>Back to us. The central unit of <code>yecc</code>'s syntax is a <strong>rule</strong>, which has the form:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Left-hand side -&gt; Right-hand side : Erlang expressions.
+</span></code></pre>
+<p>The left-hand side is a <strong>category</strong> of tokens, while the right-hand side is a category or list of categories of tokens. Categories of tokens can be of two types: <em>terminal</em> and <em>non-terminal</em>. Terminals are just tokens that do not expand to other categories; non-terminals are categories that recursively expand to other categories.</p>
+<p>For example, the <code>:&quot;[&quot;</code> or <code>{atom, Atom}</code> tokens are terminals. A list could be represented by the <code>list</code> non-terminal:</p>
+<pre class="z-code"><code><span class="z-text z-plain">list -&gt; &#39;[&#39; &#39;]&#39;.
+% or...
+list -&gt; &#39;[&#39; elems &#39;]&#39;.
+
+% By the way, &#39;%&#39; is used for comments just like in Erlang.
+</span></code></pre>
+<p>As you can see, we can define multiple &quot;clauses&quot; for each category: the category can assume any value from these clauses (think of them like an &quot;or&quot;).</p>
+<p><code>elems</code> is a non-terminal itself. We can define it as a single element or an element, a comma and a list of elements:</p>
+<pre class="z-code"><code><span class="z-text z-plain">elems -&gt; elem.
+elems -&gt; elem &#39;,&#39; elems.
+</span></code></pre>
+<p>The <code>elems</code> category could be <code>elem</code>, <code>elem, elem</code>, and so on.</p>
+<p><code>elem</code> is a non-terminal itself: it represents an integer, an atom, or a list. Note how elegantly we can represent the fact that an element of a list can be itself a list:</p>
+<pre class="z-code"><code><span class="z-text z-plain">elem -&gt; int.
+elem -&gt; atom.
+elem -&gt; list.
+</span></code></pre>
+<p>Beautiful!</p>
+<p>All non-terminals must at some point expand to terminals: you can't have a non-terminal that doesn't expand to anything. <code>yecc</code> also requires you to specify which categories are terminals and which ones are non-terminals at the top of the file:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Terminals &#39;[&#39; &#39;]&#39; &#39;,&#39; int atom.
+Nonterminals list elems elem.
+</span></code></pre>
+<p>You also have to specify a <strong>root symbol</strong>, that is, the starting non-terminal that generates the entire grammar. In our case, that's <code>list</code>:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Rootsymbol list.
+</span></code></pre>
+<p>We're almost finished! The last thing we need to do is convert the parsed lists to Elixir lists. We can do this in the Erlang code associated with each parsing rule. In these Erlang expressions, we have some special atoms available: <code>'$1'</code>, <code>'$2'</code>, <code>'$3'</code> and so on. <code>yecc</code> replaces them with the value returned by the Erlang code associated with the category at the same index on the right-hand side of the rule. I just heard you thought &quot;<em>what?!</em>&quot;; you're right, this is way easier to understand in practice:</p>
+<pre class="z-code"><code><span class="z-text z-plain">list -&gt;
+  &#39;[&#39; &#39;]&#39; : []. % an empty list translate to, well, an empty list
+list -&gt;
+  &#39;[&#39; elems &#39;]&#39; : &#39;$2&#39;. % the list is formed by its elements
+
+elems -&gt;
+  elem : [&#39;$1&#39;]. % single-element list (and base case for the recursion)
+elems -&gt;
+  elem &#39;,&#39; elems : [&#39;$1&#39;|&#39;$3&#39;]. % &#39;$3&#39; will be replaced recursively
+
+elem -&gt; int  : extract_token(&#39;$1&#39;).
+elem -&gt; atom : extract_token(&#39;$1&#39;).
+elem -&gt; list : &#39;$1&#39;.
+
+% Yep, we can use Erlang code here as well.
+Erlang code.
+
+extract_token({_Token, _Line, Value}) -&gt; Value.
+</span></code></pre>
+<p>We're done! This is how our full parser looks like:</p>
+<pre class="z-code"><code><span class="z-text z-plain">Nonterminals list elems elem.
+Terminals &#39;[&#39; &#39;]&#39; &#39;,&#39; int atom.
+Rootsymbol list.
+
+list -&gt; &#39;[&#39; &#39;]&#39;       : [].
+list -&gt; &#39;[&#39; elems &#39;]&#39; : &#39;$2&#39;.
+
+elems -&gt; elem           : [&#39;$1&#39;].
+elems -&gt; elem &#39;,&#39; elems : [&#39;$1&#39;|&#39;$3&#39;].
+
+elem -&gt; int  : extract_token(&#39;$1&#39;).
+elem -&gt; atom : extract_token(&#39;$1&#39;).
+elem -&gt; list : &#39;$1&#39;.
+
+Erlang code.
+
+extract_token({_Token, _Line, Value}) -&gt; Value.
+</span></code></pre>
+<p>We can now create an Erlang file from the <code>yecc</code> file (which has a <code>.yrl</code> extension) just like we did with <code>leex</code>:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>yecc</span><span class="z-punctuation z-separator z-method z-elixir">.</span>file<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-single z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&#39;</span>list_parser.yrl<span class="z-punctuation z-definition z-string z-end z-elixir">&#39;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> c<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>list_parser.erl<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_parser</span><span class="z-punctuation z-separator z-method z-elixir">.</span>parse<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>[<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>atom</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>foo</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>]<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>foo</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+</span></code></pre>
+<p>It works!</p>
+<h2 id="putting-it-together"><a class="zola-anchor" href="#putting-it-together" aria-label="Anchor link for: putting-it-together">Putting it together</a></h2>
+<p>We can feed the output of the lexer directly into the parser now:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> source <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>[:foo, [1], [:bar, [2, 3]]]<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> tokens<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> source <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">String</span><span class="z-punctuation z-separator z-method z-elixir">.</span>to_charlist<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_lexer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>string
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_parser</span><span class="z-punctuation z-separator z-method z-elixir">.</span>parse<span class="z-punctuation z-section z-function z-elixir">(</span>tokens<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>foo</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>bar</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-numeric z-elixir">2</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-numeric z-elixir">3</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+</span></code></pre>
+<p>Awesome!</p>
+<h2 id="elixir-integration"><a class="zola-anchor" href="#elixir-integration" aria-label="Anchor link for: elixir-integration">Elixir integration</a></h2>
+<p>Manually generating Erlang files from <code>.xrl</code> and <code>.yrl</code> files and then compiling those Erlang files can become tedious very quickly. Luckily, Mix can do that for you!</p>
+<p>Mix has the concept of &quot;compilers&quot;: they're just what you think they are, compilers. Mix provides a compiler for Erlang (which just compiles <code>.erl</code> files through the Erlang installation), one for Elixir, but also a <code>:leex</code> compiler and <code>:yecc</code> compiler. They are actually enabled by default, as you can see by inspecting the return value of <a href="https://hexdocs.pm/mix/Mix.html#compilers/0"><code>Mix.compilers/0</code></a> inside a Mix project:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-entity z-name z-class z-elixir">Mix</span><span class="z-punctuation z-separator z-method z-elixir">.</span>compilers<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>yecc</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>leex</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>erlang</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>elixir</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>app</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span></code></pre>
+<p>The only thing you have to do to make all of this work effortlessly inside a Mix project is to put your <code>.xrl</code> and <code>.yrl</code> files in the <code>src/</code> directory of the project. You'll have the compiled Erlang modules available when the Mix compiles the project.</p>
+<pre data-lang="bash" class="language-bash z-code"><code class="language-bash" data-lang="bash"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mix</span></span><span class="z-meta z-function-call z-arguments z-shell"> new list_parser</span>
+<span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mkdir</span></span><span class="z-meta z-function-call z-arguments z-shell"> list_parser/src</span>
+<span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">mv</span></span><span class="z-meta z-function-call z-arguments z-shell"> ./list_parser.yrl ./list_lexer.xrl ./list_parser/src/</span>
+</span></code></pre>
+<p>Now, inside <code>list_parser/lib/list_parser.ex</code>:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">ListParser</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>spec</span> parse<span class="z-punctuation z-section z-function z-elixir">(</span>binary<span class="z-punctuation z-section z-function z-elixir">)</span> :: list
+<span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">parse</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>str<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> tokens<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> str <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> to_charlist<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_lexer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>string<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> list<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>list_parser</span><span class="z-punctuation z-separator z-method z-elixir">.</span>parse<span class="z-punctuation z-section z-function z-elixir">(</span>tokens<span class="z-punctuation z-section z-function z-elixir">)</span>
+    list
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<h2 id="i-m-not-convinced-yet"><a class="zola-anchor" href="#i-m-not-convinced-yet" aria-label="Anchor link for: i-m-not-convinced-yet">I'm not convinced yet</a></h2>
+<p>All of this may sound very abstract, but I assure you that <code>leex</code> and <code>yecc</code> have tons of practical uses. For example, I recently had to write a parser for <a href="https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html">PO files</a> in the context of writing an Elixir binding to <a href="https://www.gnu.org/software/gettext/">GNU gettext</a>. Well, I used <code>yecc</code> to write a parser: this resulted in a very declarative, clean and easy-to-understand grammar (you can see it <a href="https://github.com/elixir-lang/gettext/blob/e2e3d42edd2a8fa5aa2deada2e5779f122594e71/src/gettext_po_parser.yrl">here</a>) and I'm super-happy with it. We didn't use <code>leex</code> in Gettext but decided to roll our own lexer, but only because the tokenization was very simple and <code>leex</code> may have been slight overkill.</p>
+<p>Want another Real-World™ example? Wait, I think I have one: ever heard of the Elixir programming language? It's a nice language built atop the Erlang virtual matching, focused on concurrency, fault to… Well, it's <a href="https://github.com/elixir-lang/elixir/blob/main/lib/elixir/src/elixir_parser.yrl">parsed by <code>yecc</code></a>!</p>
+<h2 id="recap"><a class="zola-anchor" href="#recap" aria-label="Anchor link for: recap">Recap</a></h2>
+<p>We built a lexer and a parser for transforming strings representing Elixir lists to actual Elixir lists. We used the <code>leex</code> Erlang module to generate the lexer and the <code>yecc</code> module to generate the parser.</p>
+<p>Finally, only covered the basics of these two tools: they can do more complicated things (<code>yecc</code> generates LALR parsers if you know what that means) but for that, as usual, there's their <a href="https://www.erlang.org/doc/apps/parsetools/">documentation</a>.</p>
+<hr />
+<p>I'm realizing just now that this post, even if it's my first post about Elixir, contains barely any Elixir. Let's just see this as an opportunity to sing the praises of how easy it is to use Erlang from Elixir, shall we?</p>
+<h3 id="very-small-update"><a class="zola-anchor" href="#very-small-update" aria-label="Anchor link for: very-small-update">Very small update</a></h3>
+<p>I updated the source code in this blog post to use <code>String.to_charlist/1</code> and <code>to_charlist/1</code> instead of <code>String.to_char_list/1</code> and <code>to_char_list/1</code> respectively. The <code>charlist</code> spelling has been deprecated in Elixir 1.3.</p>
+</div>
+
+    <time class="posted-at" datetime="2015-06-05">
+      Written on June  5, 2015
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

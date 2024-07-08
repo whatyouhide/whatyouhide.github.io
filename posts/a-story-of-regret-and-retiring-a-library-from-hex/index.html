@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>A story of regret and retiring a library from Hex – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="I&#x27;m retiring a library of mine from Hex. I want to explain why." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="A story of regret and retiring a library from Hex">
+<meta property="og:description" content="I&#x27;m retiring a library of mine from Hex. I want to explain why.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/a-story-of-regret-and-retiring-a-library-from-hex/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/a-story-of-regret-and-retiring-a-library-from-hex/cover-image.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2018-09-15T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="A story of regret and retiring a library from Hex">
+<meta name="twitter:description" content="I&#x27;m retiring a library of mine from Hex. I want to explain why.">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/a-story-of-regret-and-retiring-a-library-from-hex/cover-image.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>A story of regret and retiring a library from Hex</h1>
+
+    <div class="entry"><p>Now the story of an Elixir library and the one author who had no choice but to take it away.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/a-story-of-regret-and-retiring-a-library-from-hex/cover-image.jpg" alt="Cover image of a map" /></p>
+<p><a style="background-color:black;color:white;text-decoration:none;padding:4px 6px;font-family:-apple-system, BlinkMacSystemFont, &quot;San Francisco&quot;, &quot;Helvetica Neue&quot;, Helvetica, Ubuntu, Roboto, Noto, &quot;Segoe UI&quot;, Arial, sans-serif;font-size:12px;font-weight:bold;line-height:1.2;display:inline-block;border-radius:3px" href="https://unsplash.com/@nicnut?utm_medium=referral&amp;utm_campaign=photographer-credit&amp;utm_content=creditBadge" target="_blank" rel="noopener noreferrer" title="Download free do whatever you want high-resolution photos from Nicola Nuttall"><span style="display:inline-block;padding:2px 3px"><svg xmlns="http://www.w3.org/2000/svg" style="height:12px;width:auto;position:relative;vertical-align:middle;top:-1px;fill:white" viewBox="0 0 32 32"><title>unsplash-logo</title><path d="M20.8 18.1c0 2.7-2.2 4.8-4.8 4.8s-4.8-2.1-4.8-4.8c0-2.7 2.2-4.8 4.8-4.8 2.7.1 4.8 2.2 4.8 4.8zm11.2-7.4v14.9c0 2.3-1.9 4.3-4.3 4.3h-23.4c-2.4 0-4.3-1.9-4.3-4.3v-15c0-2.3 1.9-4.3 4.3-4.3h3.7l.8-2.3c.4-1.1 1.7-2 2.9-2h8.6c1.2 0 2.5.9 2.9 2l.8 2.4h3.7c2.4 0 4.3 1.9 4.3 4.3zm-8.6 7.5c0-4.1-3.3-7.5-7.5-7.5-4.1 0-7.5 3.4-7.5 7.5s3.3 7.5 7.5 7.5c4.2-.1 7.5-3.4 7.5-7.5z"></path></svg></span><span style="display:inline-block;padding:2px 3px">Nicola Nuttall</span></a></p>
+<p>It was October of 2015. I was a young Elixir developer, eager to contribute and help the community. One day, someone on the <a href="https://groups.google.com/forum/#!topic/elixir-lang-core/NoUo2gqQR3I">mailing list</a> proposed a new feature for Elixir: ES6-like map destructuring. It would look like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>username<span class="z-punctuation z-separator z-sequence z-elixir">,</span> age<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">username<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>andrea<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">age<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-numeric z-elixir">27</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> username
+<span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>andrea<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> age
+<span class="z-constant z-numeric z-elixir">27</span>
+</span></code></pre>
+<p>In short, you don't bind variables through the usual <code>%{username: username} = map</code> pattern matching. You instead use a short-hand syntax that lets you reduce the repetition.</p>
+<p>The initial response was good. People looked excited. Then Josh Adams wrote this:</p>
+<blockquote>
+<p>I worry that this feature makes code much harder to read and encourages a bit of magic that I don't much love.</p>
+</blockquote>
+<p>I was with Josh on this one. This was me a few messages later:</p>
+<blockquote>
+<p>[...] it's often tedious to do <code>foo: foo</code> but I prefer clarity over conciseness in this case.</p>
+</blockquote>
+<p>A bit after this, José pointed out that this syntax would not work everywhere because we would need support for matching on atom keys but also string keys. He also pointed out that maybe a better way to implement this in Elixir would have been sigils. For example, we could have a <code>~m</code> sigil:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> <span class="z-meta z-string z-elixir"><span class="z-storage z-type z-string z-elixir">~m</span></span><span class="z-meta z-string z-elixir"><span class="z-string z-interpolated z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">(</span>username age<span class="z-punctuation z-definition z-string z-end z-elixir">)</span></span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">username<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>andrea<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">age<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-numeric z-elixir">27</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+iex<span class="z-keyword z-operator z-comparison z-elixir">&gt;</span> username
+<span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>andrea<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span></code></pre>
+<p>Since sigils support modifiers, we would have <code>~m(...)</code> to match on string keys and <code>~m(...)a</code> to match on atom keys. I liked this and wrote:</p>
+<blockquote>
+<p>I stood against the <code>%{foo, bar, baz}</code> syntax and deemed that too implicit, but I'm in favour of a possible <code>~m</code> sigil. [...] I took a stab at it and wrote a simple implementation for such sigil. We can try it out and see if we like it.</p>
+</blockquote>
+<p>I had just released <a href="https://github.com/whatyouhide/short_maps">short_maps</a>. Life was good.</p>
+<h2 id="the-decline"><a class="zola-anchor" href="#the-decline" aria-label="Anchor link for: the-decline">The decline</a></h2>
+<p>Fast forward a few years. short_maps is used here and there in the Elixir community. But requests for features keep coming in. Someone wants support for nested maps. Others want the <code>a</code> modifier to go, defaulting to atoms. At some point, a long discussion takes place in short_maps' <a href="https://github.com/whatyouhide/short_maps/issues/11">issue tracker</a>. The discussion -- a very nice and wholesome discussion, thanks Elixir community! -- eventually leads to a fork of short_maps being published. <a href="https://github.com/meyercm/shorter_maps">shorter_maps</a> supports everything and then some: update syntax, nested maps, string keys through a different sigil, you name it. I was not happy about the fork because it created a &quot;split&quot; in the community who now had two packages to choose from that did similar things. This is democracy and open source though, so all was good.</p>
+<p>However, this discussion started to make me think about short_maps and the reason it existed. I had created it so the Elixir community could try out a feature that eventually <em>might</em> have made it into the core language. It was not meant to be a widely used library: if the community liked it so much, we could have merged it into core. That didn't seem like the case, but moreover, I was the one not liking it.</p>
+<h2 id="why-i-don-t-like-short-maps"><a class="zola-anchor" href="#why-i-don-t-like-short-maps" aria-label="Anchor link for: why-i-don-t-like-short-maps">Why I don't like short_maps</a></h2>
+<p>short_maps adds magic to Elixir. When someone uses short_maps in their codebase, it forces folks that read that codebase -- even experienced Elixir developers -- to know about it. Being a syntax feature, it's really in your face and it makes code hard to read if you are not familiar with it. The distinction between atom keys and string keys is also not obvious, with the result being code that looks more obfuscated. Incidentally, these reasons are what made me dislike the built-in <code>~w</code> sigil as well. I understand verbosity annoys many, but I wouldn't sacrifice verbosity over clarity.</p>
+<h2 id="taking-action"><a class="zola-anchor" href="#taking-action" aria-label="Anchor link for: taking-action">Taking action</a></h2>
+<p>All of this led me to be really against short_maps. So I'm taking a dramatic decision: I am retiring short_maps from Hex. Practically, this means that short_maps will still work as usual, but you will get a warning when using it. I feel strongly about moving the community away from this library, but at the same time, I am at peace with this decision because of the existence of shorter_maps. If you really like short_maps, you'll have shorter_maps available. After all, Elixir is an extensible language and I love it for that, so you should always be free to bend it in whatever way you like.</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>From the infamous <a href="https://github.com/whatyouhide/short_maps/issues/11">short_maps issue</a>:</p>
+<blockquote>
+<p>It's really unfortunate that the split happened. Elixir has far fewer libs than the nodejs ecosystem.</p>
+</blockquote>
+<p>So there you go. Consider short_maps gone, and the split reverted.</p>
+<p>I don't regret creating short_maps. It was an experiment and it showed me once again how flexible Elixir is. But it's time for it to go, and in this case, for stability and simplicity to replace experimentation.</p>
+<p>Bye short_maps. It was a fun ride. Thanks for listening.</p>
+</div>
+
+    <time class="posted-at" datetime="2018-09-15">
+      Written on September 15, 2018
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

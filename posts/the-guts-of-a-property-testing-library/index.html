@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>The guts of a property testing library – Andrea Leopardi</title>
+    
+
+
+
+  
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="A look at the design and mechanics of StreamData, a data generation and property testing library for Elixir." />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="The guts of a property testing library">
+<meta property="og:description" content="A look at the design and mechanics of StreamData, a data generation and property testing library for Elixir.">
+<meta property="og:url" content="https://andrealeopardi.com/posts/the-guts-of-a-property-testing-library/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/the-guts-of-a-property-testing-library/cover-image.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2017-08-15T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="The guts of a property testing library">
+<meta name="twitter:description" content="A look at the design and mechanics of StreamData, a data generation and property testing library for Elixir.">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/the-guts-of-a-property-testing-library/cover-image.jpg">
+
+<!-- Plausible analytics -->
+<script defer data-domain="andrealeopardi.com" src="https://plausible.io/js/script.js"></script>
+
+
+    <!--[if lt IE 9]>
+      <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Mali">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/feed.xml" />
+    
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>The guts of a property testing library</h1>
+
+    <div class="entry"><p>Property-based testing is a common tool to improve testing by testing properties of a piece of software over many values drawn at random from a large space of valid values. This methodology was first introduced in the paper <a href="http://www.cs.tufts.edu/~nr/cs257/archive/john-hughes/quick.pdf">QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs</a>, which describes the basic idea and shows a possible implementation in Haskell. Since then, many tools to aid in property based testing appeared for many programming languages: as of the time of writing, there are libraries for <a href="https://hackage.haskell.org/package/QuickCheck">Haskell</a>, <a href="http://www.quviq.com/products/">Erlang</a>, <a href="https://github.com/clojure/test.check">Clojure</a>, <a href="https://hypothesis.works">Python</a>, <a href="https://www.scalacheck.org">Scala</a>, and many others. A few days ago I released the first version of <a href="https://github.com/whatyouhide/stream_data">StreamData</a>, a property testing (and data generation) library for <a href="https://elixir-lang.org">Elixir</a> (that is a candidate for inclusion in Elixir itself in the future). This post is not an introduction to property-based testing nor a tutorial on how to use StreamData: what I want to do is dig into the mechanics of how StreamData works, its design, and how it compares to some of the other property-based testing libraries mentioned above.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/the-guts-of-a-property-testing-library/cover-image.jpg" alt="Cover image of a factory" /></p>
+<h2 id="what-streamdata-looks-like"><a class="zola-anchor" href="#what-streamdata-looks-like" aria-label="Anchor link for: what-streamdata-looks-like">What StreamData looks like</a></h2>
+<p>Let's say we want to test a basic property of the <code>:lists.reverse/1</code> function: that is, we want to test that the first element of a list is the last element of the reverse of that list. These properties written using StreamData would look like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">property <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>the first elem of a list is the last elem of its reverse<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+  check all list <span class="z-keyword z-operator z-arrow z-elixir">&lt;-</span> list_of<span class="z-punctuation z-section z-function z-elixir">(</span>int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+    assert hd<span class="z-punctuation z-section z-function z-elixir">(</span>list<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-comparison z-elixir">==</span> <span class="z-entity z-name z-class z-elixir">List</span><span class="z-punctuation z-separator z-method z-elixir">.</span>last<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>lists</span><span class="z-punctuation z-separator z-method z-elixir">.</span>reverse<span class="z-punctuation z-section z-function z-elixir">(</span>list<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This syntax means: take a list randomly generated from the <code>list_of(int())</code> generator (which generates lists of integers) and test the <code>do</code> body (the assertion) using the generated list. If the test passes, a new <code>list</code> is generated and this goes on until a failure is found. When a failure is found, StreamData will try to shrink the <code>list</code> in order to find the &quot;smallest&quot; example that still fails the property. In the case above, <code>hd/1</code> will fail for the empty list <code>[]</code> and StreamData will report that (the correct test would use values generated by <code>non_empty(list_of(int()))</code>).</p>
+<p><code>check all</code> is capable of doing more than the above: we can also combine generators, use previously generated values to influence further generators, and filter out values that are not good for our tests. For example, take this trivial test:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">property <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>in/2 returns true for elements taken out of a list<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+  check all list <span class="z-keyword z-operator z-arrow z-elixir">&lt;-</span> list_of<span class="z-punctuation z-section z-function z-elixir">(</span>int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+            list <span class="z-keyword z-operator z-comparison z-elixir">!=</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+            elem <span class="z-keyword z-operator z-arrow z-elixir">&lt;-</span> member_of<span class="z-punctuation z-section z-function z-elixir">(</span>list<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+    assert elem <span class="z-keyword z-operator z-elixir">in</span> list
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>As you can see, <code>member_of/1</code> is a generator and in this case it uses <code>list</code> which is a value previously generated by the <code>list_of(int())</code> generator. The <code>list != []</code> line is a <em>filter</em>: when a filter fails for a generated value, the test &quot;run&quot; is thrown away and new values are generated.</p>
+<h3 id="data-generation"><a class="zola-anchor" href="#data-generation" aria-label="Anchor link for: data-generation">Data generation</a></h3>
+<p>While until now we only focused on property testing, StreamData also provides data generation functionality. All generators implement the <code>Enumerable</code> protocol and are infinite streams of data that can easily be used for generating test data and similar purposes.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">StreamData</span><span class="z-punctuation z-separator z-method z-elixir">.</span>int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Stream</span><span class="z-punctuation z-separator z-method z-elixir">.</span>map<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-other z-capture z-elixir"><span class="z-keyword z-operator z-capture z-elixir">&amp;</span>abs</span><span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Enum</span><span class="z-punctuation z-separator z-method z-elixir">.</span>take<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-numeric z-elixir">3</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; [1, 0, 2]
+</span></span></code></pre>
+<h2 id="the-inner-workings"><a class="zola-anchor" href="#the-inner-workings" aria-label="Anchor link for: the-inner-workings">The inner workings</a></h2>
+<p>The first things I did when starting to research a possible property testing implementation were reading the <a href="http://www.cs.tufts.edu/~nr/cs257/archive/john-hughes/quick.pdf">original QuickCheck paper</a> and having a look at the <a href="https://hackage.haskell.org/package/QuickCheck">resulting library</a>.</p>
+<h3 id="generators"><a class="zola-anchor" href="#generators" aria-label="Anchor link for: generators">Generators</a></h3>
+<p>After reading the paper and doing some more research on Haskell's implementation, I had a few requirements in mind for the generators:</p>
+<ul>
+<li>they have to be able to generate random values indefinitely (without running out of values);</li>
+<li>they have to be <em>reproducible</em>, that is, they should explicitly &quot;take in&quot; the randomness in order to be able to deterministically &quot;replay&quot; the generated values;</li>
+<li>we have to be able to use a &quot;size&quot; to control the space of generated values to be able to start a test run with smaller values and grow the generated values over time.</li>
+</ul>
+<p>The requirements above already got me going and I implemented the first version of generators. Back then, a generator was a struct (in order to be able to distinguish it from any other term) with just one field, <code>:generator</code>, which was a function that took a random seed and a size.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">StreamData</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">defstruct</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>generator</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>In the first version, the generator functions had to return <code>{term, :rand.state}</code> tuples where the first value was the generated value and the second value was the updated random seed. It's important that generators don't use a mutable seed or don't share the seed, and making the seed explicit both as input and as output ensured that by passing the same initial seed around the generated values would have been the same. To give an idea, the <code>int/0</code> generator (generator of integers) was implemented like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">int</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  %<span class="z-entity z-name z-class z-elixir">StreamData</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">generator<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-keyword z-control z-elixir">fn</span> seed<span class="z-punctuation z-separator z-sequence z-elixir">,</span> size <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>random_int<span class="z-punctuation z-separator z-sequence z-elixir">,</span> new_seed<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>rand</span><span class="z-punctuation z-separator z-method z-elixir">.</span>uniform_s<span class="z-punctuation z-section z-function z-elixir">(</span>size <span class="z-keyword z-operator z-arithmetic z-elixir">*</span> <span class="z-constant z-numeric z-elixir">2</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>random_int <span class="z-keyword z-operator z-arithmetic z-elixir">-</span> <span class="z-constant z-numeric z-elixir">1</span> <span class="z-keyword z-operator z-arithmetic z-elixir">-</span> size<span class="z-punctuation z-separator z-sequence z-elixir">,</span> new_seed<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>As you can see, the <code>seed</code> is used to generated a random value and the <code>size</code> is used to control the space this value can be drawn from (in this case, <code>int/0</code> returns integers in the <code>-size..size</code> range).</p>
+<p>Generating values from this generator was straightforward:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">data <span class="z-keyword z-operator z-assignment z-elixir">=</span> int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+seed0 <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>rand</span><span class="z-punctuation z-separator z-method z-elixir">.</span>seed_s<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>exs1024</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>first_value<span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed1<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> data<span class="z-punctuation z-separator z-method z-elixir">.</span>generator<span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-punctuation z-section z-function z-elixir">(</span>seed0<span class="z-punctuation z-separator z-object z-elixir">,</span> _size <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-numeric z-elixir">10</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>second_value<span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed2<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> data<span class="z-punctuation z-separator z-method z-elixir">.</span>generator<span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-punctuation z-section z-function z-elixir">(</span>seed1<span class="z-punctuation z-separator z-object z-elixir">,</span> _size <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-numeric z-elixir">10</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> ...and so on
+</span></span></code></pre>
+<h4 id="random-splitting"><a class="zola-anchor" href="#random-splitting" aria-label="Anchor link for: random-splitting">Random splitting</a></h4>
+<p>This worked fairly well, but when reading the QuickCheck paper again I noticed something I had missed the first time: the seed was never returned alongside the value. What QuickCheck does, instead, is they &quot;split&quot; the seed. Splitting the seed is a way to take one random seed and deterministically return two random seeds. This can be used when we need to use the random seed twice (or more): instead of using something like <code>:rand.uniform_s/2</code> above, we can split the seed into <code>seed1</code> and <code>seed2</code> and use <code>seed1</code> just once to generate an integer and then throw it away, since we still have <code>seed2</code> if we need a seed for something else. <code>seed2</code> can be further split, effectively making us able to use as many seeds as we want to generate values.</p>
+<p>With this in mind, I changed the generator function to take a seed and a size but only return a value. If I needed to call a generator twice, I would just split the seed and use the two resulting seeds to call it twice. It now looked like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">int</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  %<span class="z-entity z-name z-class z-elixir">StreamData</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">generator<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-keyword z-control z-elixir">fn</span> seed<span class="z-punctuation z-separator z-sequence z-elixir">,</span> size <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>random_int<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _seed<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>rand</span><span class="z-punctuation z-separator z-method z-elixir">.</span>uniform_s<span class="z-punctuation z-section z-function z-elixir">(</span>size <span class="z-keyword z-operator z-arithmetic z-elixir">*</span> <span class="z-constant z-numeric z-elixir">2</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed<span class="z-punctuation z-section z-function z-elixir">)</span>
+    random_int <span class="z-keyword z-operator z-arithmetic z-elixir">-</span> <span class="z-constant z-numeric z-elixir">1</span> <span class="z-keyword z-operator z-arithmetic z-elixir">-</span> size
+  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+
+data <span class="z-keyword z-operator z-assignment z-elixir">=</span> int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+seed0 <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>rand</span><span class="z-punctuation z-separator z-method z-elixir">.</span>seed_s<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>exs1024</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>seed1<span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed2<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> split_seed<span class="z-punctuation z-section z-function z-elixir">(</span>seed0<span class="z-punctuation z-section z-function z-elixir">)</span>
+first_value <span class="z-keyword z-operator z-assignment z-elixir">=</span> data<span class="z-punctuation z-separator z-method z-elixir">.</span>generator<span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-punctuation z-section z-function z-elixir">(</span>seed1<span class="z-punctuation z-separator z-object z-elixir">,</span> _size <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-numeric z-elixir">10</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+second_value <span class="z-keyword z-operator z-assignment z-elixir">=</span> data<span class="z-punctuation z-separator z-method z-elixir">.</span>generator<span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-punctuation z-section z-function z-elixir">(</span>seed2<span class="z-punctuation z-separator z-object z-elixir">,</span> _size <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-numeric z-elixir">10</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> ...and so on
+</span></span></code></pre>
+<p>This worked really well and it's what ended up being used in StreamData. The only thing that changed is the return value which is not a simple value anymore because of shrinking, which we'll discuss below.</p>
+<h4 id="random-byte-stream-approach"><a class="zola-anchor" href="#random-byte-stream-approach" aria-label="Anchor link for: random-byte-stream-approach">Random byte stream approach</a></h4>
+<p>This approach is used by Haskell's QuickCheck but also, for example, by <a href="https://github.com/clojure/test.check">Clojure's test.check</a>. A very interesting and a bit different approach is taken by <a href="https://hypothesis.works">Hypothesis</a>, Python's library for property testing. Instead of using a random seed to &quot;drive&quot; the generation, Hypothesis uses an infinite random stream of bytes. Each generator can take as many bytes as needed from the stream to generate a value that is deterministically related to those bytes. This approach is also deterministic and reproducible since by feeding generators the same byte stream, the whole generation is unchanged. This enables Hypothesis to have a &quot;database&quot; of known failures that is just a set of byte streams saved from previous runs: these streams are &quot;replayed&quot; on new runs to ensure known failures are always tested. In StreamData's case, it would be enough to store the initial seed for the known failure in order to reproduce it. Below we'll also take a look at how Hypothesis takes advantage of the byte stream approach to model shrinking.</p>
+<h3 id="haskell-s-approach"><a class="zola-anchor" href="#haskell-s-approach" aria-label="Anchor link for: haskell-s-approach">Haskell's approach</a></h3>
+<p>Haskell takes a similar approach to what we have in StreamData (or rather, the other way around) but with a big difference: Haskell is able to use its type system to infer what values to generate just based on the type. So in Haskell, while the generation of integers is done similarly to what we do in <code>int/0</code> above, there's no need to define <code>int/0</code> in the first place but only to define how to generate integers for the <code>Int</code> type. This makes a noticeable difference, since you can give Haskell's QuickCheck a function and it will be able to test it on the right randomly generated values just by looking at its type signature. However, the &quot;typed approach&quot; has a drawback, as we'll see in the &quot;Shrinking&quot; section below.</p>
+<h3 id="shrinking"><a class="zola-anchor" href="#shrinking" aria-label="Anchor link for: shrinking">Shrinking</a></h3>
+<p>Once I got generation down, I knew the other toughest problem to tackle was shrinking. Shrinking is an important component of property testing: since property testing is based on the idea of generating random data in order to find bugs in software, often the data that finds the bug is full of <em>noise</em>. Shrinking is what takes the noise out of the data that causes the failure and finds out the minimal failure case. A common example used to illustrate this is an always-failing property that looks like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">property <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>lists of integers don&#39;t contain 42<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+  check all list <span class="z-keyword z-operator z-arrow z-elixir">&lt;-</span> list_of<span class="z-punctuation z-section z-function z-elixir">(</span>int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+    assert <span class="z-constant z-numeric z-elixir">42</span> <span class="z-keyword z-operator z-logical z-elixir">not</span> <span class="z-keyword z-operator z-elixir">in</span> list
+  <span class="z-keyword z-control z-elixir">end</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This property will fail anytime <code>42</code> is generated by <code>int()</code>, but often the list <code>42</code> is generated in will contain more elements, for example, <code>[30, 12, 9, 0, 4, 42, 93]</code>. From this list, it's hard to tell that the failure is caused by the number <code>42</code> being in the list. After shrinking the list, however, StreamData will reduce it to <code>[42]</code> which is the minimal value that <code>list_of(int())</code> can generate that fails the property.</p>
+<h4 id="the-typed-approach-to-shrinking"><a class="zola-anchor" href="#the-typed-approach-to-shrinking" aria-label="Anchor link for: the-typed-approach-to-shrinking">The typed approach to shrinking</a></h4>
+<p>The approach Haskell takes is straightforward: it completely separates generation and shrinking. Haskell can do this fairly easily thanks to its type system. All you need to generate data and to shrink such data is a type. QuickCheck for Haskell defines a <code>Arbitrary</code> class that defines two functions, <code>arbitrary</code> and <code>shrink</code>:</p>
+<pre data-lang="haskell" class="language-haskell z-code"><code class="language-haskell" data-lang="haskell"><span class="z-source z-haskell"><span class="z-meta z-declaration z-class z-haskell"><span class="z-keyword z-other z-haskell">class</span> <span class="z-entity z-other z-inherited-class z-haskell">Arbitrary</span> <span class="z-variable z-other z-generic-type z-haskell">a</span> <span class="z-keyword z-other z-haskell">where</span></span>
+<span class="z-meta z-function z-type-declaration z-haskell">  <span class="z-entity z-name z-function z-haskell">arbitrary</span> <span class="z-keyword z-other z-double-colon z-haskell">::</span> <span class="z-storage z-type z-haskell">Gen</span> <span class="z-variable z-other z-generic-type z-haskell">a</span>
+</span><span class="z-meta z-function z-type-declaration z-haskell">  <span class="z-entity z-name z-function z-haskell">shrink</span> <span class="z-keyword z-other z-double-colon z-haskell">::</span> <span class="z-variable z-other z-generic-type z-haskell">a</span> <span class="z-keyword z-other z-arrow z-haskell">-&gt;</span> [<span class="z-variable z-other z-generic-type z-haskell">a</span>]
+</span></span></code></pre>
+<p>The <code>arbitrary</code> function is responsible for generating a random value for the type that implements the class. <code>Gen a</code> is a wrapper type around a function that takes a random seed and a size and returns a value of type <code>a</code> (same as what StreamData does as we described above). For example, <code>arbitrary</code> for the <code>Int</code> type is implemented very similarly to how we implemented the function in <code>int/0</code> above.</p>
+<p>The <code>shrink</code> function is completely independent of the <code>arbitrary</code> function. It takes a value of type <code>a</code> (let's call it <code>x</code>) and returns a list of values of type <code>a</code>. These values should be the possible shrinks of <code>x</code>. To go into slightly more detail, the return value of <code>shrink</code> should be the first level of the <em>shrink tree</em> for <code>x</code>: as you can imagine, since the shrinks of <code>x</code> are of the same <code>a</code> type, they can also be passed to the <code>shrink</code> function and be further shrunk. This can be done recursively, effectively forming a tree of shrinks of <code>x</code>. Note that thanks to Haskell's laziness, this tree is completely lazy: the list returned by <code>shrink</code> is evaluated one element at the time when needed, so when we want to &quot;go down&quot; in the tree instead of &quot;going left&quot;, we can just call <code>shrink</code> on a value and the rest of the original list will not be evaluated.</p>
+<p><code>shrink</code> is easy to implement as well: for example, <code>shrink</code> for the <code>[a]</code> type could simply take a list and return all the lists obtained by removing each element from the original list. This would make the tree have smaller lists as we go down in the tree, ending up with <code>[]</code> (the smallest list) as leaves.</p>
+<p>This approach is elegant and easy to implement, but it has one major drawback. Since generation and shrinking are completely separated, any generation logic that is not encoded in the type must be repeated when shrinking. To understand what this means, let's say we want to generate even integers. Assuming we have a <code>map/2</code> function that maps a function over values generated by a generator, the <code>even_int</code> generator would look like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">map<span class="z-punctuation z-section z-function z-elixir">(</span>int<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> &amp;<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-capture z-elixir"><span class="z-keyword z-operator z-capture z-elixir">&amp;</span>1</span> <span class="z-keyword z-operator z-arithmetic z-elixir">*</span> <span class="z-constant z-numeric z-elixir">2</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>This generator correctly generates even integers but in the typed approach such integers would still be shrunk as integers, so we would have to repeat the even logic when using this generator in tests:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">require</span> <span class="z-entity z-name z-class z-elixir">Integer</span>
+
+check all i <span class="z-keyword z-operator z-arrow z-elixir">&lt;-</span> even_int<span class="z-punctuation z-separator z-object z-elixir">,</span>
+          <span class="z-entity z-name z-class z-elixir">Integer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>is_even<span class="z-punctuation z-section z-function z-elixir">(</span>i<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+<span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...
+</span><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The solution to this problem is to couple generation and shrinking,</p>
+<h4 id="lazy-trees"><a class="zola-anchor" href="#lazy-trees" aria-label="Anchor link for: lazy-trees">Lazy trees</a></h4>
+<p>The approach I went with (which was taken straight out of <code>test.check</code>) keeps in mind the idea of a <em>shrink tree</em> mentioned above. Basically, a generator now returns a <code>StreamData.LazyTree</code> struct instead of a simple value. A &quot;lazy tree&quot; is a tree that has a realized (that is, not eager) root and a lazy stream of children, each child being a lazy tree itself.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">StreamData</span>.<span class="z-entity z-name z-class z-elixir">LazyTree</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  <span class="z-keyword z-control z-elixir">defstruct</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>root</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>children</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The root is the generated value, and the children are the shrunk values. The first level (the root of each child) is the first level in the shrink tree which corresponds to the return value of <code>shrink</code> in the Haskell implementation. Let's see how the <code>list_of/1</code> generator, which takes a generator and generates lists of values generated by that generator, could be implemented returning a lazy tree:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">list_of</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>data<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  %<span class="z-entity z-name z-class z-elixir">StreamData</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">generator<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-keyword z-control z-elixir">fn</span> seed<span class="z-punctuation z-separator z-sequence z-elixir">,</span> size <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>seed1<span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed2<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> split_seed<span class="z-punctuation z-section z-function z-elixir">(</span>seed<span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>length<span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>rand</span><span class="z-punctuation z-separator z-method z-elixir">.</span>uniform_s<span class="z-punctuation z-section z-function z-elixir">(</span>size<span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed1<span class="z-punctuation z-section z-function z-elixir">)</span>
+<span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> Let&#39;s pretend we have a function that generates values from a generator
+</span><span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> for &quot;n&quot; times.
+</span>    root <span class="z-keyword z-operator z-assignment z-elixir">=</span> generate_n_values<span class="z-punctuation z-section z-function z-elixir">(</span>data<span class="z-punctuation z-separator z-sequence z-elixir">,</span> length<span class="z-punctuation z-separator z-sequence z-elixir">,</span> seed2<span class="z-punctuation z-separator z-sequence z-elixir">,</span> size<span class="z-punctuation z-section z-function z-elixir">)</span>
+    list_lazy_tree<span class="z-punctuation z-section z-function z-elixir">(</span>root<span class="z-punctuation z-section z-function z-elixir">)</span>
+  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">list_lazy_tree</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  %<span class="z-entity z-name z-class z-elixir">LazyTree</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">root<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">children<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+
+<span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">list_lazy_tree</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>list<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+  children <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+    <span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-numeric z-elixir">0</span><span class="z-keyword z-operator z-range z-elixir">..</span>length<span class="z-punctuation z-section z-function z-elixir">(</span>list<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-arithmetic z-elixir">-</span> <span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Stream</span><span class="z-punctuation z-separator z-method z-elixir">.</span>map<span class="z-punctuation z-section z-function z-elixir">(</span>&amp;<span class="z-entity z-name z-class z-elixir">List</span><span class="z-punctuation z-separator z-method z-elixir">.</span>delete_at<span class="z-punctuation z-section z-function z-elixir">(</span>list<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-capture z-elixir"><span class="z-keyword z-operator z-capture z-elixir">&amp;</span>1</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+    <span class="z-keyword z-operator z-pipe z-elixir">|&gt;</span> <span class="z-entity z-name z-class z-elixir">Stream</span><span class="z-punctuation z-separator z-method z-elixir">.</span>map<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-other z-capture z-elixir"><span class="z-keyword z-operator z-capture z-elixir">&amp;</span>list_lazy_tree</span><span class="z-keyword z-operator z-arithmetic z-elixir">/</span><span class="z-constant z-numeric z-elixir">1</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+
+  %<span class="z-entity z-name z-class z-elixir">LazyTree</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">root<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> list<span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">children<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> children<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+<span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The core idea is that the root of the lazy tree we return is the generated list. The first-level children are a stream of trees where the roots are the values obtained by removing each element one at a time from the generated list, and the children are recursively calculated using the same process.</p>
+<p>Generator combinators (such as <code>map/2</code>) now just transform the whole tree instead of just the returned value. For example, <code>map/2</code> maps the given function over all the values in each tree generated by the given generator.</p>
+<p>With lazy trees in place, shrinking becomes straightforward: it's now just a fancy depth-first search in the lazy tree. Basically, we walk down the tree until we find a value that passes the test, and then we move &quot;to the right&quot; and start again. When a node passes and has no right siblings, the parent is the smallest failing value; when it fails and has no right siblings or children, it's the smallest failing value. This algorithm does not explore the whole tree (which is unfeasible since when we start composing generators the trees can become very large) but in practice it usually finds very good shrinks.</p>
+<h4 id="random-byte-stream-approach-to-shrinking-this-time"><a class="zola-anchor" href="#random-byte-stream-approach-to-shrinking-this-time" aria-label="Anchor link for: random-byte-stream-approach-to-shrinking-this-time">Random byte stream approach (to shrinking this time)</a></h4>
+<p>I briefly mentioned above that Hypothesis, Python's library for property-based testing, uses an infinite stream of random bytes that generators can use to generate values. This stream is the foundation of shrinking as well: when we need to shrink a value, we can remove bytes from the original stream and also shrink bytes of the original stream (towards 0). Generators are expected to be written so that they are somehow &quot;proportional&quot; to the byte stream so that shrinking the byte stream also shrinks the generated value. By using a deterministic way to generate values from the byte stream, shrinking is also deterministic. Hypothesis' approach is fascinating, and I am doing some research to see how it compares practically to our approach and our platform, to evaluate a potential switch to this architecture.</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>I had tons of fun writing this library and learned a lot of things. This post was just a little insight on how I learned those things and hopefully an interesting read for everyone and especially potential contributors to StreamData.</p>
+<h3 id="credit"><a class="zola-anchor" href="#credit" aria-label="Anchor link for: credit">Credit</a></h3>
+<p>Most ideas in StreamData are not original and are taken partially from QuickCheck but mostly from <code>test.check</code>, so a big thank you goes to everyone that helped with those projects. This blog post was also influenced by <a href="https://hypothesis.works/articles/how-hypothesis-works/">this great article</a> by the author of Hypothesis, so thank you as well, David!</p>
+</div>
+
+    <time class="posted-at" datetime="2017-08-15">
+      Written on August 15, 2017
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://www.twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a rel="me" href="https://mas.to/@whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-mastodon"
+                   class="footer-icon"
+                   src="/assets/icons/mastodon.png"
+                   alt="Hand-drawn icon of the Mastodon logo"
+                   title="Mastodon" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
