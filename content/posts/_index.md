@@ -1,5 +1,5 @@
 ---
 page_template: "post.html"
-generate_feed: true
+generate_feeds: true
 insert_anchor_links: "heading"
 ---

@@ -13,10 +13,10 @@ description = "Writing about Elixir, system architecture, and more."
 ## Feeds
 
 # Generate main feed for pages with a date.
-generate_feed = true
+generate_feeds = true
 
 # The filename to use for the feed. Used as the template filename, too.
-feed_filename = "feed.xml"
+feed_filenames = ["feed.xml"]
 
 # The number of articles to include in the feed. All items are included if
 # this limit is not set (the default).

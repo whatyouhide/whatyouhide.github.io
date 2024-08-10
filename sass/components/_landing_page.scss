@@ -117,6 +117,10 @@
         position: relative;
         top: -70px;
         left: -30px;
+
+        &:hover {
+          color: var(--color-links);
+        }
       }
 
       img.arrow {
@@ -160,6 +164,10 @@
   }
 
   $iconHeight: 130px;
+
+  &>.website-section-icon-and-link {
+    @include scaleUpOnHover;
+  }
 
   a {
     display: flex;
