@@ -1,0 +1,29 @@
+{% if page.extra.cover_image %}
+{% set_global cover_image_url = get_url(path="@/" ~ page.relative_path) ~ page.extra.cover_image %}
+{% else %}
+{% set_global cover_image_url = get_url(path="assets/media/website-overlay-cover.jpg") %}
+{% endif %}
+
+<script type="application/ld+json">
+{
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "url": "{{ current_url | safe }}",
+    "author": {
+        "@type": "Person",
+        "name": "{{ config.extra.full_name }}",
+        "email": "{{ config.extra.email }}",
+        "url": "{{ config.base_url | safe }}/about.html"
+    },
+    "datePublished": "{{ page.date | date(format="%Y-%m-%d") }}",
+    "dateCreated": "{{ page.date | date(format="%Y-%m-%d") }}",
+    "dateModified": "{% if page.updated %}{{ page.updated | date(format="%Y-%m-%d") }}{% else %}{{ page.date | date(format="%Y-%m-%d") }}{% endif %}",
+    "headline": {{ page.title | json_encode() | safe }},
+    "description": {{ page.description | trim | json_encode() | safe }},
+    "image": {{ cover_image_url | json_encode() | safe }},
+    "inLanguage": {
+        "@type": "Language",
+        "name": "English"
+    }
+}
+</script>
