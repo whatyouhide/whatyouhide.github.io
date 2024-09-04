@@ -188,6 +188,13 @@ We just have to remember to reactivate the socket when we receive a `{:tcp, ...}
 defmodule Redis do
   # ...as before...
 
+  def init(state) do
+    opts = [:binary, active: :once]
+    # ...as before...
+  end
+
+ # ...as before...
+
   def handle_info({:tcp, socket, msg}, %{socket: socket} = state) do
     # Allow the socket to send us the next message.
     :inet.setopts(socket, active: :once)
