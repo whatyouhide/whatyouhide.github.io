@@ -15,7 +15,7 @@ jobs:
     env: {}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Lint Markdown files (with markdownlint)
         run: |
@@ -30,7 +30,7 @@ jobs:
           config-file: link_check_config.json
 
       - name: Ensure the website builds
-        uses: shalzz/zola-deploy-action@448f43557d06624a326567089b8965c79ba58306
+        uses: shalzz/zola-deploy-action@960304368c31a93d6991d64ae962df0786b905f1
         env:
           BUILD_ONLY: true
           BUILD_FLAGS: --drafts
@@ -42,10 +42,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v3.0.0
+        uses: actions/checkout@v4
 
       - name: Build with Zola and push to GitHub Pages
-        uses: shalzz/zola-deploy-action@448f43557d06624a326567089b8965c79ba58306
+        uses: shalzz/zola-deploy-action@960304368c31a93d6991d64ae962df0786b905f1
         env:
           PAGES_BRANCH: gh-pages
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
