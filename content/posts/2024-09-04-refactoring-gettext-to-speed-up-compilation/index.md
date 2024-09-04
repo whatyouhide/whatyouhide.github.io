@@ -3,7 +3,7 @@ title: Reducing Compile-Time Dependencies in Gettext for Elixir
 description: |
   This is how we significantly improved compilation time for Elixir projects that use Gettext, using a few metaprogramming tricks and ten years of Elixir experience since we wrote the first version of this library.
 extra:
-  cover_image: cover-image.png
+  cover_image: cover-image.jpg
 ---
 
 The Elixir compiler does what most modern compilers have to do: it only recompiles the files it *needs* to. You change a file, and the compiler figures out all the files that somehow depend on that file. Those are the only files that get recompiled. This way, you get to avoid recompiling big projects when changing only a few files.

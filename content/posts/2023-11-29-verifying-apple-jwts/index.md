@@ -3,7 +3,7 @@ title: Verifying JWTs from Apple's App Store
 description: |
   A quick walkthrough on how to verify JWTs coming from Apple's App Store APIs using Elixir.
 extra:
-  cover_image: cover-image.png
+  cover_image: cover-image.jpg
 ---
 
 If you've ever had to interact with Apple APIs related to App Store purchases and whatnot (like the [App Store Server Notifications][docs-receiving-app-store-server-notifications]), there's a chance you had to **verify JWTs** at some point. I had used, signed, and verified JWTs extensively before this, but Apple uses a bit of a *unique* way of signing their JWTs that I had never stumbled upon in the past. In this short post, I'll show some code around verifying Apple's JWT signatures in Elixir.
@@ -12,7 +12,7 @@ If you've ever had to interact with Apple APIs related to App Store purchases an
 
 ![Cover image of a very yellow safe-style lock with yellow background. Minimalistic photograph.](cover-image.jpg)
 
-{{ unsplash_credit(name="FLY:D", link="https://unsplash.com/photos/green-and-silver-padlock-on-pink-surface-f34K70FGpCg") }}
+{{ unsplash_credit(name="FLY:D", link="<https://unsplash.com/photos/green-and-silver-padlock-on-pink-surface-f34K70FGpCg>") }}
 
 At [Veeps], we're working on some features connected to the App Store. This involves verifying that the notifications (webhooks) that Apple sends to us are legitimate.
 
