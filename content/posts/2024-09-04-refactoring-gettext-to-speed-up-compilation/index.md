@@ -48,7 +48,7 @@ import MyAppWeb.Gettext
 
 You could use `*gettext` macros everywhere this way. Maybe you can already see the issue: everything using Gettext macros would have a compile-time dependency on the backend. Uh oh. Take a look at this: I generated a new Phoenix app (`mix phx.new my_app`), added `gettext/1` calls to all controllers and views, and then used [`mix xref`][mix-xref] to trace all the files that have a compile-time dependency on `MyAppWeb.Gettext`.
 
-```shell
+```bash
 $ mix xref graph --sink lib/my_app_web/gettext.ex --label compile
 lib/my_app_web/components/core_components.ex
 └── lib/my_app_web/gettext.ex (compile)
@@ -153,7 +153,7 @@ end
 
 That's the trick. At compile-time we can still extract translations, as we have to recompile the whole project anyway to perform extraction. However, now adding translated strings to PO files only causes the Gettext backend to recompile—and not all the files that use macros from it. You can verify this in a new Phoenix app generated with `phx_new` from `main` (I also added `gettext/1` calls to the same controllers and views as the previous example):
 
-```shell
+```bash
 $ mix xref graph --sink lib/my_app_web/gettext.ex --label compile
 # Prints nothing here
 ```
