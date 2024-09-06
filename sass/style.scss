@@ -9,7 +9,7 @@ html {
 
 body {
   background: var(--color-site-background);
-  font: 18px/1.4 $helvetica;
+  font: 18px/1.4 $sansSerifFontStack;
   color: var(--color-text);
   height: 100%;
 }
@@ -31,6 +31,7 @@ h6 {
 h1 {
   font-size: 200%;
   text-align: center;
+
   a {
     color: inherit;
   }
@@ -51,12 +52,14 @@ h4 {
 
 p {
   margin: 15px 0;
+  font-size: 18px;
 }
 
 a {
   color: var(--color-links);
   text-decoration: none;
   cursor: pointer;
+
   &:hover,
   &:active {
     color: var(--color-links);
@@ -111,12 +114,12 @@ b {
   flex-direction: column;
 }
 
-.posts > .post {
+.posts>.post {
   padding-bottom: 2em;
   border-bottom: 1px solid var(--color-box-borders);
 }
 
-.posts > .post:last-child {
+.posts>.post:last-child {
   padding-bottom: 1em;
   border-bottom: none;
 }
@@ -131,7 +134,7 @@ b {
   }
 }
 
-:not(pre) > code {
+:not(pre)>code {
   background-color: var(--color-code-background);
   padding-left: 4px;
   padding-right: 4px;
@@ -162,7 +165,7 @@ main.about {
 
   h1,
   h2 {
-    font-family: $handwrittenFont;
+    font-family: $handwrittenFontStack;
     font-weight: bold;
   }
 
@@ -188,7 +191,8 @@ main.about {
     overflow: scroll;
   }
 
-  .unsplash-credit, .image-caption {
+  .unsplash-credit,
+  .image-caption {
     font-size: 80%;
     font-style: italic;
     text-align: center;
@@ -222,7 +226,8 @@ article.post table {
   tr {
     border-bottom: 1px solid var(--color-text-dimmer);
 
-    th:first-child, td:first-child {
+    th:first-child,
+    td:first-child {
       white-space: nowrap;
     }
   }
@@ -231,7 +236,8 @@ article.post table {
     border-bottom: none;
   }
 
-  th, td {
+  th,
+  td {
     padding: 0.5em 0.5em;
     border-right: 1px solid var(--color-text-dimmer);
 
@@ -253,7 +259,7 @@ article.post details {
   border-radius: 7px;
   padding: 0.5em 1em;
 
-  :not(pre) > code {
+  :not(pre)>code {
     background-color: transparent;
   }
 }
@@ -266,6 +272,7 @@ article.post .embedded-youtube-player {
 }
 
 article.post {
+
   h2,
   h3,
   h4 {

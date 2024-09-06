@@ -70,7 +70,7 @@
     }
 
     h1 {
-      font-family: $handwrittenFont;
+      font-family: $handwrittenFontStack;
       font-size: 50pt;
       line-height: 1;
       text-align: center;
@@ -110,7 +110,7 @@
       a {
         display: block;
         color: inherit;
-        font-family: $handwrittenFont;
+        font-family: $handwrittenFontStack;
         text-align: right;
         text-decoration: underline;
         text-transform: lowercase;
@@ -178,7 +178,7 @@
 
   span[role="link"] {
     display: block;
-    font-family: $handwrittenFont;
+    font-family: $handwrittenFontStack;
     text-transform: uppercase;
     color: var(--color-text);
   }

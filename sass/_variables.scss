@@ -4,9 +4,9 @@
 }
 
 // Font stacks
-$helvetica: Helvetica, Arial, sans-serif;
+$sansSerifFontStack: "Lato", Helvetica, Arial, sans-serif;
 $helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
-$handwrittenFont: "Andrea", "Mali", sans-serif; // From Google Fonts
+$handwrittenFontStack: "Andrea", sans-serif;
 
 // Colors
 
@@ -49,4 +49,4 @@ $handwrittenFont: "Andrea", "Mali", sans-serif; // From Google Fonts
 // Sizes
 
 // The maximum size of website content, such as posts, on any screen.
-$maxContentWidth: 1100px;
+$maxContentWidth: 800px;
