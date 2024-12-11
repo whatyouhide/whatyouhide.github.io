@@ -23,6 +23,40 @@
     {% endblock %}
 
     {% block json_ld %}{% endblock json_ld %}
+
+    <script>
+        function createSnowflakes() {
+            const snowflakesInARow = 15;
+            const snowflakeRows = 12;
+            const viewportJiggle = 8;
+            const body = document.body;
+
+            for (let row = 0; row < snowflakeRows; row++) {
+                for (let col = 0; col < snowflakesInARow; col++) {
+                    const snowflake = document.createElement('div');
+                    snowflake.classList.add('snowflake');
+
+                    // Random size (scale), rotation, and opacity.
+                    const scale = Math.random() * 0.8 + 0.2; // Scale between 0.2 and 1
+                    snowflake.style.width = `${50 * scale}px`;
+                    snowflake.style.height = `${50 * scale}px`;
+                    snowflake.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    snowflake.style.opacity = `${Math.random() * 0.1}`; // Opacity between 0.5 and 1
+
+                    // Random position
+                    const startLeft = 100 * (col / snowflakesInARow);
+                    const startTop = 100 * (row / snowflakeRows);
+                    // Jiggle the position a bit to make it look more natural.
+                    snowflake.style.left = `${startLeft + Math.random() * viewportJiggle - (viewportJiggle / 2)}vw`;
+                    snowflake.style.top = `${startTop + Math.random() * viewportJiggle - (viewportJiggle / 2)}vh`;
+
+                    body.appendChild(snowflake);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', createSnowflakes);
+    </script>
 </head>
 
 <body>

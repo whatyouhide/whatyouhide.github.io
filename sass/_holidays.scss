@@ -32,3 +32,17 @@ picture:has(.portrait-with-santa-hat) {
         }
     }
 }
+
+.snowflake {
+    position: absolute;
+    background-image: url('/assets/holidays/snowflake.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+
+    /* Base size for snowflake */
+    width: 50px;
+    height: 50px;
+
+    /* Slightly transparent for effect */
+    opacity: 0.5;
+}
