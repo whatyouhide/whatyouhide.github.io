@@ -36,7 +36,7 @@ import MyApp.Gettext
 gettext("Hello world")
 ```
 
-Gettext backends read `.po` and `.pot` files containing translations and compile those translations into pattern matches. Every time you add or change a translation, the Gettext backend needs to be recompiled. I wrote a [whole blog post](/posts/compile-time-work-with-elixir-macros/) about how Gettext extraction and compilation work, if you're curious.
+Gettext backends read `.po` and `.pot` files containing translations and compile those translations into pattern matches. Every time you add or change a translation, the Gettext backend needs to be recompiled. I wrote a [whole blog post](https://andrealeopardi.com/posts/compile-time-work-with-elixir-macros/) about how Gettext extraction and compilation work, if you're curious.
 
 This works pretty straightforward overall. However, calling those Gettext macros creates a compile-time dependency on the imported backend. Just `import`ing the backend doesn't, as that's what the Elixir compiler calls an **export dependency**—the difference is explained in [`mix xref`'s documentation][hexdocs-dependency-types].
 

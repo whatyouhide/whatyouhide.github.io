@@ -1924,9 +1924,9 @@ Surely I'm missing something, but I'm also weirded out by having to turn `chunk_
 [Advent of Code]: https://adventofcode.com
 [Rust]: https://www.rust-lang.org
 [Elixir]: https://elixir-lang.org
-[dall-e-2]: https://openai.com/dall-e-2/
+[dall-e-2]: https://openai.com/index/dall-e-2/
 [copilot]: https://github.com/features/copilot
-[chatgpt]: https://openai.com/blog/chatgpt/
+[chatgpt]: https://openai.com/index/chatgpt/
 [Cargo]: https://doc.rust-lang.org/book/ch01-03-hello-cargo.html
 [rust-docs-hashset]: https://doc.rust-lang.org/1.65.0/std/collections/hash_set/struct.HashSet.html
 [repo]: https://github.com/whatyouhide/advent_of_code_2022
