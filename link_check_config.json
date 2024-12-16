@@ -8,6 +8,9 @@
         },
         {
             "pattern": "https://www.reddit.com"
+        },
+        {
+            "pattern": "https://openai.com"
         }
     ]
 }
