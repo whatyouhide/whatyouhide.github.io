@@ -32,10 +32,6 @@ A couple months back I upgraded from an older iPad Air to a 13" M4 iPad Pro. Wha
 
 Headphones are still the same as they've been for the past few years. AirPods Max (in black) at the desk, and AirPods Pro 2 or whatever version for going around. AirPods Pro are my favorite piece of tech ever, I carry them everywhere.
 
-## Non-tech Hardware
-
-I spent a stupid amount of money on a pair of [Danner Mountain Light](https://global.danner.com/mountain-light-cascade-clovis.html) boots. Favorite piece of clothing bought this year.
-
 ## Software
 
 I have a particular type of love for software and apps and whatnot. This list would change all the time, but here's my end-of-2024 snapshot, in no particular order.
