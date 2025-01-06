@@ -11,6 +11,9 @@
         },
         {
             "pattern": "https://openai.com"
+        },
+        {
+            "pattern": "https://medium.com"
         }
     ]
 }

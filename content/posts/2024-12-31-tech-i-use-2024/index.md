@@ -10,7 +10,7 @@ Other people do this. I assume, because only [Louis' post](https://lpil.uk/blog/
 
 I've never done a write-up on stuff I use, but I'm a sucker for *reading* this kind of posts, so I figured I'd join in on the fun. Here's to this becoming a yearly tradition.
 
-<span class="small-aside">By the way, an up-to-date list is always available at my [`/uses` page](/uses).</span>
+<span class="small-aside">By the way, an up-to-date list is always available at my [`/uses` page](https://andrealeopardi.com/uses).</span>
 
 <!-- more -->
 
