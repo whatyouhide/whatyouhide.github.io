@@ -322,7 +322,7 @@ This dance is pretty common. Get the current value, make sure to set it back aft
 
 So, what are you to do in these cases? Tough luck. There's no satisfaction here. The most successful practical approach I've seen is to define an interface for `Application` and use mocks to have values read/written in an async-friendly way. You can use Mox, you can use [Mimic](https://github.com/edgurgel/mimic), whatever floats your boat really. Just go read [The Mox Blog Post](https://dashbit.co/blog/mocks-and-explicit-contracts) first.
 
-## Practical Advices
+## Practical Advice
 
 Just a bunch of jotted-down advices:
 
