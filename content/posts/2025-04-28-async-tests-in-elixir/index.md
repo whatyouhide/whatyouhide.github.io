@@ -16,7 +16,7 @@ This post is about beautiful, elegant, robust asynchronous tests in Elixir. It's
 
 ![Cover image of a bench with very geometric lines.](cover-image.jpg)
 
-{{ unsplash_credit(name="鱼 鱼", link="https://unsplash.com/photos/a-wooden-room-with-a-bench-in-the-middle-of-it-klE0kbCfrwk?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash") }}
+{{ unsplash_credit(name="鱼 鱼", link="<https://unsplash.com/photos/a-wooden-room-with-a-bench-in-the-middle-of-it-klE0kbCfrwk?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash>") }}
 
 
 ## When Is It Hard to Parallelize Tests?
@@ -43,8 +43,9 @@ test "writes output to a file" do
 end
 ```
 
-> [!warning] Don't do this at home
-> Use ExUnit's `tmp_dir` tag. It cleans up for you and it's nicer and it protects kittens (probably).
+{% callout(type="warning", title="Don't Do This at Home") %}
+Use ExUnit's `tmp_dir` tag. It cleans up for you and it's nicer and it protects kittens (probably).
+{% end %}
 
 Cool, you can run many of these tests in parallel and they won't step on each other's toes, even though the system under test is all about the side effect.
 

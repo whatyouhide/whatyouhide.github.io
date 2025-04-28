@@ -14,6 +14,7 @@ $handwrittenFontStack: "Andrea", sans-serif;
   $siteBackground: #f4f5f0;
   $text: #212424;
   $callout-background-info: rgba(#81d2d4, 0.3);
+  $callout-background-warning: rgba(#f4d482, 0.3);
 
   --color-site-background: #{$siteBackground};
   --color-site-background-accented: #{darken($siteBackground, 5)};
@@ -27,6 +28,9 @@ $handwrittenFontStack: "Andrea", sans-serif;
 
   --color-callout-info-background: #{$callout-background-info};
   --color-callout-info-background-title: #{darken($callout-background-info, 20)};
+
+  --color-callout-warning-background: #{$callout-background-warning};
+  --color-callout-warning-background-title: #{darken($callout-background-warning, 20)};
 }
 
 @include darkMode {

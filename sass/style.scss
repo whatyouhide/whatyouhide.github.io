@@ -336,6 +336,14 @@ aside.callout {
       background-color: var(--color-callout-info-background-title);
     }
   }
+
+  &.callout-warning {
+    background-color: var(--color-callout-warning-background);
+
+    h5 {
+      background-color: var(--color-callout-warning-background-title);
+    }
+  }
 }
 
 @import "components/header";
