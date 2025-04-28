@@ -16,7 +16,7 @@ This post is about beautiful, elegant, robust asynchronous tests in Elixir. It's
 
 ![Cover image of a bench with very geometric lines.](cover-image.jpg)
 
-{{ unsplash_credit(name="鱼 鱼", link="<https://unsplash.com/photos/a-wooden-room-with-a-bench-in-the-middle-of-it-klE0kbCfrwk?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash>") }}
+{{ unsplash_credit(name="鱼 鱼", link="https://unsplash.com/photos/a-wooden-room-with-a-bench-in-the-middle-of-it-klE0kbCfrwk?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash") }}
 
 
 ## When Is It Hard to Parallelize Tests?
