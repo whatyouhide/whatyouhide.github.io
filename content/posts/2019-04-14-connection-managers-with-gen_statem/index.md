@@ -266,7 +266,6 @@ We've now got a pretty neat connection process that holds the TCP connection to 
 
 Let's start by setting the timeout when we enter the disconnected state.
 
-{% raw %}
 ```elixir
 def disconnected(:enter, :connected, data) do
   # Same as before: logging, replying to
@@ -276,7 +275,6 @@ def disconnected(:enter, :connected, data) do
   {:keep_state, data, actions}
 end
 ```
-{% endraw %}
 
 Our timeout will fire after 500 milliseconds We use `nil` as its term since we're not carrying any information alongside the timeout other than its name (`:reconnect`). When the timeout expires, we need to handle it in `disconnected/3`:
 
