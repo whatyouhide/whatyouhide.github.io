@@ -68,7 +68,7 @@ A helpful habit when designing state machines is to draw a diagram of the state 
 
 ### Implementing the state machine
 
-Let's turn this diagram into a functioning `gen_statem`. The first thing to do is to create a `Connection` module and add specify that it's an implementation of the `:gen_statem` behaviour. We'll also define an internal struct that we'll use as the data carried by the state machine. The data will contain the host and port to connect/reconnect to, the TCP socket, and a map of request ID to caller waiting for a response.
+Let's turn this diagram into a functioning `gen_statem`. The first thing to do is to create a `Connection` module and specify that it's an implementation of the `:gen_statem` behaviour. We'll also define an internal struct that we'll use as the data carried by the state machine. The data will contain the host and port to connect/reconnect to, the TCP socket, and a map of request ID to caller waiting for a response.
 
 ```elixir
 defmodule Connection do
