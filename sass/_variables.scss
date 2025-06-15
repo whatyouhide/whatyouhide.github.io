@@ -5,26 +5,29 @@
 
 // Font stacks
 $sansSerifFontStack: "Lato", Helvetica, Arial, sans-serif;
+$serifFontStack: "Spectral", serif;
 $helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $handwrittenFontStack: "Andrea", sans-serif;
 
 // Colors
 
 :root {
-  $siteBackground: #f4f5f0;
-  $text: #212424;
+  $siteBackground: #faf7f2;
+  $text: #2d2d2d;
   $callout-background-info: rgba(#81d2d4, 0.3);
   $callout-background-warning: rgba(#f4d482, 0.3);
 
   --color-site-background: #{$siteBackground};
   --color-site-background-accented: #{darken($siteBackground, 5)};
-  --color-code-background: #eee;
+  --color-code-background: #f8f8f8;
 
   --color-text: #{$text};
-  --color-text-dimmer: #{lighten($text, 30%)};
-  --color-links: #4183c4;
+  --color-text-dimmer: #{lighten($text, 35%)};
+  --color-links: #8b4513;
+  --color-links-hover: #a0522d;
 
-  --color-box-borders: #d3d7d7;
+  --color-box-borders: #e8e5e0;
+  --color-page-shadow: rgba(0, 0, 0, 0.1);
 
   --color-callout-info-background: #{$callout-background-info};
   --color-callout-info-background-title: #{darken($callout-background-info, 20)};
@@ -40,11 +43,12 @@ $handwrittenFontStack: "Andrea", sans-serif;
   :root {
     --color-site-background: #{$site-background};
     --color-site-background-accented: #{darken($site-background, 5)};
-    --color-code-background: transparent;
+    --color-code-background: #{rgba(0, 0, 0, 0.2)};
 
     --color-text: #{$text};
     --color-text-dimmer: #{darken($text, 30%)};
-    --color-links: #4f97de;
+    --color-links: #ce7332;
+    --color-links-hover: #eb7139;
 
     --color-box-borders: rgba(238, 238, 238, 0.1);
   }

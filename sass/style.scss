@@ -9,7 +9,7 @@ html {
 
 body {
   background: var(--color-site-background);
-  font: 18px/1.4 $sansSerifFontStack;
+  font: 18px/1.5 $serifFontStack;
   color: var(--color-text);
   height: 100%;
 }
@@ -53,16 +53,25 @@ h4 {
 p {
   margin: 15px 0;
   font-size: 18px;
+
+  // First line indentation (like in books)
+  text-indent: 2em;
+
+  // No indent for first paragraph
+  &:first-of-type {
+    text-indent: 0;
+  }
 }
 
 a {
   color: var(--color-links);
   text-decoration: none;
   cursor: pointer;
+  transition: color 0.2s ease;
 
   &:hover,
   &:active {
-    color: var(--color-links);
+    color: var(--color-links-hover);
     text-decoration: underline;
   }
 }
@@ -171,6 +180,7 @@ main.about {
 
   .entry {
     font-size: 12pt;
+    text-align: justify;
   }
 
   img {
@@ -251,6 +261,12 @@ article.post time.posted-at {
   display: block;
   font-style: italic;
   color: var(--color-text-dimmer);
+  text-align: center;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding-top: 1em;
+  border-top: 1px solid var(--color-box-borders);
+  font-size: 80%;
 }
 
 article.post details {
@@ -275,7 +291,10 @@ article.post {
 
   h2,
   h3,
-  h4 {
+  h4,
+  h5 {
+    font-family: $serifFontStack;
+
     a.zola-anchor {
       color: var(--color-text);
 
