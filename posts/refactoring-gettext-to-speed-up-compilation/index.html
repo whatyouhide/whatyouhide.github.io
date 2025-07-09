@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Reducing Compile-Time Dependencies in Gettext for Elixir – Andrea Leopardi</title>
+    
+
+
+
+
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="This is how we significantly improved compilation time for Elixir projects that use Gettext, using a few metaprogramming tricks and ten years of Elixir experience since we wrote the first version of this library.
+" />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Reducing Compile-Time Dependencies in Gettext for Elixir">
+<meta property="og:description" content="This is how we significantly improved compilation time for Elixir projects that use Gettext, using a few metaprogramming tricks and ten years of Elixir experience since we wrote the first version of this library.
+">
+<meta property="og:url" content="https://andrealeopardi.com/posts/refactoring-gettext-to-speed-up-compilation/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/refactoring-gettext-to-speed-up-compilation/cover-image.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2024-09-04T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="Reducing Compile-Time Dependencies in Gettext for Elixir">
+<meta name="twitter:description" content="This is how we significantly improved compilation time for Elixir projects that use Gettext, using a few metaprogramming tricks and ten years of Elixir experience since we wrote the first version of this library.
+">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/refactoring-gettext-to-speed-up-compilation/cover-image.jpg">
+
+
+    <!--[if lt IE 9]>
+    <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/ feed.xml" />
+    
+
+    
+
+
+
+
+<script type="application/ld+json">
+{
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "url": "https://andrealeopardi.com/posts/refactoring-gettext-to-speed-up-compilation/",
+    "author": {
+        "@type": "Person",
+        "name": "Andrea Leopardi",
+        "email": "hi@andrealeopardi.com",
+        "url": "https://andrealeopardi.com//about.html"
+    },
+    "datePublished": "2024-09-04",
+    "dateCreated": "2024-09-04",
+    "dateModified": "2024-09-04",
+    "headline": "Reducing Compile-Time Dependencies in Gettext for Elixir",
+    "description": "This is how we significantly improved compilation time for Elixir projects that use Gettext, using a few metaprogramming tricks and ten years of Elixir experience since we wrote the first version of this library.",
+    "image": "https://andrealeopardi.com/posts/refactoring-gettext-to-speed-up-compilation/cover-image.jpg",
+    "inLanguage": {
+        "@type": "Language",
+        "name": "English"
+    }
+}
+</script>
+
+
+
+    <script>
+        function createSnowflakes() {
+            const snowflakesInARow = 15;
+            const snowflakeRows = 12;
+            const viewportJiggle = 8;
+            const body = document.body;
+
+            for (let row = 0; row < snowflakeRows; row++) {
+                for (let col = 0; col < snowflakesInARow; col++) {
+                    const snowflake = document.createElement('div');
+                    snowflake.classList.add('snowflake');
+
+                    // Random size (scale), rotation, and opacity.
+                    const scale = Math.random() * 0.8 + 0.2; // Scale between 0.2 and 1
+                    snowflake.style.width = `${50 * scale}px`;
+                    snowflake.style.height = `${50 * scale}px`;
+                    snowflake.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    snowflake.style.opacity = `${Math.random() * 0.1}`; // Opacity between 0.5 and 1
+
+                    // Random position
+                    const startLeft = 100 * (col / snowflakesInARow);
+                    const startTop = 100 * (row / snowflakeRows);
+                    // Jiggle the position a bit to make it look more natural.
+                    snowflake.style.left = `${startLeft + Math.random() * viewportJiggle - (viewportJiggle / 2)}vw`;
+                    snowflake.style.top = `${startTop + Math.random() * viewportJiggle - (viewportJiggle / 2)}vh`;
+
+                    body.appendChild(snowflake);
+                }
+            }
+        }
+
+        // Re-enable during holidays.
+        // document.addEventListener('DOMContentLoaded', createSnowflakes);
+    </script>
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>Reducing Compile-Time Dependencies in Gettext for Elixir</h1>
+
+    <div class="entry"><p>The Elixir compiler does what most modern compilers have to do: it only recompiles the files it <em>needs</em> to. You change a file, and the compiler figures out all the files that somehow depend on that file. Those are the only files that get recompiled. This way, you get to avoid recompiling big projects when changing only a few files.</p>
+<p>All good and nice, but it all relies on files not having too many dependent files. That's what was happening with <a href="https://github.com/elixir-gettext/gettext">Gettext</a>, Elixir's localization and internationalization library. This post goes through the issue in detail, and how we ended up fixing it.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/refactoring-gettext-to-speed-up-compilation/cover-image.jpg" alt="Cover image of a network of ropes connected to each other." /></p>
+<span class="unsplash-credit">
+    Photo by <a href="&lt;https:&#x2F;&#x2F;unsplash.com&#x2F;photos&#x2F;green-and-black-rope-BW0vK-FA3eg&gt;">Clint Adair</a> on <a href="https://unsplash.com">Unsplash</a>
+</span>
+<h2 id="the-issue"><a class="zola-anchor" href="#the-issue" aria-label="Anchor link for: the-issue">The Issue</a></h2>
+<p><a href="https://github.com/josevalim">José</a> and I started Gettext for Elixir in March 2015, so close to ten years ago at the time of writing. Back then, writing Elixir was different. We didn't think too much about generating a lot of code at compile time, inside macros and <code>use</code> calls.</p>
+<p>The way Gettext has worked for most of its lifetime has been this. Users created a <strong>Gettext backend</strong> by calling <code>use Gettext</code> within a module in their application:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">Gettext</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">otp_app<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>That little line of code generated a whopping <strong>twenty-one macros and functions</strong> in the calling module. Users could call those macros to perform translation:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">import</span> <span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">gettext<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello world<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></code></pre>
+<p>Gettext backends read <code>.po</code> and <code>.pot</code> files containing translations and compile those translations into pattern matches. Every time you add or change a translation, the Gettext backend needs to be recompiled. I wrote a <a href="https://andrealeopardi.com/posts/compile-time-work-with-elixir-macros/">whole blog post</a> about how Gettext extraction and compilation work, if you're curious.</p>
+<p>This works pretty straightforward overall. However, calling those Gettext macros creates a compile-time dependency on the imported backend. Just <code>import</code>ing the backend doesn't, as that's what the Elixir compiler calls an <strong>export dependency</strong>—the difference is explained in <a href="https://hexdocs.pm/mix/Mix.Tasks.Xref.html#module-dependency-types"><code>mix xref</code>'s documentation</a>.</p>
+<p>This makes sense: if a module changes, we want to recompile modules that use <em>macros</em> from it too, as those macros are expanded at compile time. The main issue arose with <a href="https://www.phoenixframework.org/">Phoenix</a> applications. By default, Phoenix has a <code>MyAppWeb</code> module for boilerplate code that you want to inject in controllers, views, and whatnot. For controllers, live views, live components, and views, the generated code included this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">import</span> <span class="z-entity z-name z-class z-elixir">MyAppWeb</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span>
+</span></code></pre>
+<p>You could use <code>*gettext</code> macros everywhere this way. Maybe you can already see the issue: everything using Gettext macros would have a compile-time dependency on the backend. Uh oh. Take a look at this: I generated a new Phoenix app (<code>mix phx.new my_app</code>), added <code>gettext/1</code> calls to all controllers and views, and then used <a href="https://hexdocs.pm/mix/Mix.Tasks.Xref.html"><code>mix xref</code></a> to trace all the files that have a compile-time dependency on <code>MyAppWeb.Gettext</code>.</p>
+<pre data-lang="bash" class="language-bash z-code"><code class="language-bash" data-lang="bash"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">$</span></span><span class="z-meta z-function-call z-arguments z-shell"> mix xref graph<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>sink</span> lib/my_app_web/gettext.ex<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>label</span> compile</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">lib/my_app_web/components/core_components.ex</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">└──</span></span><span class="z-meta z-function-call z-arguments z-shell"> lib/my_app_web/gettext.ex (compile</span><span class="z-meta z-function-call z-shell"></span>)
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">lib/my_app_web/controllers/error_html.ex</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">└──</span></span><span class="z-meta z-function-call z-arguments z-shell"> lib/my_app_web/gettext.ex (compile</span><span class="z-meta z-function-call z-shell"></span>)
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">lib/my_app_web/controllers/page_controller.ex</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">└──</span></span><span class="z-meta z-function-call z-arguments z-shell"> lib/my_app_web/gettext.ex (compile</span><span class="z-meta z-function-call z-shell"></span>)
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">lib/my_app_web/controllers/page_html.ex</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">└──</span></span><span class="z-meta z-function-call z-arguments z-shell"> lib/my_app_web/gettext.ex (compile</span><span class="z-meta z-function-call z-shell"></span>)
+</span></code></pre>
+<p>Yuck! In an app with tens of controllers and views, the list above gets a lot longer. But worry not, we fixed this.</p>
+<h2 id="the-fix"><a class="zola-anchor" href="#the-fix" aria-label="Anchor link for: the-fix">The Fix</a></h2>
+<p>We do need to generate something in Gettext backends: the actual translations pattern matches. Gettext generates two important functions to handle that in each backend, <code>lgettext</code> and <code>lngettext</code>. <code>lgettext</code>'s signature looks like this:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">lgettext</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>locale<span class="z-punctuation z-separator z-object z-elixir">,</span> domain<span class="z-punctuation z-separator z-object z-elixir">,</span> msgctxt <span class="z-keyword z-operator z-other z-elixir">\\</span> <span class="z-constant z-language z-elixir">nil</span>, msgid<span class="z-punctuation z-separator z-object z-elixir">,</span> bindings<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span></span></code></pre>
+<p>The generated clauses are a bunch of these:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">lgettext</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>it<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>default<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Red<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> _bindings<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">do:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Ross<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">lgettext</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>it<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>default<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Green<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> _bindings<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">do:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Verde<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">lgettext</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>it<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>default<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-language z-elixir">nil</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Yellow<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> _bindings<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">do:</span></span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Giallo<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span> ...and so on
+</span></span></code></pre>
+<p>Well, after thinking about it for a bit, we realized that this is all we need from a Gettext backend. We don't need all the macros we generated in them, or the translation-extraction feature (we can do that outside of the backend). We just need the backend to hold the compiled patterns for the translations.</p>
+<p>So, <a href="https://github.com/maennchen">Jonatan</a> (one of the maintainers of Gettext for Elixir) <a href="https://github.com/elixir-gettext/gettext/issues/330#issuecomment-2293187581">came up</a> with an initial API where we would not have to <code>import</code> Gettext backends:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">Gettext</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">otp_app<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">Greeter</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">backend<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">say_hello</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">do:</span></span> gettext<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This was the right direction, but we needed to actually implement it. After refining and iterating on the API for a while, we came up with a re-hauled solution to using Gettext. It goes like this.</p>
+<p>First, you <code>use Gettext.Backend</code> (instead of just <code>Gettext</code>) to create a Gettext backend:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">Gettext</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Backend</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">otp_app<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Very clear that you're defining just a backend—or a repository of translations, or a storage for translations, or however you want to think about this. The Gettext backend just exposes <code>lgettext</code> and <code>lngettext</code> (which are <a href="https://hexdocs.pm/gettext/0.26.1/Gettext.Backend.html">documented callbacks now</a>).</p>
+<p>Then, you have <a href="https://hexdocs.pm/gettext/0.26.1/Gettext.Macros.html#dgettext_noop/2"><code>Gettext.Macros</code></a>. This is where all those <code>*gettext</code> macros live now. There's a variant of each of those macros suffixed in <code>_with_backend</code> which now explicitly takes a backend as its first argument. So, no magic here anymore:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Macros</span><span class="z-punctuation z-separator z-method z-elixir">.</span>gettext_with_backend<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Purple<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; &quot;Viola&quot;
+</span></span></code></pre>
+<p>Not super ergonomic though. So, we also have "normal" <code>gettext</code> macros. These infer the backend from an internal module attribute, that you set by using the original API proposed by Jonatan:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">Greeting</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">backend<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">say_hello</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">do:</span></span> gettext<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>That's it! <code>gettext/1</code> here does not come from the backend, it comes from <code>Gettext.Macros</code>, which is never recompiled (it comes from a dependency after all). Walking backwards, the code above roughly translates to:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyApp</span>.<span class="z-entity z-name z-class z-elixir">Greeting</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>gettext_backend</span> <span class="z-entity z-name z-class z-elixir">MyApp</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Gettext</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">say_hello</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-method z-elixir">.</span><span class="z-entity z-name z-class z-elixir">Macros</span><span class="z-punctuation z-separator z-method z-elixir">.</span>gettext_with_backend<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>gettext_backend</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>In turn, <code>say_hello/0</code>'s contents more or less expand to:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">say_hello</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">if</span> extracting_gettext?<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">    extract_translation<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>gettext_backend</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> This finally calls @gettext_backend.lgettext/5 internally:
+</span></span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">Gettext</span><span class="z-punctuation z-separator z-method z-elixir">.</span>gettext<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>gettext_backend</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>Hello<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p><code>Gettext.gettext/2</code> calls the backend's <code>lgettext/5</code> function "dynamically" (akin to using <a href="https://hexdocs.pm/elixir/Kernel.html#apply/3"><code>apply/3</code></a>), which <strong>does not create a compile-time dependency</strong>!</p>
+<p>That's the trick. At compile-time we can still extract translations, as we have to recompile the whole project anyway to perform extraction. However, now adding translated strings to PO files only causes the Gettext backend to recompile—and not all the files that use macros from it. You can verify this in a new Phoenix app generated with <code>phx_new</code> from <code>main</code> (I also added <code>gettext/1</code> calls to the same controllers and views as the previous example):</p>
+<pre data-lang="bash" class="language-bash z-code"><code class="language-bash" data-lang="bash"><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">$</span></span><span class="z-meta z-function-call z-arguments z-shell"> mix xref graph<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>sink</span> lib/my_app_web/gettext.ex<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> --</span>label</span> compile</span>
+</span><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> Prints nothing here</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span></code></pre>
+<p>Fantastique.</p>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>When working on libraries that do compile-time work and use macros, or do other weird stuff, think about this stuff. We didn't, and it took us a while to figure it out. If you want to do some spelunking through the changes, here's a list of stuff to look at:</p>
+<ul>
+<li>The <a href="https://github.com/elixir-gettext/gettext/issues/330">original Gettext issue</a>.</li>
+<li><a href="https://github.com/elixir-gettext/gettext/pull/390">This Gettext PR</a> and <a href="https://github.com/elixir-gettext/gettext/pull/391">this other Gettext PR</a>.</li>
+<li>The <a href="https://github.com/phoenixframework/phoenix/pull/5902">PR</a> that updates Phoenix generators to use the new Gettext API.</li>
+</ul>
+<p>Lesson learned!</p>
+</div>
+
+    <time class="posted-at" datetime="2024-09-04">
+      Written on September  4, 2024
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

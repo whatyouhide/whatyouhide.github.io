@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>Andrea Leopardi</title>
+    
+
+    <!--[if lt IE 9]>
+    <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/ feed.xml" />
+    
+
+    
+
+    <script>
+        function createSnowflakes() {
+            const snowflakesInARow = 15;
+            const snowflakeRows = 12;
+            const viewportJiggle = 8;
+            const body = document.body;
+
+            for (let row = 0; row < snowflakeRows; row++) {
+                for (let col = 0; col < snowflakesInARow; col++) {
+                    const snowflake = document.createElement('div');
+                    snowflake.classList.add('snowflake');
+
+                    // Random size (scale), rotation, and opacity.
+                    const scale = Math.random() * 0.8 + 0.2; // Scale between 0.2 and 1
+                    snowflake.style.width = `${50 * scale}px`;
+                    snowflake.style.height = `${50 * scale}px`;
+                    snowflake.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    snowflake.style.opacity = `${Math.random() * 0.1}`; // Opacity between 0.5 and 1
+
+                    // Random position
+                    const startLeft = 100 * (col / snowflakesInARow);
+                    const startTop = 100 * (row / snowflakeRows);
+                    // Jiggle the position a bit to make it look more natural.
+                    snowflake.style.left = `${startLeft + Math.random() * viewportJiggle - (viewportJiggle / 2)}vw`;
+                    snowflake.style.top = `${startTop + Math.random() * viewportJiggle - (viewportJiggle / 2)}vh`;
+
+                    body.appendChild(snowflake);
+                }
+            }
+        }
+
+        // Re-enable during holidays.
+        // document.addEventListener('DOMContentLoaded', createSnowflakes);
+    </script>
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="page">
+      <h1>404 - Page not found</h1>
+
+      <div class="entry">
+          <p>Wat? Back to the <a href="/">homepage?</a></p>
+      </div>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
