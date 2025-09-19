@@ -167,7 +167,8 @@ b {
 }
 
 article.post,
-main.about {
+main.about,
+main.books {
   max-width: $maxContentWidth;
   margin: 0 auto;
   padding: 0 5vw;
@@ -372,5 +373,6 @@ aside.callout {
 @import url("syntax-theme-dark.css") (prefers-color-scheme: dark);
 @import url("syntax-theme-light.css") (prefers-color-scheme: light);
 
+@import "_books";
 @import "_one_offs";
 @import "_holidays";

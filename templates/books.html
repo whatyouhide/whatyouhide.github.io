@@ -1,0 +1,50 @@
+{% extends "extra_page.html" %}
+
+{% block content %}
+<div id="main" role="main" class="container">
+  <main class="books">
+    <h1>Books</h1>
+
+    <p>I wrote a couple of <a href="https://elixir-lang.org" target="_blank">Elixir</a>-related books.</p>
+
+    <div class="book-descriptions">
+        <section>
+            <a href="https://pragprog.com/titles/lmelixir/testing-elixir/" target="_blank">
+                <h2>Testing Elixir</h2>
+            </a>
+
+            <div class="cover-and-description">
+                <a>
+                    <img
+                        src="{{ get_url(path="assets/media/testing-elixir.png") }}"
+                        alt="Hand-drawn cover of the 'Testing Elixir' book" />
+                </a>
+                <p>
+                    This one's about testing in Elixir. I co-authored it with my good friend
+                    <a href="https://x.com/idlehands" target="_blank">Jeffrey Matthias</a>.
+                </p>
+            </div>
+        </section>
+
+        <hr />
+
+        <section>
+            <a href="https://pragprog.com/titles/alnpee/network-programming-in-elixir-and-erlang/" target="_blank">
+                <h2>Network Programming in Elixir and Erlang</h2>
+            </a>
+
+            <div class="cover-and-description">
+                <a href="https://pragprog.com/titles/alnpee/network-programming-in-elixir-and-erlang/" target="_blank">
+                    <img
+                        src="{{ get_url(path="assets/media/network-programming.png") }}"
+                        alt="Hand-drawn cover of the 'Network Programming in Elixir and Erlang' book" />
+                </a>
+                <p>
+                    Lots of goodies on how to architect and build performant and scalable network applications in Elixir and Erlang.
+                </p>
+            </div>
+        </section>
+    </div>
+  </main>
+</div>
+{% endblock content %}
