@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>How to Async Tests in Elixir – Andrea Leopardi</title>
+    
+
+
+
+
+
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="description" content="It can be hard to keep tests asynchronous as Elixir applications grow in size and complexity. Let&#x27;s see why, and explore fixes.
+" />
+<meta name="author" content="Andrea Leopardi" />
+
+<!-- Favicons -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<!-- Mobile -->
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<!-- Open Graph -->
+<meta property="og:title" content="How to Async Tests in Elixir">
+<meta property="og:description" content="It can be hard to keep tests asynchronous as Elixir applications grow in size and complexity. Let&#x27;s see why, and explore fixes.
+">
+<meta property="og:url" content="https://andrealeopardi.com/posts/async-tests-in-elixir/">
+<meta property="og:image" content="https://andrealeopardi.com/posts/async-tests-in-elixir/cover-image.jpg">
+
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2025-04-28T00:00:00+00:00">
+
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:creator" content="@whatyouhide">
+<meta name="twitter:title" content="How to Async Tests in Elixir">
+<meta name="twitter:description" content="It can be hard to keep tests asynchronous as Elixir applications grow in size and complexity. Let&#x27;s see why, and explore fixes.
+">
+<meta name="twitter:image" content="https://andrealeopardi.com/posts/async-tests-in-elixir/cover-image.jpg">
+
+
+    <!--[if lt IE 9]>
+    <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap">
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="/feed.xml" />
+
+    
+    <link rel="alternate" type="application/rss+xml" title="Andrea Leopardi" href="https://andrealeopardi.com/ feed.xml" />
+    
+
+    
+
+
+
+
+<script type="application/ld+json">
+{
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "url": "https://andrealeopardi.com/posts/async-tests-in-elixir/",
+    "author": {
+        "@type": "Person",
+        "name": "Andrea Leopardi",
+        "email": "hi@andrealeopardi.com",
+        "url": "https://andrealeopardi.com//about.html"
+    },
+    "datePublished": "2025-04-28",
+    "dateCreated": "2025-04-28",
+    "dateModified": "2025-04-28",
+    "headline": "How to Async Tests in Elixir",
+    "description": "It can be hard to keep tests asynchronous as Elixir applications grow in size and complexity. Let's see why, and explore fixes.",
+    "image": "https://andrealeopardi.com/posts/async-tests-in-elixir/cover-image.jpg",
+    "inLanguage": {
+        "@type": "Language",
+        "name": "English"
+    }
+}
+</script>
+
+
+
+    <script>
+        function createSnowflakes() {
+            const snowflakesInARow = 15;
+            const snowflakeRows = 12;
+            const viewportJiggle = 8;
+            const body = document.body;
+
+            for (let row = 0; row < snowflakeRows; row++) {
+                for (let col = 0; col < snowflakesInARow; col++) {
+                    const snowflake = document.createElement('div');
+                    snowflake.classList.add('snowflake');
+
+                    // Random size (scale), rotation, and opacity.
+                    const scale = Math.random() * 0.8 + 0.2; // Scale between 0.2 and 1
+                    snowflake.style.width = `${50 * scale}px`;
+                    snowflake.style.height = `${50 * scale}px`;
+                    snowflake.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    snowflake.style.opacity = `${Math.random() * 0.1}`; // Opacity between 0.5 and 1
+
+                    // Random position
+                    const startLeft = 100 * (col / snowflakesInARow);
+                    const startTop = 100 * (row / snowflakeRows);
+                    // Jiggle the position a bit to make it look more natural.
+                    snowflake.style.left = `${startLeft + Math.random() * viewportJiggle - (viewportJiggle / 2)}vw`;
+                    snowflake.style.top = `${startTop + Math.random() * viewportJiggle - (viewportJiggle / 2)}vh`;
+
+                    body.appendChild(snowflake);
+                }
+            }
+        }
+
+        // Re-enable during holidays.
+        // document.addEventListener('DOMContentLoaded', createSnowflakes);
+    </script>
+</head>
+
+<body>
+    <div class="wrapper-masthead">
+        
+        <header>
+  <h1 class="site-name">
+    <a href="/">
+
+      <picture>
+        <source srcset="https://andrealeopardi.com/assets/media/hero-portrait-dark.png"
+        media="(prefers-color-scheme: dark)">
+
+        <img class="hero-portrait"
+             src="https://andrealeopardi.com/assets/media/hero-portrait.png"
+             alt="Portrait of Andrea, daylight, looking to your right" />
+      </picture>
+      <span>Andrea Leopardi</span>
+    </a>
+  </h1>
+</header>
+
+        
+
+        
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>How to Async Tests in Elixir</h1>
+
+    <div class="entry"><p>Recently, I've been focusing a lot on the health of our test suite at <a href="https://knock.app">Knock</a>. Fast, reliable tests are a boost for confidence and developer happiness, so I naturally care a lot about this. I've been wrestling with two main things: slow tests, and flaky tests. My sworn enemies.</p>
+<p>The good news here is that I believe that the "solution" to both these issues are proper, robust <strong>asynchronous</strong> tests. When tests are asynchronous, single tests can even be somewhat slow because you have ways to overcome that. You can <em>scale horizontally</em> with more parallel tests, more cores, and so on. You can split up test cases and parallelize slow tests even more. What about flakiness? Right. In my experience, so much of the flakiness comes from either improperly-written asynchronous tests or slow timeouts and assertions on messages. Go fix the latter, I have no silver bullet for that.</p>
+<p>This post is about beautiful, elegant, robust asynchronous tests in Elixir. It's also a kind of ode to OTP concurrency and about parallel-forward thinking and maybe some other made up words.</p>
+<span id="continue-reading"></span>
+<p><img src="https://andrealeopardi.com/posts/async-tests-in-elixir/cover-image.jpg" alt="Cover image of a bench with very geometric lines." /></p>
+<span class="unsplash-credit">
+    Photo by <a href="&lt;https:&#x2F;&#x2F;unsplash.com&#x2F;photos&#x2F;a-wooden-room-with-a-bench-in-the-middle-of-it-klE0kbCfrwk?utm_content=creditCopyText&amp;utm_medium=referral&amp;utm_source=unsplash&gt;">鱼 鱼</a> on <a href="https://unsplash.com">Unsplash</a>
+</span>
+<h2 id="when-is-it-hard-to-parallelize-tests"><a class="zola-anchor" href="#when-is-it-hard-to-parallelize-tests" aria-label="Anchor link for: when-is-it-hard-to-parallelize-tests">When Is It Hard to Parallelize Tests?</a></h2>
+<p>First of all, throw tests for pure code out of the window. We don't care about those. Say I have a function that checks if a string is valid base64 data:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">valid_base64?</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>string<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  match?<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> _<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">Base</span><span class="z-punctuation z-separator z-method z-elixir">.</span>decode64<span class="z-punctuation z-section z-function z-elixir">(</span>string<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Nothing that has to do with testing it in parallel here. This has no side effects. It's as pure as the eyes of a golden retriever puppy. Test this in parallel to your heart's desire, even though I doubt this is the kind of tests that are making your test suite slow.</p>
+<p>So, side effects are what make it hard to turn tests async? Yeah, in some way. That, but in particular <em>singletons</em>. We'll see in a sec, let's go through why <em>some</em> side effects are easy to test in parallel.</p>
+<p>Maybe you want to test a function that writes something to a file. Writing to the filesystem is a side effect, no doubts, and a destructive kind (the scariest kind!). But, as long as you're smart about <em>where</em> to write, you can kind of get away with it:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">test <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>writes output to a file<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">  filename <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-punctuation z-section z-interpolation z-begin z-elixir">#{</span></span></span></span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-meta z-interpolation z-elixir"><span class="z-source z-elixir z-embedded"><span class="z-entity z-name z-class z-elixir">System</span><span class="z-punctuation z-separator z-method z-elixir">.</span>unique_integer<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>positive</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span></span><span class="z-punctuation z-section z-interpolation z-end z-elixir">}</span></span></span></span><span class="z-source z-elixir"><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir">.txt<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span><span class="z-source z-elixir">  output_path <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Path</span><span class="z-punctuation z-separator z-method z-elixir">.</span>join<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-entity z-name z-class z-elixir">System</span><span class="z-punctuation z-separator z-method z-elixir">.</span>tmp_dir!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> filename<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">MyMod</span><span class="z-punctuation z-separator z-method z-elixir">.</span>calculate_something_and_write_it<span class="z-punctuation z-section z-function z-elixir">(</span>output_path<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<aside class="callout callout-warning">
+    <h5>Don&#x27;t Do This at Home</h5>
+    <div class="callout-content">
+        <p>Use ExUnit's <code>tmp_dir</code> tag. It cleans up for you and it's nicer and it protects kittens (probably).</p>
+
+    </div>
+</aside>
+<p>Cool, you can run many of these tests in parallel and they won't step on each other's toes, even though the system under test is all about the side effect.</p>
+<h3 id="singletons-are-the-bane-of-async-tests"><a class="zola-anchor" href="#singletons-are-the-bane-of-async-tests" aria-label="Anchor link for: singletons-are-the-bane-of-async-tests">Singletons Are the Bane of Async Tests</a></h3>
+<p>Back to <strong>singletons</strong>. A <a href="https://en.wikipedia.org/wiki/Singleton_pattern">singleton</a> is something which you have a single instance in your system.  Those are hard to test. You want an example that you probably know about? I'll give you one. That sick, deprived <code>Logger</code>. Yucksies. <code>Logger</code> is a singleton in the sense that you usually only log to stdout/stderr and use <code>ExUnit.CaptureLog</code> functions to assert on logged content. But if two pieces of code log at the same time—because spoiler, it's two tests running concurrently and executing some code that logs something—:vomiting_face:. Who captures what. It's undeterministic (well until you have to patch a hotfix in production, then it's whatever makes at least one of the tests <strong>fail</strong> in CI).</p>
+<p>You're likely to have an assorted, colorful bunch of other singletons in your system. The GenServers ticking every few seconds and doing godknowswhat™. The ETS tables doing the cachin'. You know the ones.</p>
+<p>But fear no more, there is a fix for almost all situations. It's based on LLMs, agentic processing, and the power of AI. Nah just kidding, it's <strong>ownership</strong> (plus getting rid of singletons, lol).</p>
+<p>The getting-rid part first.</p>
+<h2 id="no-more-singletons"><a class="zola-anchor" href="#no-more-singletons" aria-label="Anchor link for: no-more-singletons">No More Singletons</a></h2>
+<p>Design your processes and interfaces and applications so that singleton-ness (singleton-icity? singleton-ality?) is <em>optional</em>. Say I have a process that buffers metric writes to a StatsD agent so as to be Very Fast™ and out of the way of your system.</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MetricsBuffer</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">use</span> <span class="z-entity z-name z-class z-elixir">GenServer</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">start_link</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span> <span class="z-keyword z-operator z-assignment z-elixir">=</span> _opts<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>no_args</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">name<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">increment_counter</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>name<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>cast<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>metric</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>counter</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> name<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...
+</span></span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  <span class="z-variable z-other z-module z-elixir"><span class="z-keyword z-operator z-definition z-constant z-elixir">@</span>impl</span> <span class="z-entity z-name z-class z-elixir">GenServer</span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">handle_cast</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>metric</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> type<span class="z-punctuation z-separator z-sequence z-elixir">,</span> name<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> state<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>noreply</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> buffer_metric<span class="z-punctuation z-section z-function z-elixir">(</span>state<span class="z-punctuation z-separator z-sequence z-elixir">,</span> type<span class="z-punctuation z-separator z-sequence z-elixir">,</span> name<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Bad news: that's a singleton if I've ever seen one. The sneaky <code>name: __MODULE__</code> is the culprit. If you register the process with a (very "static") name, and then cast to it by name, then there can only be one of those processes in the system. If two concurrent tests emit a metric through <code>MetricsBuffer</code>, you just lost the ability to test those metrics as you'll have unpredictable results depending on the order those tests execute stuff in.</p>
+<p>I don't know of a perfectly <em>clean</em> way to solve this. "Clean" in testing usually involves stuff like "don't change your code to make tests easier" and stuff like that. I'd rather have some test code in there and write tests for this, then to not write tests altogether, so let's power through.</p>
+<h3 id="de-singleton-ifying"><a class="zola-anchor" href="#de-singleton-ifying" aria-label="Anchor link for: de-singleton-ifying">De-singleton-ifying</a></h3>
+<p>The simplest approach to take in these cases, in my opinion, is to make your singleton behave like a singleton at production time, but not making it a singleton at test time. You'll see what I mean in a second.</p>
+<pre data-lang="diff" class="language-diff z-code"><code class="language-diff" data-lang="diff"><span class="z-source z-diff"> defmodule MetricsBuffer do
+</span><span class="z-source z-diff">   use GenServer
+</span><span class="z-source z-diff">
+</span><span class="z-source z-diff"><span class="z-markup z-deleted z-diff"><span class="z-punctuation z-definition z-deleted z-diff">-</span>  def start_link([] = _opts) do
+</span></span><span class="z-source z-diff"><span class="z-markup z-inserted z-diff"><span class="z-punctuation z-definition z-inserted z-diff">+</span>  def start_link(opts) do
+</span></span><span class="z-source z-diff"><span class="z-markup z-deleted z-diff"><span class="z-punctuation z-definition z-deleted z-diff">-</span>    GenServer.start_link(__MODULE__, :no_args, name: __MODULE__)
+</span></span><span class="z-source z-diff"><span class="z-markup z-inserted z-diff"><span class="z-punctuation z-definition z-inserted z-diff">+</span>    name = Keyword.get(opts, :name, __MODULE__)
+</span></span><span class="z-source z-diff"><span class="z-markup z-inserted z-diff"><span class="z-punctuation z-definition z-inserted z-diff">+</span>    GenServer.start_link(__MODULE__, :no_args, name: name)
+</span></span><span class="z-source z-diff">   end
+</span><span class="z-source z-diff">
+</span><span class="z-source z-diff"><span class="z-markup z-deleted z-diff"><span class="z-punctuation z-definition z-deleted z-diff">-</span>  def increment_counter(name) do
+</span></span><span class="z-source z-diff"><span class="z-markup z-inserted z-diff"><span class="z-punctuation z-definition z-inserted z-diff">+</span>  def increment_counter(server \\ __MODULE__, name) do
+</span></span><span class="z-source z-diff"><span class="z-markup z-deleted z-diff"><span class="z-punctuation z-definition z-deleted z-diff">-</span>    GenServer.cast(__MODULE__, {:metric, :counter, name})
+</span></span><span class="z-source z-diff"><span class="z-markup z-inserted z-diff"><span class="z-punctuation z-definition z-inserted z-diff">+</span>    GenServer.cast(server, {:metric, :counter, name})
+</span></span><span class="z-source z-diff">   end
+</span><span class="z-source z-diff">
+</span><span class="z-source z-diff">   # ...
+</span><span class="z-source z-diff"> end
+</span></code></pre>
+<p>Now, you're making the GenServer name optional and defaulting to <code>__MODULE__</code>. That's what it'll use in production. In tests, you can start it with something like</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">setup context <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">  server_name <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Module</span><span class="z-punctuation z-separator z-method z-elixir">.</span>concat<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span> context<span class="z-punctuation z-separator z-method z-elixir">.</span>test<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  start_supervised!<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-entity z-name z-class z-elixir">MetricsBuffer</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-keywords z-elixir">name<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> server_name<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  %<span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-keywords z-elixir">metrics_server<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> server_name<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Nice, but there are some issues. The main one is that you have to explicitly reference that new name everywhere in your test case now. But you might not be testing the public API for <code>MetricsBuffer</code> directly—maybe your code-under-test is calling out to that. How do you pass stuff around? Turns out, you combine this technique with <em>ownership</em>.</p>
+<h2 id="ownership-async-true-heart"><a class="zola-anchor" href="#ownership-async-true-heart" aria-label="Anchor link for: ownership-async-true-heart">Ownership + <code>async: true</code> = :heart:</a></h2>
+<p>First, a few words to explain what I’m talking about. The idea with ownership is that you want to slice your resources so that each test (and its process) <strong>own</strong> the resources. For example, you want each test process to "own" its own <code>MetricsBuffer</code> running instance. If the owned resources are isolated from each other, then you can run those tests asynchronously.</p>
+<p>There are a few ways you can build ownership into your code. Let's take a look.</p>
+<h3 id="at-the-process-level-nimble-ownership-and-processtree"><a class="zola-anchor" href="#at-the-process-level-nimble-ownership-and-processtree" aria-label="Anchor link for: at-the-process-level-nimble-ownership-and-processtree">At the Process Level: nimble_ownership and ProcessTree</a></h3>
+<p>Ownership (in this context) is essentially always at the <strong>process level</strong>. Each test process owns the resource. However, the important caveat is that you often want "child processes" of the test process to be allowed to use the resource too. Basically, you want this to work:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">test <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>async metrics<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">Task</span><span class="z-punctuation z-separator z-method z-elixir">.</span>async<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-keyword z-control z-elixir">fn</span> <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir">    <span class="z-punctuation z-definition z-comment z-elixir">#</span> ↓ Should still use the metrics server owned by the test process
+</span></span><span class="z-source z-elixir">    code_that_reports_metrics<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>without necessarily passing the <code>MetricsServer</code> around (which is often a pain to do). There's a pretty easy solution that, however, requires you to modify your <code>MetricsServer</code> code a bit.</p>
+<h4 id="processtree"><a class="zola-anchor" href="#processtree" aria-label="Anchor link for: processtree"><code>ProcessTree</code></a></h4>
+<p>I’m talking about a library called <a href="https://github.com/jbsf2/process-tree">process_tree</a>. Its job is pretty simple: it looks up keys in the process dictionary of the current process and its "parents". A short example:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Process</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>some_key</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>some value<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">task <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">Task</span><span class="z-punctuation z-separator z-method z-elixir">.</span>async<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-keyword z-control z-elixir">fn</span> <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+</span><span class="z-source z-elixir">    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-entity z-name z-class z-elixir">Process</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>some_key</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">ProcessTree</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>some_key</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-entity z-name z-class z-elixir">Task</span><span class="z-punctuation z-separator z-method z-elixir">.</span>await<span class="z-punctuation z-section z-function z-elixir">(</span>task<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir"><span class="z-punctuation z-definition z-comment z-elixir">#</span>=&gt; {nil, &quot;some value&quot;}
+</span></span></code></pre>
+<p>This "parent lookup" is based on a few features of OTP, namely the <code>:"$callers"</code> process dictionary key that many OTP behaviours use as well as <a href="https://www.erlang.org/docs/26/man/erlang#process_info-2"><code>:erlang.process_info(pid, :parent)</code></a>. This turns out to be pretty reliable.</p>
+<p><img src="https://andrealeopardi.com/posts/async-tests-in-elixir/process_tree.png" alt="A diagram showing parent-child process relationships. At the top is a pink oval labeled &quot;TEST PROCESS&quot; connected by lines labeled &quot;Process.get&quot; to a light green oval labeled &quot;CHILD PROCESS&quot; in the middle-right. The child process connects via another &quot;Process.get&quot; line to a light yellow oval labeled &quot;GRAND CHILD PROCESS&quot; on the right. There&#39;s also a dotted line connecting the test process to another light purple oval labeled &quot;CHILD PROCESS&quot; on the left side." /></p>
+<p>Now, the trick to have async tests here is to store the PID of the metrics server (or whatever singleton) in the process tree of your test process. Then, every "child" of your test process has access to this. In my opinion, a nice way to do this is to just slightly modify the <code>MetricsServer</code> code:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MetricsServer</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">start_link</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>opts<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>no_arg</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-entity z-name z-class z-elixir">Keyword</span><span class="z-punctuation z-separator z-method z-elixir">.</span>take<span class="z-punctuation z-section z-function z-elixir">(</span>opts<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>name</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">increment_counter</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>name<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">GenServer</span><span class="z-punctuation z-separator z-method z-elixir">.</span>cast<span class="z-punctuation z-section z-function z-elixir">(</span>server<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>metric</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>counter</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> name<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-comment z-line z-number-sign z-elixir">  <span class="z-punctuation z-definition z-comment z-elixir">#</span> ...
+</span></span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">if</span> <span class="z-entity z-name z-class z-elixir">Mix</span><span class="z-punctuation z-separator z-method z-elixir">.</span>env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-comparison z-elixir">==</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>test</span> <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">    <span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">server</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">      <span class="z-entity z-name z-class z-elixir">ProcessTree</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>server_pid</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">    <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">else</span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">    <span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">server</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">      <span class="z-variable z-language z-elixir">__MODULE__</span>
+</span><span class="z-source z-elixir">    <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The idea is that you start your server with <code>name: MetricsServer</code> in your application supervisor. In tests, instead, you do:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir">setup <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">  pid <span class="z-keyword z-operator z-assignment z-elixir">=</span> start_supervised<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-entity z-name z-class z-elixir">MetricsServer</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">Process</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-entity z-name z-class z-elixir">MetricsServer</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>server_pid</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> pid<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Voila! You have Solved Async Tests™.</p>
+<p>Now, if you're worried about whether this is a "clean" solution, I get it. However, let's think through this a sec. What is it that you're doing in production that you're not testing here? I'd argue it's only the name resolution. In production, you're not testing that <code>__MODULE__</code> name registration works... But that's OTP, so I trust that.</p>
+<p>Now, <code>ProcessTree</code> falls short when you want to have utilities that test something about the owned resource <em>after the test is finished</em>. This is somewhat a common use case. The prime example is <a href="https://github.com/dashbitco/mox">Mox</a>. In Mox, you want to assert that the expected number of calls were received during the test, but <em>after</em> the test is done. Mox uses a <code>on_exit</code> hook for this, but when <code>on_exit</code> runs the test process has already exited... We need to store these expectations outside of the test process, and be able to retrieve them after the test is done. We need a resource that outlives the test.</p>
+<h4 id="enter-nimble-ownership"><a class="zola-anchor" href="#enter-nimble-ownership" aria-label="Anchor link for: enter-nimble-ownership">Enter <code>nimble_ownership</code></a></h4>
+<p><a href="https://github.com/dashbitco/nimble_ownership">nimble_ownership</a> is a small library that we extracted out of Mox itself. Its job is to provide an "ownership server" and track ownership of resources across processes.</p>
+<p>The ownership server can store some metadata for a given process. Then, that process can <em>allow</em> other processes to access and modify that metadata.</p>
+<p><img src="https://andrealeopardi.com/posts/async-tests-in-elixir/nimble_ownership.png" alt="A diagram illustrating an ownership server architecture. At the top is a rectangle labeled &quot;OWNERSHIP SERVER&quot; containing two vertical columns labeled &quot;RESOURCE&quot; with multi-colored layers. Text annotation states &quot;Has one &#39;version&#39; of the resource for each owner.&quot; Below, connected by dotted lines, are two light blue ovals labeled &quot;TEST PROCESS #1&quot; and &quot;TEST PROCESS #2&quot;, each connected to two small yellow ovals labeled &quot;PROC&quot; that represent processes. Dotted lines show connections between these processes and the resources in the ownership server." /></p>
+<p>You might see how Mox uses this. Mox starts a global ownership server when it starts (<code>Mox.Server</code>) and stores expectations for each function in each mock module, <em>for each process</em> that calls <code>Mox.expect/4</code>. A simplified implementation could:</p>
+<ul>
+<li>Store a list of <code>{mock_module, function_name, implementation}</code> tuples.</li>
+<li>Whenever there's a call to a function in the mock module, the mock module (which is implemented by Mox) would find the tuple for the right mock module and function, and "pop" the <code>implementation</code>.</li>
+</ul>
+<p>Then, you'd <em>allow</em> other processes (like child processes) to use the mocks. The server would do something like:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-module z-elixir"><span class="z-keyword z-control z-module z-elixir">defmodule</span> <span class="z-entity z-name z-class z-elixir">MyMox</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">start_link</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">NimbleOwnership</span><span class="z-punctuation z-separator z-method z-elixir">.</span>start_link<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-keywords z-elixir">name<span class="z-punctuation z-definition z-constant z-elixir">:</span></span> <span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir">  <span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">expect</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>mod<span class="z-punctuation z-separator z-object z-elixir">,</span> fun<span class="z-punctuation z-separator z-object z-elixir">,</span> impl<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">NimbleOwnership</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get_and_update<span class="z-punctuation z-section z-function z-elixir">(</span>
+</span><span class="z-source z-elixir">      <span class="z-variable z-language z-elixir">__MODULE__</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      _owner <span class="z-keyword z-operator z-assignment z-elixir">=</span> self<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      _key <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>mocked_functions</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      <span class="z-keyword z-control z-elixir">fn</span> current_value <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+</span><span class="z-source z-elixir">        new_value <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-punctuation z-section z-function z-elixir">(</span>current_value <span class="z-keyword z-operator z-other z-elixir">|</span><span class="z-keyword z-operator z-other z-elixir">|</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-list-manipulation z-elixir">++</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>mod<span class="z-punctuation z-separator z-sequence z-elixir">,</span> fun<span class="z-punctuation z-separator z-sequence z-elixir">,</span> impl<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span><span class="z-source z-elixir">        <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span>new_value<span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>unused_return_value</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span>
+</span><span class="z-source z-elixir">      <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">    <span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>Then, the generated mock modules could do something like:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">my_mocked_fun</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>arg1<span class="z-punctuation z-separator z-object z-elixir">,</span> arg2<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>ok</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> owner<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">NimbleOwnership</span><span class="z-punctuation z-separator z-method z-elixir">.</span>fetch_owner<span class="z-punctuation z-section z-function z-elixir">(</span>
+</span><span class="z-source z-elixir">      _ownership_server <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">MyMox</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      <span class="z-punctuation z-section z-array z-elixir">[</span>self<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-other z-elixir">|</span> callers<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>mocked_functions</span>
+</span><span class="z-source z-elixir">    <span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  impl <span class="z-keyword z-operator z-assignment z-elixir">=</span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">NimbleOwnership</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get_and_update<span class="z-punctuation z-section z-function z-elixir">(</span>
+</span><span class="z-source z-elixir">      <span class="z-entity z-name z-class z-elixir">MyMox</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      owner<span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      _key <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>mocked_functions</span><span class="z-punctuation z-separator z-object z-elixir">,</span>
+</span><span class="z-source z-elixir">      <span class="z-keyword z-control z-elixir">fn</span> current_value <span class="z-keyword z-operator z-other z-elixir">-&gt;</span> pop_implementation<span class="z-punctuation z-section z-function z-elixir">(</span>current_value<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">    <span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  apply<span class="z-punctuation z-section z-function z-elixir">(</span>impl<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-punctuation z-section z-array z-elixir">[</span>arg1<span class="z-punctuation z-separator z-object z-elixir">,</span> arg2<span class="z-punctuation z-section z-array z-elixir">]</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">callers</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">Process</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-double-quoted z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:&quot;</span>$callers<span class="z-punctuation z-definition z-constant z-elixir">&quot;</span></span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-other z-elixir">|</span><span class="z-keyword z-operator z-other z-elixir">|</span> parents<span class="z-punctuation z-section z-function z-elixir">(</span>self<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">defp</span> <span class="z-entity z-name z-function z-private z-elixir">parents</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>pid<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">case</span> <span class="z-entity z-name z-class z-elixir">Process</span><span class="z-punctuation z-separator z-method z-elixir">.</span>info<span class="z-punctuation z-section z-function z-elixir">(</span>pid<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>parent</span><span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>parent</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>undefined</span><span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-punctuation z-section z-array z-elixir">[</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span><span class="z-source z-elixir">    <span class="z-meta z-sequence z-tuple z-elixir"><span class="z-punctuation z-section z-sequence z-begin z-elixir">{</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>parent</span><span class="z-punctuation z-separator z-sequence z-elixir">,</span> parent<span class="z-punctuation z-section z-sequence z-end z-elixir">}</span></span> <span class="z-keyword z-operator z-arrow z-elixir">-&gt;</span> <span class="z-punctuation z-section z-array z-elixir">[</span>parent <span class="z-keyword z-operator z-other z-elixir">|</span> parents<span class="z-punctuation z-section z-function z-elixir">(</span>parent<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-array z-elixir">]</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>The key thing here is that mock implementations are not tied to the <em>lifecycle</em> of the test process, nor is the ownership server. So, when the test process has exited (like in an <code>on_exit</code> hook), you can still access the owned resources for that exited test process and perform assertions on those.</p>
+<p>This whole ownership thing is not super straightforward, but the <a href="https://hexdocs.pm/nimble_ownership/NimbleOwnership.html">nimble_ownership documentation</a> does a good job at explaining how it works. Also, you can go dig into the Mox implementation to see how it uses nimble_ownership.</p>
+<p>Now, there's another way of doing process-based ownership that you've likely been using.</p>
+<h3 id="at-the-database-level-transactions"><a class="zola-anchor" href="#at-the-database-level-transactions" aria-label="Anchor link for: at-the-database-level-transactions">At the Database Level: Transactions</a></h3>
+<p><a href="https://github.com/elixir-ecto/ecto">Ecto</a> is probably the best-known example of tracking ownership. Ecto calls it the <strong>sandbox</strong>, but the idea is quite similar. First, why this is an issue: the database is, in its own way, shared state. Say you had:</p>
+<ol>
+<li>A test that selects all rows from table <code>accounts</code>.</li>
+<li>Another test that inserts a row in the <code>accounts</code> table.</li>
+</ol>
+<p>Test #1 would sometimes see the new from test #2 and sometimes not. Flaky test.</p>
+<p>So, instead of tracking a resource like a nimble_ownership server or similar, the Ecto sandbox tracks <em>a database transaction</em>. All DB operations in a test and in the <strong>allowed processes</strong> for that test run in a database transaction, that gets rolled back when the test finishes. No data overlap!</p>
+<p>Ecto implements its own ownership mechanism, <a href="https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html"><code>Ecto.Adapters.SQL.Sandbox</code></a>, but the ideas are the same as the ones we discussed in this post.</p>
+<h3 id="at-other-levels-whooopsie"><a class="zola-anchor" href="#at-other-levels-whooopsie" aria-label="Anchor link for: at-other-levels-whooopsie">At Other Levels: Whooopsie</a></h3>
+<p>There are some singletons that you cannot get out of having. We already mentioned <code>Logger</code>, for example. You could get clever with ownership-aware logger handlers and whatnot, but that's not the only common one. Another frequent suspect is <code>Application</code> configuration. If your code reads values from the application environment, then testing changes to those values makes it impossible to run those tests asynchronously:</p>
+<pre data-lang="elixir" class="language-elixir z-code"><code class="language-elixir" data-lang="elixir"><span class="z-source z-elixir"><span class="z-meta z-function z-elixir"><span class="z-keyword z-control z-module z-elixir">def</span> <span class="z-entity z-name z-function z-public z-elixir">truncate_string</span><span class="z-punctuation z-definition z-parameters z-elixir">(</span>string<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-control z-module z-elixir">do</span></span>
+</span><span class="z-source z-elixir">  limit <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Application</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>truncation_limit</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">500</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">String</span><span class="z-punctuation z-separator z-method z-elixir">.</span>slice<span class="z-punctuation z-section z-function z-elixir">(</span>string<span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">0</span><span class="z-keyword z-operator z-range z-elixir">..</span>limit<span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">test <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>truncate_string/1 respects the configured limit<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span> <span class="z-keyword z-control z-elixir">do</span>
+</span><span class="z-source z-elixir">  current_limit <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">Application</span><span class="z-punctuation z-separator z-method z-elixir">.</span>get_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>truncation_limit</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  on_exit<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-keyword z-control z-elixir">fn</span> <span class="z-keyword z-operator z-other z-elixir">-&gt;</span>
+</span><span class="z-source z-elixir">    <span class="z-entity z-name z-class z-elixir">Application</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>truncation_limit</span><span class="z-punctuation z-separator z-object z-elixir">,</span> current_limit<span class="z-punctuation z-section z-function z-elixir">)</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-keyword z-control z-elixir">end</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  string <span class="z-keyword z-operator z-assignment z-elixir">=</span> <span class="z-entity z-name z-class z-elixir">String</span><span class="z-punctuation z-separator z-method z-elixir">.</span>duplicate<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>a<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">10</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">  <span class="z-entity z-name z-class z-elixir">Application</span><span class="z-punctuation z-separator z-method z-elixir">.</span>put_env<span class="z-punctuation z-section z-function z-elixir">(</span><span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>my_app</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-other z-symbol z-elixir"><span class="z-punctuation z-definition z-constant z-elixir">:</span>truncation_limit</span><span class="z-punctuation z-separator z-object z-elixir">,</span> <span class="z-constant z-numeric z-elixir">3</span><span class="z-punctuation z-section z-function z-elixir">)</span>
+</span><span class="z-source z-elixir">
+</span><span class="z-source z-elixir">  assert truncate_string<span class="z-punctuation z-section z-function z-elixir">(</span>string<span class="z-punctuation z-section z-function z-elixir">)</span> <span class="z-keyword z-operator z-comparison z-elixir">==</span> <span class="z-meta z-string z-elixir"><span class="z-string z-quoted z-double z-elixir"><span class="z-punctuation z-definition z-string z-begin z-elixir">&quot;</span>aaa<span class="z-punctuation z-definition z-string z-end z-elixir">&quot;</span></span></span>
+</span><span class="z-source z-elixir"><span class="z-keyword z-control z-elixir">end</span>
+</span></code></pre>
+<p>This dance is pretty common. Get the current value, make sure to set it back after the test finishes, and then change it to test the behavior. But you can see how another concurrent test changing that value would potentially break this test.</p>
+<p>So, what are you to do in these cases? Tough luck. There's no satisfaction here. The most successful practical approach I've seen is to define an interface for <code>Application</code> and use mocks to have values read/written in an async-friendly way. You can use Mox, you can use <a href="https://github.com/edgurgel/mimic">Mimic</a>, whatever floats your boat really. Just go read <a href="https://dashbit.co/blog/mocks-and-explicit-contracts">The Mox Blog Post</a> first.</p>
+<h2 id="practical-advice"><a class="zola-anchor" href="#practical-advice" aria-label="Anchor link for: practical-advice">Practical Advice</a></h2>
+<p>Just a bunch of jotted-down advices:</p>
+<ul>
+<li>Hardcoded singletons are "clean" from a code perspective, but so hard to work with. Make your life easier, and <em>think like a library author</em> when you can: no singletons, just configurable processes. Then, these can act as a single global resource if needed.</li>
+<li>Try to start with <code>ProcessTree</code> rather than nimble_ownership. The ownership idea is powerful but quite more complex than just climbing up the process tree to find a PID.</li>
+<li>Abstract as much as possible into your own testing helpers. At Knock, we have quite a few <code>MyApp.SomePartOfTheAppTesting</code> helpers that we <code>use</code> in our tests. This facilitates abstracting what to store in the process dictionary, key names, and so on.</li>
+</ul>
+<h2 id="conclusion"><a class="zola-anchor" href="#conclusion" aria-label="Anchor link for: conclusion">Conclusion</a></h2>
+<p>Woah, that was a lot.</p>
+<p>First, a short acknowledgement. I've got to thank my coworker <a href="https://brentjanderson.com/">Brent</a>, who put me onto <code>ProcessTree</code> and who I've designed much of what I've talked about with.</p>
+<p>We started with what the common issues that prevent asynchronous tests are. Then, we explored solutions for:</p>
+<ul>
+<li>Limiting singletons in your system.</li>
+<li>Using <code>ProcessTree</code> to track resources back to a test process.</li>
+<li>Establishing resource ownership with nimble_ownership (or Ecto's sandbox).</li>
+<li>Using mocks as the last resource.</li>
+</ul>
+<p>Some resources to check out:</p>
+<ul>
+<li>I <a href="https://youtu.be/clAHOdIzkW0?si=1dgCrQ7qExFl3Qtr">spoke</a> about some of these topics a few years ago—the talk is more philosophical and high level than this post, but might be helpful.</li>
+<li><a href="https://pragprog.com/titles/lmelixir/testing-elixir/"><em>Testing Elixir</em></a>, which goes into more detail on some of the things we discussed.</li>
+</ul>
+<p>I hope this all made sense. If I can help clarify anything, leave a comment or throw an email my way. See ya!</p>
+</div>
+
+    <time class="posted-at" datetime="2025-04-28">
+      Written on April 28, 2025
+      
+    </time>
+
+    <script src="https://giscus.app/client.js"
+        data-repo="whatyouhide/whatyouhide.github.io"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkxODQwNDQxNzQ="
+        data-category="General"
+        data-category-id="DIC_kwDOCvhKjs4CY-gd"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+  </article>
+</div>
+
+
+        <footer>
+    <div class="icons">
+        <a href="mailto:hi@andrealeopardi.com">
+            <picture>
+              <img id="icon-email"
+                   class="footer-icon"
+                   src="/assets/icons/email.png"
+                   alt="Hand-drawn icon of a letter envelope"
+                   title="Email" />
+            </picture>
+        </a>
+
+        <a href="https://github.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-github"
+                   class="footer-icon"
+                   src="/assets/icons/github.png"
+                   alt="Hand-drawn icon of the GitHub logo"
+                   title="GitHub" />
+            </picture>
+        </a>
+
+        <a href="https://twitter.com/whatyouhide" target="_blank">
+            <picture>
+              <img id="icon-twitter"
+                   class="footer-icon"
+                   src="/assets/icons/twitter.png"
+                   alt="Hand-drawn icon of the Twitter logo"
+                   title="Twitter" />
+            </picture>
+        </a>
+
+        <a href="/feed.xml">
+            <picture>
+              <img id="icon-rss"
+                   class="footer-icon"
+                   src="/assets/icons/rss.png"
+                   alt="Hand-drawn icon of the RSS logo"
+                   title="RSS feed" />
+            </picture>
+        </a>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
