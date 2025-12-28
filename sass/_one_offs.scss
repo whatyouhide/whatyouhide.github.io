@@ -3,3 +3,17 @@
     color: var(--color-text-dimmer);
     font-style: italic;
 }
+
+.horizontal-images {
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+    align-items: flex-start;
+}
+
+.horizontal-images img {
+    max-height: 30em;
+    height: auto;
+    width: auto;
+    display: block;
+}

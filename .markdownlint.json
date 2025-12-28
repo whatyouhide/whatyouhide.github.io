@@ -39,7 +39,8 @@
             "span",
             "svg",
             "title",
-            "path"
+            "path",
+            "div"
         ]
     },
     "MD034": true,
