@@ -33,7 +33,10 @@ dark_theme = "ayu-dark"
 
 [extra]
 full_name = "Andrea Leopardi"
+username = "whatyouhide"
 email = "hi@andrealeopardi.com"
 twitter_username = "whatyouhide"
 github_username = "whatyouhide"
+linkedin_url = "https://www.linkedin.com/in/anleopardi/"
+bluesky_url = "https://bsky.app/profile/whatyouhi.de"
 talks_youtube_playlist_url = "https://youtube.com/playlist?list=PLd7I3U4fDsUJfNM-N7Kyss66gmml_OSDq"

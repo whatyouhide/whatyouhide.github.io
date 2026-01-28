@@ -24,6 +24,35 @@
         trailing_slash=false) }}" />
     {% endblock %}
 
+    <script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "Person",
+			"@id": "{{ config.base_url | safe }}/#person",
+			"name": "{{ config.extra.full_name }}",
+			"alternateName": "{{ config.extra.username }}",
+            "pronouns": "he/him",
+			"url": "{{ config.base_url | safe }}",
+            "email": "{{ config.extra.email }}",
+			"image": "{{ config.base_url | safe }}/assets/headshot.png",
+			"jobTitle": "Principal engineer, Elixir core team, author, public speaker",
+			"description": "Andrea is a software engineer from Italy working as a platform engineer at Knock. Member of the Elixir programming language core team since 2016, active contributor to the open-source community. His work focuses on Elixir, distributed systems, testing, and system architecture.",
+			"sameAs": [
+				"https://twitter.com/{{ config.extra.twitter_username }}",
+				"https://github.com/{{ config.extra.github_username }}",
+				"{{ config.extra.linkedin_url | safe }}",
+				"{{ config.extra.bluesky_url | safe }}"
+			],
+			"knowsAbout": [
+				"Elixir programming language",
+                "Distributed systems",
+                "Software architecture",
+                "Testing methodologies",
+                "Open-source software"
+			]
+		}
+    </script>
+
     {% block json_ld %}{% endblock json_ld %}
 
     <script>
