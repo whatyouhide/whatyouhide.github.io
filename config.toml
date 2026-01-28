@@ -27,7 +27,7 @@ feed_limit = 20
 taxonomies = [{ name = "tags", feed = true }]
 
 [markdown.highlighting]
-style = "class"
+style = "inline"
 light_theme = "github-light"
 dark_theme = "ayu-dark"
 
