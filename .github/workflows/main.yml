@@ -9,13 +9,13 @@ on:
 jobs:
   test:
     name: Run tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
     env: {}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
       - name: Lint Markdown files (with markdownlint)
         run: |
@@ -28,24 +28,3 @@ jobs:
           check-modified-files-only: "yes"
           use-verbose-mode: "yes"
           config-file: link_check_config.json
-
-      - name: Ensure the website builds
-        uses: shalzz/zola-deploy-action@960304368c31a93d6991d64ae962df0786b905f1
-        env:
-          BUILD_ONLY: true
-          BUILD_FLAGS: --drafts
-
-  # Following https://www.getzola.org/documentation/deployment/github-pages/
-  build:
-    name: Build and deploy GitHub Pages
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout this repository
-        uses: actions/checkout@v4
-
-      - name: Build with Zola and push to GitHub Pages
-        uses: shalzz/zola-deploy-action@960304368c31a93d6991d64ae962df0786b905f1
-        env:
-          PAGES_BRANCH: gh-pages
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
