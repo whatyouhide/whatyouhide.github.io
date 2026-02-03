@@ -1,0 +1,238 @@
+// Travels page styles
+
+main.travels {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 5vw;
+
+  h1 {
+    font-family: $handwrittenFontStack;
+    font-weight: bold;
+  }
+
+  .travels-intro {
+    text-align: center;
+    text-indent: 0;
+    color: var(--color-text-dimmer);
+    margin-bottom: 2em;
+  }
+}
+
+.map-container {
+  position: relative;
+  width: 100%;
+  border: 2px solid var(--color-box-borders);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-site-background);
+  box-shadow: 3px 3px 0 var(--color-box-borders);
+
+  @include darkMode {
+    box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+#travels-map {
+  width: 100%;
+  height: 400px;
+  cursor: grab;
+
+  @include mediumScreen {
+    height: 500px;
+  }
+
+  @include wideScreen {
+    height: 600px;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.map-controls {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  button {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--color-box-borders);
+    border-radius: 4px;
+    background: var(--color-site-background);
+    color: var(--color-text);
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--color-site-background-accented);
+      border-color: var(--color-links);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}
+
+// Country tooltip
+.country-tooltip {
+  position: absolute;
+  background: var(--color-site-background);
+  border: 2px solid var(--color-box-borders);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-family: $sansSerifFontStack;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 2px 2px 0 var(--color-box-borders);
+  white-space: nowrap;
+
+  &.home::after {
+    content: " (home)";
+    color: var(--color-text-dimmer);
+    font-style: italic;
+  }
+
+  @include darkMode {
+    box-shadow: 2px 2px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Modal styles
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+
+  &[aria-hidden="false"] {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: relative;
+  background: var(--color-site-background);
+  border: 2px solid var(--color-box-borders);
+  border-radius: 8px;
+  padding: 2em;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 4px 4px 0 var(--color-box-borders);
+  transform: scale(0.95);
+  transition: transform 0.2s ease;
+
+  .modal[aria-hidden="false"] & {
+    transform: scale(1);
+  }
+
+  @include darkMode {
+    box-shadow: 4px 4px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  h2 {
+    font-family: $handwrittenFontStack;
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    text-align: left;
+  }
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--color-text-dimmer);
+  line-height: 1;
+  padding: 0;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+// Trip details in modal
+.trip-item {
+  margin-bottom: 1.5em;
+  padding-bottom: 1em;
+  border-bottom: 1px solid var(--color-box-borders);
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.trip-dates {
+  font-weight: bold;
+  color: var(--color-links);
+  margin-bottom: 0.25em;
+}
+
+.trip-cities {
+  color: var(--color-text-dimmer);
+  font-size: 14px;
+  margin-bottom: 0.25em;
+}
+
+.trip-notes {
+  font-style: italic;
+  font-size: 15px;
+}
+
+.no-trips {
+  color: var(--color-text-dimmer);
+  font-style: italic;
+}
+
+.home-badge {
+  display: inline-block;
+  background: var(--color-links);
+  color: var(--color-site-background);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 10px;
+  vertical-align: middle;
+}

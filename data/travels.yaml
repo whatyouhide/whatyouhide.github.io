@@ -1,0 +1,170 @@
+# Travel data for the /travels page
+# Country codes use ISO 3166-1 alpha-3 (ITA, USA, JPN, etc.)
+
+countries:
+  ITA:
+    name: "Italy"
+    visited: true
+    home: true
+  ARG:
+    name: "Argentina"
+    visited: true
+  AUT:
+    name: "Austria"
+    visited: true
+  BLR:
+    name: "Belarus"
+    visited: true
+  BEL:
+    name: "Belgium"
+    visited: true
+  BIH:
+    name: "Bosnia and Herzegovina"
+    visited: true
+  BRA:
+    name: "Brazil"
+    visited: true
+  BGR:
+    name: "Bulgaria"
+    visited: true
+  CAN:
+    name: "Canada"
+    visited: true
+  COL:
+    name: "Colombia"
+    visited: true
+  HRV:
+    name: "Croatia"
+    visited: true
+  CZE:
+    name: "Czech Republic"
+    visited: true
+  DNK:
+    name: "Denmark"
+    visited: true
+  EGY:
+    name: "Egypt"
+    visited: true
+  EST:
+    name: "Estonia"
+    visited: true
+  FIN:
+    name: "Finland"
+    visited: true
+  FRA:
+    name: "France"
+    visited: true
+  DEU:
+    name: "Germany"
+    visited: true
+  GBR:
+    name: "United Kingdom"
+    visited: true
+  GRC:
+    name: "Greece"
+    visited: true
+  VAT:
+    name: "Vatican City"
+    visited: true
+  IND:
+    name: "India"
+    visited: true
+  IRL:
+    name: "Ireland"
+    visited: true
+  ISR:
+    name: "Israel"
+    visited: true
+  JPN:
+    name: "Japan"
+    visited: true
+  JOR:
+    name: "Jordan"
+    visited: true
+  KOR:
+    name: "South Korea"
+    visited: true
+  LVA:
+    name: "Latvia"
+    visited: true
+  LTU:
+    name: "Lithuania"
+    visited: true
+  MAC:
+    name: "Macao"
+    visited: true
+  MYS:
+    name: "Malaysia"
+    visited: true
+  MLT:
+    name: "Malta"
+    visited: true
+  MEX:
+    name: "Mexico"
+    visited: true
+  MCO:
+    name: "Monaco"
+    visited: true
+  NLD:
+    name: "Netherlands"
+    visited: true
+  PSE:
+    name: "Palestine"
+    visited: true
+  PAN:
+    name: "Panama"
+    visited: true
+  CHN:
+    name: "China"
+    visited: true
+  PER:
+    name: "Peru"
+    visited: true
+  POL:
+    name: "Poland"
+    visited: true
+  PRT:
+    name: "Portugal"
+    visited: true
+  ROU:
+    name: "Romania"
+    visited: true
+  SMR:
+    name: "San Marino"
+    visited: true
+  SRB:
+    name: "Serbia"
+    visited: true
+  ESP:
+    name: "Spain"
+    visited: true
+  SWE:
+    name: "Sweden"
+    visited: true
+    home: true
+  CHE:
+    name: "Switzerland"
+    visited: true
+  TUN:
+    name: "Tunisia"
+    visited: true
+  TUR:
+    name: "Turkey"
+    visited: true
+  UKR:
+    name: "Ukraine"
+    visited: true
+    home: true
+  USA:
+    name: "United States"
+    visited: true
+  URY:
+    name: "Uruguay"
+    visited: true
+  VNM:
+    name: "Vietnam"
+    visited: true
+settings:
+  defaultZoom: 1.5
+  centerLat: 30
+  centerLon: 10

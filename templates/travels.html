@@ -1,0 +1,44 @@
+{% extends "extra_page.html" %}
+
+{% block content %}
+{% set travels = load_data(path="data/travels.yaml") %}
+<div id="main" role="main" class="container">
+  <main class="travels">
+    <h1>Scratch Map</h1>
+
+    <p class="travels-intro">
+      Places I've been lucky enough to visit.
+    </p>
+
+    <div class="map-container">
+      <div id="travels-map"></div>
+      <div class="map-controls">
+        <button id="zoom-in" aria-label="Zoom in">+</button>
+        <button id="zoom-out" aria-label="Zoom out">−</button>
+        <button id="zoom-reset" aria-label="Reset zoom">⟲</button>
+      </div>
+    </div>
+
+    <script id="travels-data" type="application/json">{{ travels | json_encode() | safe }}</script>
+
+    <div id="country-modal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" aria-label="Close">&times;</button>
+        <h2 id="modal-country-name"></h2>
+        <div id="modal-trips"></div>
+      </div>
+    </div>
+
+    <p class="travels-intro">
+      If you want to see more details, I've got all this data available on
+      <a href="https://share.skratch.world/045saE8YdC/visited" target="_blank">Skratch</a>.
+    </p>
+  </main>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/topojson-client@3"></script>
+<script src="https://unpkg.com/roughjs@4.6.6/bundled/rough.js"></script>
+<script src="{{ get_url(path='assets/js/travels-map.js') }}"></script>
+{% endblock content %}
