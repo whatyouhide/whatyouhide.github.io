@@ -21,12 +21,10 @@ footer {
 
     a {
       display: block;
-      opacity: 0.6;
-      transition: opacity 0.15s ease, transform 0.15s ease;
+      transition: transform 0.15s ease;
 
       &:hover {
-        opacity: 1;
-        transform: translateY(-2px);
+        transform: translateY(-3pt);
       }
     }
   }

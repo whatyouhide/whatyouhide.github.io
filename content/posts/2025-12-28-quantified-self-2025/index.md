@@ -1,5 +1,5 @@
 ---
-title: Quantified Self — 2025
+title: Quantified Self • 2025
 description: |
   My own sort of "wrapped" for the 2025 years.
 extra:

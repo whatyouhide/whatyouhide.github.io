@@ -1,3 +1,7 @@
+// ═══════════════════════════════════════════════════════
+//  Landing Page
+// ═══════════════════════════════════════════════════════
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -9,72 +13,79 @@
   }
 }
 
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes travelDash {
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+// ─── Page Shell ──────────────────────────────────────
+
 #main.landing-page {
   flex: 1 100%;
   min-height: auto;
   padding: 0;
   width: 100%;
-
   display: flex;
   justify-content: center;
 
   #content-container {
     width: 100%;
-    max-width: 1200px;
-
+    max-width: 1000px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    gap: 20px;
-
-    @include wideScreen {
-      flex-direction: row;
-    }
-
-    margin-top: 0;
-    padding: calc(min(3vh, 50px)) 0 0 0;
+    padding: calc(min(3vh, 40px)) 5vw 0;
   }
 }
 
-.landing-page #hero-container {
-  flex: 2.5 0px;
+// ─── Hero Section ────────────────────────────────────
 
-  margin-left: 1vw;
-  margin-right: 0;
-
+.landing-page #hero-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  width: 100%;
+  margin-bottom: 16px;
 
   @include wideScreen {
-    flex: 5 0px;
-    gap: 30px;
     flex-direction: row;
+    gap: 30px;
+    justify-content: center;
+    margin-bottom: 20px;
   }
 
   #hero-portrait {
     display: block;
     width: auto;
-    height: 30vw;
-    min-height: 200px;
-    max-height: 400px;
+    height: 28vw;
+    min-height: 180px;
+    max-height: 320px;
     animation: fadeInUp 0.6s ease-out both;
   }
 
   #hero-text {
     width: 100%;
     max-width: 380px;
-    padding: calc(min(3vh, 10px)) 0;
+    padding: calc(min(2vh, 8px)) 0;
     animation: fadeInUp 0.6s ease-out 0.15s both;
-
     display: flex;
     flex-direction: column;
 
     @include wideScreen {
       align-self: flex-end;
-      padding-bottom: 40px;
+      padding-bottom: 30px;
     }
 
     h1 {
@@ -86,7 +97,7 @@
       margin-bottom: -40pt;
 
       @include wideScreen {
-        font-size: 120pt;
+        font-size: 100pt;
         text-align: left;
       }
     }
@@ -102,7 +113,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-
     position: relative;
 
     #hero-about {
@@ -143,76 +153,305 @@
   }
 }
 
-.landing-page #main-links {
-  flex: 1 0px;
-  margin-left: 0;
-  margin-right: 0;
-  height: min-content;
+// ─── Exploration Grid ────────────────────────────────
 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 30px;
+#explore-grid {
+  width: 100%;
+  max-width: 860px;
+  padding-bottom: 40px;
+
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
 
   @include mediumScreen {
-    flex-direction: row;
-    margin: 3vh 0;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 
   @include wideScreen {
-    flex-direction: column;
-    margin-top: 6vh;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+}
+
+// ─── Card Base ───────────────────────────────────────
+
+.explore-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 26px;
+  border-radius: 10px;
+  border: 1px solid var(--color-box-borders);
+  background: var(--card-bg, var(--color-site-background));
+  text-decoration: none;
+  color: var(--color-text);
+  position: relative;
+  overflow: hidden;
+
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04),
+              0 1px 2px rgba(0, 0, 0, 0.06);
+
+  // Entrance animation (controls opacity + transform/translate)
+  animation: cardReveal 0.5s ease-out both;
+
+  // Hover uses individual transform properties (scale, rotate)
+  // so they don't conflict with animation's hold on `transform`
+  scale: 1;
+  rotate: 0deg;
+
+  transition: scale 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              rotate 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.2s ease;
+
+  // Organic tilt on medium+ screens
+  @include mediumScreen {
+    &:nth-child(1) { rotate: -0.4deg; }
+    &:nth-child(2) { rotate: 0.5deg; }
+    &:nth-child(3) { rotate: -0.3deg; }
+    &:nth-child(4) { rotate: 0.6deg; }
+    &:nth-child(5) { rotate: -0.5deg; }
+    &:nth-child(6) { rotate: 0.3deg; }
+    &:nth-child(7) { rotate: -0.4deg; }
   }
 
-  $iconHeight: 130px;
+  &:hover {
+    scale: 1.02;
+    rotate: 0deg;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07),
+                0 3px 6px rgba(0, 0, 0, 0.05);
+    border-color: var(--card-accent, var(--color-links));
 
-  &>.website-section-icon-and-link {
-    transition: transform 0.15s ease;
-    animation: fadeInUp 0.5s ease-out both;
-
-    &:nth-child(1) { animation-delay: 0.3s; }
-    &:nth-child(2) { animation-delay: 0.4s; }
-    &:nth-child(3) { animation-delay: 0.5s; }
-
-    &:hover {
-      transform: translateY(-3px);
+    .card-label {
+      color: var(--card-accent, var(--color-links));
     }
   }
 
-  a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 150px;
-  }
+  // Staggered entrance delays
+  &:nth-child(1) { animation-delay: 0.15s; }
+  &:nth-child(2) { animation-delay: 0.22s; }
+  &:nth-child(3) { animation-delay: 0.29s; }
+  &:nth-child(4) { animation-delay: 0.36s; }
+  &:nth-child(5) { animation-delay: 0.43s; }
+  &:nth-child(6) { animation-delay: 0.50s; }
+  &:nth-child(7) { animation-delay: 0.57s; }
 
-  span[role="link"] {
-    display: block;
-    font-family: $handwrittenFontStack;
-    text-transform: uppercase;
-    color: var(--color-text);
-    transition: color 0.15s ease;
-  }
+  @include darkMode {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15),
+                0 1px 2px rgba(0, 0, 0, 0.2);
 
-  &>.website-section-icon-and-link:hover span[role="link"] {
-    color: var(--color-links);
+    &:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25),
+                  0 3px 6px rgba(0, 0, 0, 0.15);
+    }
   }
+}
 
-  img.big-icon {
-    object-fit: contain;
-    display: block;
-    height: 100%;
-    width: 100%;
-    max-height: $iconHeight;
-  }
+// ─── Card Typography ─────────────────────────────────
 
-  img.big-icon:not(#blog *) {
+.card-label {
+  font-family: $handwrittenFontStack;
+  font-size: 24px;
+  text-transform: lowercase;
+  color: var(--color-text);
+  transition: color 0.2s ease;
+  display: block;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.card-desc {
+  font-family: $serifFontStack;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-dimmer);
+  display: block;
+}
+
+.card-icon {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 8px;
+
+  &.icon-needs-invert {
     @include darkMode {
       filter: invert(1);
     }
   }
 }
 
-#main-links.container {
-  padding: 0;
+// ─── Card: Blog (Featured) ───────────────────────────
+
+.card-blog {
+  --card-accent: #8b4513;
+  --card-bg: rgba(139, 69, 19, 0.03);
+
+  @include darkMode {
+    --card-accent: #ce7332;
+    --card-bg: rgba(206, 115, 50, 0.05);
+  }
+
+  @include mediumScreen {
+    grid-column: span 2;
+  }
+}
+
+// ─── Card: Latest Post ──────────────────────────────
+
+.card-latest-post {
+  --card-accent: #8b4513;
+  --card-bg: rgba(139, 69, 19, 0.02);
+  
+  // Only show this if there's enough space.
+  display: none;
+  
+  @include mediumScreen {
+    display: block;
+  }
+
+  @include darkMode {
+    --card-accent: #ce7332;
+    --card-bg: rgba(206, 115, 50, 0.03);
+  }
+
+  .card-label {
+    font-family: $serifFontStack;
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: none;
+    line-height: 1.35;
+  }
+}
+
+.card-eyebrow {
+  font-family: $sansSerifFontStack;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--card-accent, var(--color-links));
+  display: block;
+  margin-bottom: 6px;
+}
+
+.card-date {
+  font-family: $sansSerifFontStack;
+  font-size: 13px;
+  color: var(--color-text-dimmer);
+  display: block;
+  margin-top: 6px;
+}
+
+// ─── Card: Travels ───────────────────────────────────
+
+.card-travels {
+  --card-accent: #6b8f5e;
+  --card-bg: rgba(139, 162, 126, 0.06);
+
+  @include darkMode {
+    --card-accent: #8fb87e;
+    --card-bg: rgba(139, 162, 126, 0.08);
+  }
+
+  .travels-deco {
+    width: 100%;
+    max-width: 260px;
+    height: auto;
+    color: var(--card-accent);
+    margin-bottom: 6px;
+
+    path {
+      animation: travelDash 1.5s linear infinite;
+    }
+  }
+}
+
+// ─── Card: Books ─────────────────────────────────────
+
+.card-books {
+  --card-accent: #b8860b;
+  --card-bg: rgba(184, 134, 11, 0.03);
+
+  @include darkMode {
+    --card-accent: #d4a843;
+    --card-bg: rgba(212, 168, 67, 0.05);
+  }
+
+  .books-stack {
+    display: flex;
+    margin-bottom: 8px;
+
+    .book-cover {
+      height: 85px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 2px;
+      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.12));
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .book-1 {
+      transform: rotate(-3deg);
+      z-index: 2;
+      position: relative;
+    }
+
+    .book-2 {
+      transform: rotate(2.5deg) translateX(-10px);
+      z-index: 1;
+    }
+  }
+
+  &:hover .books-stack {
+    .book-1 {
+      transform: rotate(-5deg) translateY(-2px);
+    }
+
+    .book-2 {
+      transform: rotate(4deg) translateX(-10px) translateY(-1px);
+    }
+  }
+}
+
+// ─── Card: Talks ─────────────────────────────────────
+
+.card-talks {
+  --card-accent: #b45a3c;
+  --card-bg: rgba(180, 90, 60, 0.03);
+
+  @include darkMode {
+    --card-accent: #d4795a;
+    --card-bg: rgba(212, 121, 90, 0.05);
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+// ─── Card: Teaching ──────────────────────────────────
+
+.card-teaching {
+  --card-accent: #5a7d95;
+  --card-bg: rgba(90, 125, 149, 0.03);
+
+  @include darkMode {
+    --card-accent: #7da5bf;
+    --card-bg: rgba(125, 165, 191, 0.05);
+  }
+}
+
+// ─── Card: Uses ──────────────────────────────────────
+
+.card-uses {
+  --card-accent: #6b7b5e;
+  --card-bg: rgba(107, 123, 94, 0.03);
+
+  @include darkMode {
+    --card-accent: #95a882;
+    --card-bg: rgba(149, 168, 130, 0.05);
+  }
 }

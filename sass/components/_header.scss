@@ -14,19 +14,52 @@ header {
     @include mediumScreen {
       margin: 0;
     }
+
+    // The <picture> element becomes the circular clip container,
+    // so the image can be scaled past the decorative frame.
+    picture {
+      display: block;
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06),
+                  0 0 0 1px rgba(0, 0, 0, 0.04);
+      transition: box-shadow 0.25s ease;
+
+      @include darkMode {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2),
+                    0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+    }
   }
 
   img.hero-portrait {
     display: block;
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    border-radius: 50%;
-    transition: transform 0.2s ease;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 52% 25%;
+    // Scale past the hand-drawn frame and black border
+    transform: scale(1.45);
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .header-link:hover img.hero-portrait {
-    transform: scale(1.05);
+  .header-link:hover {
+    picture {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+                  0 0 0 1.5px var(--color-links);
+
+      @include darkMode {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+                    0 0 0 1.5px var(--color-links);
+      }
+    }
+
+    img.hero-portrait {
+      transform: scale(1.52);
+    }
   }
 
   .site-name {

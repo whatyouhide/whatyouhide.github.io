@@ -7,8 +7,8 @@
 
     {% for post in section.pages | sort(attribute="date") | reverse %}
     <article class="post">
-      <time class="post-date" datetime="{{ post.date }}">{{ post.date | date(format="%B %e, %Y") }}</time>
       <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+      <time class="post-date" datetime="{{ post.date }}">{{ post.date | date(format="%B %e, %Y") }}</time>
 
       <div class="entry">
         {{ post.summary | safe }}
