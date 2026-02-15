@@ -94,17 +94,60 @@
       line-height: 1;
       text-align: center;
       margin-top: 0;
-      margin-bottom: -40pt;
+      margin-bottom: -8px;
 
       @include wideScreen {
         font-size: 100pt;
         text-align: left;
+        margin-bottom: -18px;
+      }
+    }
+
+    .hero-meta {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 6px;
+      align-self: stretch;
+      margin: 36px 0 36px;
+      padding: 16px 20px;
+      border-radius: 14px;
+      border: 1px solid var(--color-box-borders);
+      background: var(--color-content-surface);
+      box-shadow: 0 18px 45px -30px var(--color-page-shadow);
+      position: relative;
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 12px;
+        border: 1px dashed rgba(139, 69, 19, 0.22);
+        pointer-events: none;
+
+        @include darkMode {
+          border-color: rgba(206, 115, 50, 0.28);
+        }
+      }
+
+      .hero-meta-line {
+        font-family: $monoFontStack;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text);
+        display: inline-flex;
+        align-items: center;
+      }
+
+      @include wideScreen {
+        margin-top: 32px;
+        align-self: flex-start;
       }
     }
 
     p {
       max-width: 350px;
-      margin-top: 70px;
+      margin-top: 0;
       margin-bottom: 0;
     }
   }
@@ -262,9 +305,10 @@
 }
 
 .card-desc {
-  font-family: $serifFontStack;
+  font-family: $sansSerifFontStack;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
   color: var(--color-text-dimmer);
   display: block;
 }
@@ -326,10 +370,10 @@
 }
 
 .card-eyebrow {
-  font-family: $sansSerifFontStack;
+  font-family: $monoFontStack;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--card-accent, var(--color-links));
   display: block;
@@ -337,8 +381,10 @@
 }
 
 .card-date {
-  font-family: $sansSerifFontStack;
-  font-size: 13px;
+  font-family: $monoFontStack;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--color-text-dimmer);
   display: block;
   margin-top: 6px;

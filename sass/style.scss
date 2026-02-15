@@ -16,7 +16,9 @@ body {
     linear-gradient(180deg, var(--color-background-gradient-veil), transparent 60%);
   background-repeat: no-repeat;
   background-attachment: fixed;
-  font: 18px/1.6 $serifFontStack;
+  font-family: $sansSerifFontStack;
+  font-size: 18px;
+  line-height: 1.6;
   color: var(--color-text);
   height: 100%;
   -webkit-font-smoothing: antialiased;
@@ -30,8 +32,9 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: $helveticaNeue;
-  font-weight: bold;
+  font-family: $displaySansFontStack;
+  font-weight: 600;
+  letter-spacing: 0.015em;
 
   line-height: 1.3;
   margin: 1.2em 0 0.5em;
@@ -41,6 +44,7 @@ h6 {
 h1 {
   font-size: 200%;
   text-align: center;
+  letter-spacing: 0.025em;
 
   a {
     color: inherit;
@@ -144,21 +148,55 @@ b {
   margin-bottom: 2.5em;
   border-bottom: 1px solid var(--color-post-border);
 
+  .post-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75em;
+  }
+
+  .post-heading-topline {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: $monoFontStack;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-date-text);
+  }
+
+  .post-heading-sigil {
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    color: var(--color-links);
+  }
+
+  .post-heading-divider {
+    font-size: 11px;
+    color: rgba(139, 69, 19, 0.4);
+
+    @include darkMode {
+      color: rgba(206, 115, 50, 0.5);
+    }
+  }
+
+  time.post-date,
+  .post-reading-time {
+    font-family: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+
+  .post-reading-time {
+    text-transform: uppercase;
+  }
+
   h1 {
     margin-top: 0;
     margin-bottom: 0;
-  }
-
-  time.post-date {
-    display: block;
-    font-family: $sansSerifFontStack;
-    font-size: 13px;
-    font-weight: 400;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--color-date-text);
-    margin-top: 0.35em;
-    margin-bottom: 0.8em;
+    text-align: left;
+    letter-spacing: 0.01em;
+    text-transform: none;
   }
 }
 
@@ -174,19 +212,34 @@ b {
   }
 
   .read-more {
-    font-family: $sansSerifFontStack;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    font-family: $monoFontStack;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    display: inline-block;
-    margin-top: 0.8em;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0.9em;
+    padding-bottom: 2px;
     color: var(--color-links);
-    transition: color 0.15s ease, transform 0.15s ease;
+    transition: color 0.15s ease, gap 0.2s ease;
+
+    &::after {
+      content: "↗";
+      font-size: 13px;
+      transform: translateY(-1px);
+      transition: transform 0.2s ease;
+    }
 
     &:hover {
       color: var(--color-links-hover);
+      gap: 14px;
       text-decoration: none;
+    }
+
+    &:hover::after {
+      transform: translate(3px, -1px);
     }
   }
 }
@@ -347,10 +400,11 @@ article.post table {
 
 article.post time.posted-at {
   display: block;
-  font-family: $sansSerifFontStack;
+  font-family: $monoFontStack;
   font-style: normal;
-  font-size: 13px;
-  letter-spacing: 0.02em;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--color-date-text);
   text-align: center;
   text-transform: uppercase;
@@ -362,9 +416,10 @@ article.post time.posted-at {
 
 article.post time.post-meta-top {
   display: block;
-  font-family: $sansSerifFontStack;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  font-family: $monoFontStack;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--color-date-text);
   text-align: center;
   margin-top: -0.5em;
@@ -395,7 +450,9 @@ article.post {
   h3,
   h4,
   h5 {
-    font-family: $serifFontStack;
+    font-family: $displaySansFontStack;
+    letter-spacing: 0.01em;
+    text-transform: none;
 
     a.zola-anchor {
       color: var(--color-text);
@@ -428,42 +485,111 @@ article.post {
 }
 
 code {
-  font-family: "Bitstream Vera Sans Mono", "Menlo", "Consolas", "Courier New", monospace;
+  font-family: $monoFontStack;
 }
 
 aside.callout {
-  $border-radius: 15px;
+  --callout-accent: var(--color-links);
+  --callout-surface: var(--color-content-surface);
+  --callout-border: var(--color-box-borders);
+  --callout-accent-veil: rgba(139, 69, 19, 0.12);
 
-  margin-top: 2em;
-  margin-bottom: 2em;
+  position: relative;
+  margin: 2.4em 0;
+  padding: 1.5em 1.75em 1.6em 2.2em;
+  border-radius: 18px;
+  border: 1px solid var(--callout-border);
+  background: var(--callout-surface);
+  box-shadow: 0 22px 50px -38px var(--color-page-shadow);
+  overflow: hidden;
 
-  border-radius: $border-radius;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(120% 120% at -10% 50%, rgba(0, 0, 0, 0.05), transparent),
+                linear-gradient(90deg, rgba(139, 69, 19, 0.08), transparent 55%);
+    pointer-events: none;
 
-  h5 {
-    border-radius: $border-radius $border-radius 0 0;
-    padding: .7em 2em;
-    margin: 0;
-    font-size: 120%;
+    @include darkMode {
+      background: radial-gradient(120% 120% at -10% 50%, rgba(255, 255, 255, 0.07), transparent),
+                  linear-gradient(90deg, rgba(206, 115, 50, 0.08), transparent 55%);
+    }
   }
 
-  div.callout-content {
-    padding: 0 1em .5em;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 6px;
+    border-radius: inherit;
+    background: var(--callout-accent);
+  }
+
+  .callout-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 0.9em;
+  }
+
+  .callout-sigil {
+    font-family: $monoFontStack;
+    font-size: 11px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: var(--callout-accent);
+    background: var(--callout-accent-veil);
+    padding: 6px 12px 6px 16px;
+    border-radius: 999px;
+  }
+
+  h5 {
+    font-family: $handwrittenFontStack;
+    font-size: 26px;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    color: var(--color-text);
+  }
+
+  .callout-content {
+    position: relative;
+    font-family: $sansSerifFontStack;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--color-text);
+
+    p:first-child {
+      margin-top: 0;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
   }
 
   &.callout-info {
-    background-color: var(--color-callout-info-background);
-
-    h5 {
-      background-color: var(--color-callout-info-background-title);
-    }
+    --callout-accent: #{darken(#81d2d4, 30%)};
+    --callout-surface: rgba(129, 210, 212, 0.22);
+    --callout-border: rgba(129, 210, 212, 0.45);
+    --callout-accent-veil: rgba(129, 210, 212, 0.18);
   }
 
   &.callout-warning {
-    background-color: var(--color-callout-warning-background);
+    --callout-accent: #{darken(#f4d482, 25%)};
+    --callout-surface: rgba(244, 212, 130, 0.24);
+    --callout-border: rgba(244, 212, 130, 0.45);
+    --callout-accent-veil: rgba(244, 212, 130, 0.22);
+  }
 
-    h5 {
-      background-color: var(--color-callout-warning-background-title);
-    }
+  @include darkMode {
+    --callout-surface: rgba(31, 35, 39, 0.82);
+    --callout-accent-veil: rgba(206, 115, 50, 0.22);
   }
 }
 

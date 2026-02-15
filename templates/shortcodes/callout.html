@@ -1,5 +1,10 @@
 <aside class="callout callout-{{ type }}">
-    <h5>{{ title }}</h5>
+    <header class="callout-header">
+        <span class="callout-sigil" aria-hidden="true">
+            {% if type == "warning" %}!{% else %}&gt;&gt;{% endif %}
+        </span>
+        <h5>{{ title }}</h5>
+    </header>
     <div class="callout-content">
         {{ body | markdown | safe }}
     </div>

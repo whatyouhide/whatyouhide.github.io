@@ -4,9 +4,10 @@
 }
 
 // Font stacks
-$sansSerifFontStack: "Lato", Helvetica, Arial, sans-serif;
-$serifFontStack: "Spectral", serif;
-$helveticaNeue: "Helvetica Neue", Helvetica, Arial, sans-serif;
+$sansSerifFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$serifFontStack: "Spectral", "Iowan Old Style", Georgia, serif;
+$displaySansFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$monoFontStack: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
 $handwrittenFontStack: "Andrea", sans-serif;
 
 // Colors

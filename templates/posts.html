@@ -7,13 +7,22 @@
 
     {% for post in section.pages | sort(attribute="date") | reverse %}
     <article class="post">
-      <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
-      <time class="post-date" datetime="{{ post.date }}">{{ post.date | date(format="%B %e, %Y") }}</time>
+      <header class="post-heading">
+        <div class="post-heading-topline">
+          <span class="post-heading-sigil" aria-hidden="true">$</span>
+          <time class="post-date" datetime="{{ post.date }}">{{ post.date | date(format="%B %e, %Y") }}</time>
+          {% if post.reading_time > 0 %}
+          <span class="post-heading-divider" aria-hidden="true">•</span>
+          <span class="post-reading-time">{{ post.reading_time }} min read</span>
+          {% endif %}
+        </div>
+        <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+      </header>
 
       <div class="entry">
         {{ post.summary | safe }}
 
-        <a href="{{ post.permalink }}" class="read-more">Continue reading &rarr;</a>
+        <a href="{{ post.permalink }}" class="read-more">Read post</a>
       </div>
     </article>
     {% endfor %}
