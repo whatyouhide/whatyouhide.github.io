@@ -1,33 +1,39 @@
-// Footer
-
-$footerIconWidth: 50px;
+$footerIconWidth: 42px;
 
 footer {
-  height: 100px;
-  flex: 0 1 0;
+  flex: 0 0 auto;
   justify-self: flex-end;
-  margin-top: calc(min(2vh, 30px));
-  margin-bottom: calc(min(2vh, 30px)); // Space from the bottom of the page
+  margin-top: auto;
+  padding: 0 5vw 30px;
+
+  .footer-divider {
+    width: 60px;
+    height: 1px;
+    background: var(--color-post-border);
+    margin: 30px auto 24px;
+  }
 
   div.icons {
-    width: 50%;
     margin: 0 auto;
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 16px;
 
     a {
       display: block;
+      opacity: 0.6;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        opacity: 1;
+        transform: translateY(-2px);
+      }
     }
   }
 
   img.footer-icon {
     width: $footerIconWidth;
-    position: relative;
-    top: 50%;
-    transform: translateY(-50%);
-
-    @include scaleUpOnHover;
+    display: block;
   }
 
   #icon-github {

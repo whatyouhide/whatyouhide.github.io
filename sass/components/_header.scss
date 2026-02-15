@@ -1,33 +1,44 @@
-// The header is not present on the landing page. This is the header
-// that's in all other pages.
-
 header {
-  flex: 1 1 0px;
-  padding: 20px 0 10px 0;
+  flex: 0 0 auto;
+  padding: 24px 5vw;
 
-  a {
+  .header-link {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    width: fit-content;
+    margin: 0 auto;
+
+    @include mediumScreen {
+      margin: 0;
+    }
   }
 
   img.hero-portrait {
     display: block;
-    min-height: 100px;
-    max-height: 150px;
+    width: 48px;
+    height: 48px;
     object-fit: contain;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
   }
 
-  h1.site-name {
-    margin: 0;
-    cursor: pointer;
+  .header-link:hover img.hero-portrait {
+    transform: scale(1.05);
+  }
+
+  .site-name {
     font-family: $handwrittenFontStack;
     font-weight: 300;
-    font-size: 28px;
-    letter-spacing: 1px;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    color: var(--color-text);
+    transition: color 0.15s ease;
+  }
 
-    span {
-      display: block;
-    }
+  .header-link:hover .site-name {
+    color: var(--color-links);
   }
 }

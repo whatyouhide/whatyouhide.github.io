@@ -19,7 +19,7 @@ $handwrittenFontStack: "Andrea", sans-serif;
 
   --color-site-background: #{$siteBackground};
   --color-site-background-accented: #{darken($siteBackground, 5)};
-  --color-code-background: #f8f8f8;
+  --color-code-background: #f5f2ed;
 
   --color-text: #{$text};
   --color-text-dimmer: #{lighten($text, 35%)};
@@ -34,6 +34,9 @@ $handwrittenFontStack: "Andrea", sans-serif;
 
   --color-callout-warning-background: #{$callout-background-warning};
   --color-callout-warning-background-title: #{darken($callout-background-warning, 20)};
+
+  --color-date-text: #{lighten($text, 45%)};
+  --color-post-border: #ebe7e1;
 }
 
 @include darkMode {
@@ -51,6 +54,8 @@ $handwrittenFontStack: "Andrea", sans-serif;
     --color-links-hover: #eb7139;
 
     --color-box-borders: rgba(238, 238, 238, 0.1);
+    --color-date-text: #{darken($text, 45%)};
+    --color-post-border: rgba(238, 238, 238, 0.08);
   }
 }
 

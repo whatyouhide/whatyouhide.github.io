@@ -5,6 +5,11 @@
   <article class="post">
     <h1>{{ page.title }}</h1>
 
+    <time class="post-meta-top" datetime="{{ page.date }}">
+      {{ page.date | date(format="%B %e, %Y") }}
+      {% if page.updated %} · Updated {{ page.updated | date(format="%B %e, %Y") }}{% endif %}
+    </time>
+
     <div class="entry">{{ page.content | safe }}</div>
 
     <time class="posted-at" datetime="{{ page.date }}">
