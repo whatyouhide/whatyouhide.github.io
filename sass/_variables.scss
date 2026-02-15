@@ -29,6 +29,13 @@ $handwrittenFontStack: "Andrea", sans-serif;
   --color-box-borders: #e8e5e0;
   --color-page-shadow: rgba(0, 0, 0, 0.1);
 
+  --color-background-gradient-1: rgba(152, 103, 64, 0.16);
+  --color-background-gradient-2: rgba(56, 92, 115, 0.12);
+  --color-background-gradient-veil: rgba(255, 255, 255, 0.6);
+
+  --color-content-surface: rgba(255, 255, 255, 0.88);
+  --color-content-surface-border: rgba(139, 69, 19, 0.08);
+
   --color-callout-info-background: #{$callout-background-info};
   --color-callout-info-background-title: #{darken($callout-background-info, 20)};
 
@@ -56,6 +63,14 @@ $handwrittenFontStack: "Andrea", sans-serif;
     --color-box-borders: rgba(238, 238, 238, 0.1);
     --color-date-text: #{darken($text, 45%)};
     --color-post-border: rgba(238, 238, 238, 0.08);
+
+    --color-background-gradient-1: rgba(119, 77, 49, 0.35);
+    --color-background-gradient-2: rgba(46, 86, 112, 0.28);
+    --color-background-gradient-veil: rgba(14, 18, 23, 0.75);
+
+    --color-content-surface: rgba(31, 35, 39, 0.78);
+    --color-content-surface-border: rgba(255, 255, 255, 0.06);
+    --color-page-shadow: rgba(3, 4, 8, 0.55);
   }
 }
 
