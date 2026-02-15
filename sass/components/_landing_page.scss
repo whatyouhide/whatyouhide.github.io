@@ -135,8 +135,18 @@
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--color-text);
-        display: inline-flex;
-        align-items: center;
+        position: relative;
+        padding-left: 18px;
+
+        &::before {
+          content: "$";
+          color: var(--color-links);
+          font-weight: 700;
+          letter-spacing: 0;
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
       }
 
       @include wideScreen {
@@ -221,50 +231,48 @@
 // ─── Card Base ───────────────────────────────────────
 
 .explore-card {
+  --card-surface: color-mix(in srgb, var(--color-site-background) 88%, #ffffff);
+  --card-outline: color-mix(in srgb, var(--color-industrial-border) 45%, var(--color-box-borders));
+  --card-shadow: none;
+  --card-wash: color-mix(in srgb, var(--card-accent, var(--color-links)) 7%, transparent);
+
   display: flex;
   flex-direction: column;
-  padding: 22px 26px;
-  border-radius: 10px;
-  border: 1px solid var(--color-box-borders);
-  background: var(--card-bg, var(--color-site-background));
+  padding: 24px 28px;
+  border-radius: 8px;
+  border: 2px solid var(--card-outline);
+  background: linear-gradient(165deg, var(--card-surface), color-mix(in srgb, var(--card-surface) 86%, var(--card-wash)));
   text-decoration: none;
   color: var(--color-text);
   position: relative;
   overflow: hidden;
-
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04),
-              0 1px 2px rgba(0, 0, 0, 0.06);
-
-  // Entrance animation (controls opacity + transform/translate)
+  transform: none;
+  transition: transform 0.16s ease,
+              rotate 0.16s ease,
+              box-shadow 0.16s ease,
+              border-color 0.16s ease;
   animation: cardReveal 0.5s ease-out both;
+  box-shadow: var(--card-shadow);
 
-  // Hover uses individual transform properties (scale, rotate)
-  // so they don't conflict with animation's hold on `transform`
-  scale: 1;
-  rotate: 0deg;
-
-  transition: scale 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-              rotate 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 0.2s ease;
-
-  // Organic tilt on medium+ screens
-  @include mediumScreen {
-    &:nth-child(1) { rotate: -0.4deg; }
-    &:nth-child(2) { rotate: 0.5deg; }
-    &:nth-child(3) { rotate: -0.3deg; }
-    &:nth-child(4) { rotate: 0.6deg; }
-    &:nth-child(5) { rotate: -0.5deg; }
-    &:nth-child(6) { rotate: 0.3deg; }
-    &:nth-child(7) { rotate: -0.4deg; }
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 7px;
+    background: color-mix(in srgb, var(--card-accent, var(--color-links)) 78%, var(--color-industrial-border));
+    pointer-events: none;
   }
 
-  &:hover {
-    scale: 1.02;
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
     rotate: 0deg;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07),
-                0 3px 6px rgba(0, 0, 0, 0.05);
-    border-color: var(--card-accent, var(--color-links));
+    border-color: color-mix(in srgb, var(--card-accent, var(--color-links)) 35%, var(--card-outline));
+    box-shadow: none;
 
     .card-label {
       color: var(--card-accent, var(--color-links));
@@ -280,13 +288,25 @@
   &:nth-child(6) { animation-delay: 0.50s; }
   &:nth-child(7) { animation-delay: 0.57s; }
 
-  @include darkMode {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15),
-                0 1px 2px rgba(0, 0, 0, 0.2);
+  @include mediumScreen {
+    &:nth-child(1) { rotate: -0.25deg; }
+    &:nth-child(2) { rotate: 0.2deg; }
+    &:nth-child(3) { rotate: -0.2deg; }
+    &:nth-child(4) { rotate: 0.25deg; }
+    &:nth-child(5) { rotate: -0.15deg; }
+    &:nth-child(6) { rotate: 0.2deg; }
+    &:nth-child(7) { rotate: -0.2deg; }
+  }
 
-    &:hover {
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25),
-                  0 3px 6px rgba(0, 0, 0, 0.15);
+  @include darkMode {
+    --card-surface: color-mix(in srgb, var(--color-industrial-surface) 92%, rgba(255, 255, 255, 0.03));
+    --card-outline: color-mix(in srgb, var(--color-industrial-border) 80%, rgba(255, 255, 255, 0.1));
+    --card-shadow: none;
+    --card-wash: color-mix(in srgb, var(--card-accent, var(--color-links)) 10%, transparent);
+
+    &:hover,
+    &:focus-visible {
+      box-shadow: none;
     }
   }
 }
@@ -295,19 +315,21 @@
 
 .card-label {
   font-family: $handwrittenFontStack;
-  font-size: 24px;
-  text-transform: lowercase;
+  font-size: 22px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.01em;
   color: var(--color-text);
   transition: color 0.2s ease;
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   line-height: 1.2;
 }
 
 .card-desc {
   font-family: $sansSerifFontStack;
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   letter-spacing: 0.01em;
   color: var(--color-text-dimmer);
   display: block;
@@ -329,12 +351,10 @@
 // ─── Card: Blog (Featured) ───────────────────────────
 
 .card-blog {
-  --card-accent: #8b4513;
-  --card-bg: rgba(139, 69, 19, 0.03);
+  --card-accent: #9f5c2f;
 
   @include darkMode {
-    --card-accent: #ce7332;
-    --card-bg: rgba(206, 115, 50, 0.05);
+    --card-accent: #ca7f43;
   }
 
   @include mediumScreen {
@@ -345,8 +365,7 @@
 // ─── Card: Latest Post ──────────────────────────────
 
 .card-latest-post {
-  --card-accent: #8b4513;
-  --card-bg: rgba(139, 69, 19, 0.02);
+  --card-accent: #4f6472;
   
   // Only show this if there's enough space.
   display: none;
@@ -356,8 +375,7 @@
   }
 
   @include darkMode {
-    --card-accent: #ce7332;
-    --card-bg: rgba(206, 115, 50, 0.03);
+    --card-accent: #7f99aa;
   }
 
   .card-label {
@@ -370,10 +388,10 @@
 }
 
 .card-eyebrow {
-  font-family: $monoFontStack;
-  font-size: 11px;
+  font-family: $sansSerifFontStack;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--card-accent, var(--color-links));
   display: block;
@@ -381,9 +399,9 @@
 }
 
 .card-date {
-  font-family: $monoFontStack;
+  font-family: $sansSerifFontStack;
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-dimmer);
   display: block;
@@ -393,12 +411,10 @@
 // ─── Card: Travels ───────────────────────────────────
 
 .card-travels {
-  --card-accent: #6b8f5e;
-  --card-bg: rgba(139, 162, 126, 0.06);
+  --card-accent: #5e765f;
 
   @include darkMode {
-    --card-accent: #8fb87e;
-    --card-bg: rgba(139, 162, 126, 0.08);
+    --card-accent: #86a38a;
   }
 
   .travels-deco {
@@ -417,12 +433,10 @@
 // ─── Card: Books ─────────────────────────────────────
 
 .card-books {
-  --card-accent: #b8860b;
-  --card-bg: rgba(184, 134, 11, 0.03);
+  --card-accent: #8f7242;
 
   @include darkMode {
-    --card-accent: #d4a843;
-    --card-bg: rgba(212, 168, 67, 0.05);
+    --card-accent: #b08d4d;
   }
 
   .books-stack {
@@ -464,12 +478,10 @@
 // ─── Card: Talks ─────────────────────────────────────
 
 .card-talks {
-  --card-accent: #b45a3c;
-  --card-bg: rgba(180, 90, 60, 0.03);
+  --card-accent: #935943;
 
   @include darkMode {
-    --card-accent: #d4795a;
-    --card-bg: rgba(212, 121, 90, 0.05);
+    --card-accent: #bb7a62;
   }
 
   .card-icon {
@@ -481,23 +493,19 @@
 // ─── Card: Teaching ──────────────────────────────────
 
 .card-teaching {
-  --card-accent: #5a7d95;
-  --card-bg: rgba(90, 125, 149, 0.03);
+  --card-accent: #4d6676;
 
   @include darkMode {
-    --card-accent: #7da5bf;
-    --card-bg: rgba(125, 165, 191, 0.05);
+    --card-accent: #7795a8;
   }
 }
 
 // ─── Card: Uses ──────────────────────────────────────
 
 .card-uses {
-  --card-accent: #6b7b5e;
-  --card-bg: rgba(107, 123, 94, 0.03);
+  --card-accent: #666f56;
 
   @include darkMode {
-    --card-accent: #95a882;
-    --card-bg: rgba(149, 168, 130, 0.05);
+    --card-accent: #8a9d76;
   }
 }

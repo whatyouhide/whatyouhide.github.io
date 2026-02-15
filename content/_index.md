@@ -1,4 +1,4 @@
 ---
 ---
 
-I'm a **platform engineer** at [Knock](https://knock.app) and a member of the [Elixir](https://elixir-lang.org) core team. This is my home on the web.
+I'm Andrea. I live in Italy and work as a software engineer specialized in distributed systems and platforms. This is my home on the web.

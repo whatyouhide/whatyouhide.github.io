@@ -10,12 +10,7 @@ html {
 
 body {
   background-color: var(--color-site-background);
-  background-image:
-    radial-gradient(1000px circle at 16% -5%, var(--color-background-gradient-1), transparent 70%),
-    radial-gradient(900px circle at 90% 0%, var(--color-background-gradient-2), transparent 68%),
-    linear-gradient(180deg, var(--color-background-gradient-veil), transparent 60%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-image: none;
   font-family: $sansSerifFontStack;
   font-size: 18px;
   line-height: 1.6;
@@ -493,13 +488,16 @@ aside.callout {
   --callout-surface: var(--color-content-surface);
   --callout-border: var(--color-box-borders);
   --callout-accent-veil: rgba(139, 69, 19, 0.12);
+  --callout-inner-glow: rgba(22, 30, 39, 0.08);
 
   position: relative;
   margin: 2.4em 0;
   padding: 1.5em 1.75em 1.6em 2.2em;
   border-radius: 18px;
   border: 1px solid var(--callout-border);
-  background: var(--callout-surface);
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--callout-surface) 80%, var(--callout-inner-glow)) 0%,
+    color-mix(in srgb, var(--callout-surface) 68%, rgba(255, 255, 255, 0.12)) 100%);
   box-shadow: 0 22px 50px -38px var(--color-page-shadow);
   overflow: hidden;
 
@@ -508,8 +506,8 @@ aside.callout {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: radial-gradient(120% 120% at -10% 50%, rgba(0, 0, 0, 0.05), transparent),
-                linear-gradient(90deg, rgba(139, 69, 19, 0.08), transparent 55%);
+    background: radial-gradient(120% 120% at -10% 50%, var(--callout-inner-glow), transparent),
+                linear-gradient(95deg, color-mix(in srgb, var(--callout-accent) 22%, transparent), transparent 60%);
     pointer-events: none;
 
     @include darkMode {
@@ -578,6 +576,7 @@ aside.callout {
     --callout-surface: rgba(129, 210, 212, 0.22);
     --callout-border: rgba(129, 210, 212, 0.45);
     --callout-accent-veil: rgba(129, 210, 212, 0.18);
+    --callout-inner-glow: rgba(41, 66, 78, 0.12);
   }
 
   &.callout-warning {
@@ -585,11 +584,13 @@ aside.callout {
     --callout-surface: rgba(244, 212, 130, 0.24);
     --callout-border: rgba(244, 212, 130, 0.45);
     --callout-accent-veil: rgba(244, 212, 130, 0.22);
+    --callout-inner-glow: rgba(62, 49, 24, 0.12);
   }
 
   @include darkMode {
-    --callout-surface: rgba(31, 35, 39, 0.82);
+    --callout-surface: rgba(21, 27, 32, 0.88);
     --callout-accent-veil: rgba(206, 115, 50, 0.22);
+    --callout-inner-glow: rgba(10, 14, 19, 0.6);
   }
 }
 

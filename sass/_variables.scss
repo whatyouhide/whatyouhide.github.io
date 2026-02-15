@@ -13,29 +13,32 @@ $handwrittenFontStack: "Andrea", sans-serif;
 // Colors
 
 :root {
-  $siteBackground: #faf7f2;
-  $text: #2d2d2d;
+  $siteBackground: #f3f1ec;
+  $text: #1f232b;
   $callout-background-info: rgba(#81d2d4, 0.3);
   $callout-background-warning: rgba(#f4d482, 0.3);
 
   --color-site-background: #{$siteBackground};
-  --color-site-background-accented: #{darken($siteBackground, 5)};
+  --color-site-background-accented: #{darken($siteBackground, 4)};
   --color-code-background: #f5f2ed;
 
   --color-text: #{$text};
-  --color-text-dimmer: #{lighten($text, 35%)};
+  --color-text-dimmer: #{lighten($text, 32%)};
   --color-links: #8b4513;
   --color-links-hover: #a0522d;
 
-  --color-box-borders: #e8e5e0;
-  --color-page-shadow: rgba(0, 0, 0, 0.1);
+  --color-box-borders: #d9d6cf;
+  --color-page-shadow: rgba(14, 16, 19, 0.1);
 
-  --color-background-gradient-1: rgba(152, 103, 64, 0.16);
-  --color-background-gradient-2: rgba(56, 92, 115, 0.12);
-  --color-background-gradient-veil: rgba(255, 255, 255, 0.6);
+  --color-background-gradient-1: rgba(57, 67, 74, 0.2);
+  --color-background-gradient-2: rgba(122, 85, 56, 0.14);
+  --color-background-gradient-veil: rgba(245, 243, 238, 0.72);
+  --color-background-grid-line: rgba(54, 62, 70, 0.08);
 
-  --color-content-surface: rgba(255, 255, 255, 0.88);
-  --color-content-surface-border: rgba(139, 69, 19, 0.08);
+  --color-content-surface: rgba(247, 246, 242, 0.86);
+  --color-content-surface-border: rgba(32, 38, 44, 0.08);
+  --color-industrial-surface: rgba(18, 27, 36, 0.92);
+  --color-industrial-border: rgba(8, 12, 17, 0.55);
 
   --color-callout-info-background: #{$callout-background-info};
   --color-callout-info-background-title: #{darken($callout-background-info, 20)};
@@ -43,35 +46,38 @@ $handwrittenFontStack: "Andrea", sans-serif;
   --color-callout-warning-background: #{$callout-background-warning};
   --color-callout-warning-background-title: #{darken($callout-background-warning, 20)};
 
-  --color-date-text: #{lighten($text, 45%)};
-  --color-post-border: #ebe7e1;
+  --color-date-text: #{lighten($text, 50%)};
+  --color-post-border: #e5e1d8;
 }
 
 @include darkMode {
-  $site-background: #2a2e31;
-  $text: #fff;
+  $site-background: #1f2328;
+  $text: #f4f6fb;
 
   :root {
     --color-site-background: #{$site-background};
     --color-site-background-accented: #{darken($site-background, 5)};
-    --color-code-background: #{rgba(0, 0, 0, 0.2)};
+    --color-code-background: rgba(12, 18, 24, 0.82);
 
     --color-text: #{$text};
-    --color-text-dimmer: #{darken($text, 30%)};
+    --color-text-dimmer: #{rgba(216, 223, 233, 0.7)};
     --color-links: #ce7332;
     --color-links-hover: #eb7139;
 
     --color-box-borders: rgba(238, 238, 238, 0.1);
-    --color-date-text: #{darken($text, 45%)};
+    --color-date-text: rgba(184, 193, 205, 0.7);
     --color-post-border: rgba(238, 238, 238, 0.08);
 
-    --color-background-gradient-1: rgba(119, 77, 49, 0.35);
-    --color-background-gradient-2: rgba(46, 86, 112, 0.28);
-    --color-background-gradient-veil: rgba(14, 18, 23, 0.75);
+    --color-background-gradient-1: rgba(41, 56, 68, 0.46);
+    --color-background-gradient-2: rgba(111, 78, 50, 0.28);
+    --color-background-gradient-veil: rgba(8, 12, 16, 0.74);
+    --color-background-grid-line: rgba(148, 157, 166, 0.08);
 
-    --color-content-surface: rgba(31, 35, 39, 0.78);
-    --color-content-surface-border: rgba(255, 255, 255, 0.06);
-    --color-page-shadow: rgba(3, 4, 8, 0.55);
+    --color-content-surface: rgba(38, 44, 51, 0.9);
+    --color-content-surface-border: rgba(255, 255, 255, 0.08);
+    --color-industrial-surface: rgba(45, 52, 60, 0.94);
+    --color-industrial-border: rgba(7, 12, 16, 0.65);
+    --color-page-shadow: rgba(3, 5, 9, 0.55);
   }
 }
 
