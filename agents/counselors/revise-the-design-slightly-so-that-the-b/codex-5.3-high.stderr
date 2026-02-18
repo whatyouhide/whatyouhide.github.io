@@ -1,0 +1,515 @@
+OpenAI Codex v0.101.0 (research preview)
+--------
+workdir: /Users/andrea/Code/Hobby/whatyouhide.github.io
+model: gpt-5.3-codex
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: auto
+session id: 019c72f4-ecef-7c80-9972-3c21e431bffb
+--------
+user
+Read the file at /Users/andrea/Code/Hobby/whatyouhide.github.io/agents/counselors/revise-the-design-slightly-so-that-the-b/prompt.md and follow the instructions within it.
+mcp: pencil starting
+mcp: pencil ready
+mcp startup: ready: pencil
+
+thinking
+**Establishing read-only analysis approach**
+codex
+I’ll open that `prompt.md` file first, extract its instructions, and then execute them exactly as requested.
+exec
+/bin/zsh -lc 'cat /Users/andrea/Code/Hobby/whatyouhide.github.io/agents/counselors/revise-the-design-slightly-so-that-the-b/prompt.md' in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 68ms:
+# Second Opinion Request
+
+## Question
+Revise the design slightly so that the background of the homepage and of the blog posts (not the post card itself) has a very subtle grid, like 80s computer style, but still fitting within the aesthetics of the existing design (which is my very personal brand)
+
+## Instructions
+You are providing an independent second opinion. Be critical and thorough.
+- Analyze the question in the context provided
+- Identify risks, tradeoffs, and blind spots
+- Suggest alternatives if you see better approaches
+- Be direct and opinionated — don't hedge
+- Structure your response with clear headings
+- Keep your response focused and actionable
+
+thinking
+**Confirming skill use for design**
+codex
+I found the prompt: it asks for a direct, critical second opinion on adding a subtle 80s-style grid to homepage/post-page backgrounds. I’ll quickly load the `frontend-design` skill guidance, then give you a focused recommendation with risks and alternatives.
+exec
+/bin/zsh -lc 'cat /Users/andrea/Code/Hobby/whatyouhide.github.io/.agents/skills/frontend-design/SKILL.md' in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 105ms:
+---
+name: frontend-design
+description: Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics.
+license: Complete terms in LICENSE.txt
+---
+
+This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
+
+The user provides frontend requirements: a component, page, application, or interface to build. They may include context about the purpose, audience, or technical constraints.
+
+## Design Thinking
+
+Before coding, understand the context and commit to a BOLD aesthetic direction:
+- **Purpose**: What problem does this interface solve? Who uses it?
+- **Tone**: Pick an extreme: brutally minimal, maximalist chaos, retro-futuristic, organic/natural, luxury/refined, playful/toy-like, editorial/magazine, brutalist/raw, art deco/geometric, soft/pastel, industrial/utilitarian, etc. There are so many flavors to choose from. Use these for inspiration but design one that is true to the aesthetic direction.
+- **Constraints**: Technical requirements (framework, performance, accessibility).
+- **Differentiation**: What makes this UNFORGETTABLE? What's the one thing someone will remember?
+
+**CRITICAL**: Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work - the key is intentionality, not intensity.
+
+
+thinking
+**Planning context gathering**
+codex
+Next I’m checking the current styling for page backgrounds and post cards so the recommendation is grounded in your actual implementation, not generic advice.
+exec
+/bin/zsh -lc "sed -n '1,220p' /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_variables.scss" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '1,260p' /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/base.html" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '1,280p' /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "rg -n \"background|card|posts|post\" /Users/andrea/Code/Hobby/whatyouhide.github.io/sass -g '*.scss'" in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 115ms:
+@import "reset";
+@import "mixins";
+@import "variables";
+
+html {
+  font-size: 100%;
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-site-background);
+  background-image: none;
+  font-family: $sansSerifFontStack;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--color-text);
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+ succeeded in 134ms:
+@font-face {
+  font-family: "Andrea";
+  src: url('assets/fonts/Andrea 2dot0.otf') format('opentype');
+}
+
+// Font stacks
+$sansSerifFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$serifFontStack: "Spectral", "Iowan Old Style", Georgia, serif;
+$displaySansFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$monoFontStack: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+$handwrittenFontStack: "Andrea", sans-serif;
+
+// Colors
+
+:root {
+  $siteBackground: #f3f1ec;
+  $text: #1f232b;
+  $callout-background-info: rgba(#81d2d4, 0.3);
+  $callout-background-warning: rgba(#f4d482, 0.3);
+
+ succeeded in 116ms:
+<!DOCTYPE html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+
+<head>
+    <title>{% if page.title %}{{ page.title }} – {% endif %}{{ config.title }}</title>
+    {% block meta %}{% include "snippets/meta.html" %}{% endblock meta %}
+
+    <!--[if lt IE 9]>
+    <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Mono:wght@200;300;400;500;600;700&display=swap">
+    <link rel="alternate" type="application/rss+xml" title="{{ config.title }}" href="/feed.xml" />
+
+    {% block rss %}
+ succeeded in 136ms:
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_holidays.scss:12:        background: url("/assets/holidays/santa-hat.png") no-repeat;
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_holidays.scss:13:        background-size: cover;
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_holidays.scss:38:    background-image: url('/assets/holidays/snowflake.png');
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_holidays.scss:39:    background-size: contain;
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_holidays.scss:40:    background-repeat: no-repeat;
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:12:  background-color: var(--color-site-background);
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:13:  background-image: none;
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:141:.posts>.post {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:144:  border-bottom: 1px solid var(--color-post-border);
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:146:  .post-heading {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:152:  .post-heading-topline {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:163:  .post-heading-sigil {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:169:  .post-heading-divider {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:178:  time.post-date,
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:179:  .post-reading-time {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:185:  .post-reading-time {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:198:.posts>.post:last-child {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:204:.post {
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:243:  background-color: var(--color-code-background);
+/Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss:253:// Main content for posts.
+
+thinking
+**Inspecting stylesheet around card backgrounds**
+exec
+/bin/zsh -lc "sed -n '280,390p' /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '1,240p' /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/index.html" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '390,560p' /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '1,260p' /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/post.html" in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 100ms:
+
+    a {
+      text-decoration: underline;
+      text-decoration-color: var(--color-post-border);
+      text-underline-offset: 3px;
+      transition: color 0.15s ease, text-decoration-color 0.15s ease;
+
+      &:hover {
+        text-decoration-color: var(--color-links-hover);
+      }
+    }
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    margin: 0 auto;
+
+    &.invert-in-dark-mode {
+      @include darkMode {
+ succeeded in 104ms:
+{% extends "base.html" %}
+
+{% block content %}
+<div id="main" role="main" class="container">
+  <article class="post">
+    <h1>{{ page.title }}</h1>
+
+    <time class="post-meta-top" datetime="{{ page.date }}">
+      {{ page.date | date(format="%B %e, %Y") }}
+      {% if page.updated %} · Updated {{ page.updated | date(format="%B %e, %Y") }}{% endif %}
+    </time>
+
+    <div class="entry">{{ page.content | safe }}</div>
+
+    <time class="posted-at" datetime="{{ page.date }}">
+      Written on {{ page.date | date(format="%B %e, %Y")}}
+      {% if page.updated %} · Last updated on {{ page.updated | date(format="%B %e, %Y") }}{% endif %}
+    </time>
+
+    {% include "snippets/giscus.html" %}
+ succeeded in 104ms:
+    &:last-child {
+      border-right: none;
+    }
+  }
+}
+
+article.post time.posted-at {
+  display: block;
+  font-family: $monoFontStack;
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-date-text);
+  text-align: center;
+  text-transform: uppercase;
+  margin-top: 3em;
+  margin-bottom: 1em;
+  padding-top: 2em;
+  border-top: 1px solid var(--color-post-border);
+ succeeded in 104ms:
+{% extends "base.html" %}
+
+{# The landing page shouldn't have a header. #}
+{% block header %}{% endblock header %}
+
+{% block content %}
+{% set posts_section = get_section(path="posts/_index.md") %}
+{% set latest_post = posts_section.pages | sort(attribute="date") | reverse | first %}
+
+<div id="main" role="main" class="landing-page">
+  <div id="content-container">
+    <section id="hero-section">
+      <div id="hero-portrait-with-about-link">
+        <aside id="hero-about">
+          <img class="arrow"
+               src="{{ get_url(path="assets/media/arrow.png") }}"
+               alt="An arrow pointing to the About page" />
+          <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
+        </aside>
+
+
+thinking
+**Inspecting landing page styles**
+codex
+I now have enough context from templates and core styles; I’m doing one more pass on the landing-page SCSS to see whether a subtle grid already exists there and avoid conflicting advice.
+exec
+/bin/zsh -lc "sed -n '1,260p' /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/components/_landing_page.scss" in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 101ms:
+// ═══════════════════════════════════════════════════════
+//  Landing Page
+// ═══════════════════════════════════════════════════════
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+thinking
+**Assessing background pattern relevance**
+exec
+/bin/zsh -lc "sed -n '260,520p' /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/components/_landing_page.scss" in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 94ms:
+    inset: 0 auto 0 0;
+    width: 7px;
+    background: color-mix(in srgb, var(--card-accent, var(--color-links)) 78%, var(--color-industrial-border));
+    pointer-events: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
+    rotate: 0deg;
+    border-color: color-mix(in srgb, var(--card-accent, var(--color-links)) 35%, var(--card-outline));
+    box-shadow: none;
+
+    .card-label {
+      color: var(--card-accent, var(--color-links));
+    }
+
+thinking
+**Reviewing blog list template**
+codex
+I’m checking the blog index template too, so the recommendation explicitly covers “post cards vs page background” exactly as requested.
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/posts.html" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '1,220p' /Users/andrea/Code/Hobby/whatyouhide.github.io/content/blog.md" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "sed -n '1,220p' /Users/andrea/Code/Hobby/whatyouhide.github.io/content/posts/_index.md" in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 122ms:
+---
+page_template: "post.html"
+generate_feeds: true
+insert_anchor_links: "heading"
+---
+ succeeded in 123ms:
+---
+template: "posts.html"
+---
+ succeeded in 137ms:
+{% extends "base.html" %}
+
+{% block content %}
+<div id="main" role="main" class="container">
+  <div class="posts">
+    {% set section = get_section(path="posts/_index.md") %}
+
+    {% for post in section.pages | sort(attribute="date") | reverse %}
+    <article class="post">
+      <header class="post-heading">
+        <div class="post-heading-topline">
+          <span class="post-heading-sigil" aria-hidden="true">$</span>
+          <time class="post-date" datetime="{{ post.date }}">{{ post.date | date(format="%B %e, %Y") }}</time>
+          {% if post.reading_time > 0 %}
+          <span class="post-heading-divider" aria-hidden="true">•</span>
+          <span class="post-reading-time">{{ post.reading_time }} min read</span>
+          {% endif %}
+        </div>
+        <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+      </header>
+
+thinking
+**Providing detailed second opinion on adding subtle grid background**
+exec
+/bin/zsh -lc "nl -ba /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/_variables.scss | sed -n '28,90p'" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "nl -ba /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss | sed -n '1,40p'" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "nl -ba /Users/andrea/Code/Hobby/whatyouhide.github.io/sass/style.scss | sed -n '336,375p'" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "nl -ba /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/index.html | sed -n '1,40p'" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "nl -ba /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/post.html | sed -n '1,40p'" in /Users/andrea/Code/Hobby/whatyouhide.github.ioexec
+/bin/zsh -lc "nl -ba /Users/andrea/Code/Hobby/whatyouhide.github.io/templates/posts.html | sed -n '1,40p'" in /Users/andrea/Code/Hobby/whatyouhide.github.io succeeded in 114ms:
+     1	@import "reset";
+     2	@import "mixins";
+     3	@import "variables";
+     4	
+     5	html {
+     6	  font-size: 100%;
+     7	  height: 100%;
+     8	  scroll-behavior: smooth;
+     9	}
+    10	
+    11	body {
+    12	  background-color: var(--color-site-background);
+    13	  background-image: none;
+    14	  font-family: $sansSerifFontStack;
+    15	  font-size: 18px;
+    16	  line-height: 1.6;
+    17	  color: var(--color-text);
+    18	  height: 100%;
+    19	  -webkit-font-smoothing: antialiased;
+    20	  -moz-osx-font-smoothing: grayscale;
+ succeeded in 141ms:
+    28	  --color-links-hover: #a0522d;
+    29	
+    30	  --color-box-borders: #d9d6cf;
+    31	  --color-page-shadow: rgba(14, 16, 19, 0.1);
+    32	
+    33	  --color-background-gradient-1: rgba(57, 67, 74, 0.2);
+    34	  --color-background-gradient-2: rgba(122, 85, 56, 0.14);
+    35	  --color-background-gradient-veil: rgba(245, 243, 238, 0.72);
+    36	  --color-background-grid-line: rgba(54, 62, 70, 0.08);
+    37	
+    38	  --color-content-surface: rgba(247, 246, 242, 0.86);
+    39	  --color-content-surface-border: rgba(32, 38, 44, 0.08);
+    40	  --color-industrial-surface: rgba(18, 27, 36, 0.92);
+    41	  --color-industrial-border: rgba(8, 12, 17, 0.55);
+    42	
+    43	  --color-callout-info-background: #{$callout-background-info};
+    44	  --color-callout-info-background-title: #{darken($callout-background-info, 20)};
+    45	
+    46	  --color-callout-warning-background: #{$callout-background-warning};
+    47	  --color-callout-warning-background-title: #{darken($callout-background-warning, 20)};
+ succeeded in 109ms:
+     1	{% extends "base.html" %}
+     2	
+     3	{# The landing page shouldn't have a header. #}
+     4	{% block header %}{% endblock header %}
+     5	
+     6	{% block content %}
+     7	{% set posts_section = get_section(path="posts/_index.md") %}
+     8	{% set latest_post = posts_section.pages | sort(attribute="date") | reverse | first %}
+     9	
+    10	<div id="main" role="main" class="landing-page">
+    11	  <div id="content-container">
+    12	    <section id="hero-section">
+    13	      <div id="hero-portrait-with-about-link">
+    14	        <aside id="hero-about">
+    15	          <img class="arrow"
+    16	               src="{{ get_url(path="assets/media/arrow.png") }}"
+    17	               alt="An arrow pointing to the About page" />
+    18	          <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
+    19	        </aside>
+    20	
+ succeeded in 111ms:
+     1	{% extends "base.html" %}
+     2	
+     3	{% block content %}
+     4	<div id="main" role="main" class="container">
+     5	  <article class="post">
+     6	    <h1>{{ page.title }}</h1>
+     7	
+     8	    <time class="post-meta-top" datetime="{{ page.date }}">
+     9	      {{ page.date | date(format="%B %e, %Y") }}
+    10	      {% if page.updated %} · Updated {{ page.updated | date(format="%B %e, %Y") }}{% endif %}
+    11	    </time>
+    12	
+    13	    <div class="entry">{{ page.content | safe }}</div>
+    14	
+    15	    <time class="posted-at" datetime="{{ page.date }}">
+    16	      Written on {{ page.date | date(format="%B %e, %Y")}}
+    17	      {% if page.updated %} · Last updated on {{ page.updated | date(format="%B %e, %Y") }}{% endif %}
+    18	    </time>
+    19	
+    20	    {% include "snippets/giscus.html" %}
+ succeeded in 116ms:
+   336	  blockquote {
+   337	    margin: 2em 0;
+   338	    border-left: 3px solid var(--color-links);
+   339	    padding: 0.2em 1.5em;
+   340	    color: var(--color-text-dimmer);
+   341	    font-size: 110%;
+   342	    font-style: italic;
+   343	  }
+   344	}
+   345	
+   346	#main.container > article.post,
+   347	#main.container > main.about,
+   348	#main.container > main.books {
+   349	  margin: clamp(2.5rem, 6vw, 4.5rem) auto;
+   350	  padding: clamp(2.25rem, 5vw, 3.75rem);
+   351	  background-color: var(--color-content-surface);
+   352	  border: 1px solid var(--color-content-surface-border);
+   353	  border-radius: clamp(20px, 4vw, 28px);
+   354	  box-shadow: 0 32px 64px -48px var(--color-page-shadow);
+   355	  backdrop-filter: saturate(140%) blur(12px);
+ succeeded in 97ms:
+     1	{% extends "base.html" %}
+     2	
+     3	{% block content %}
+     4	<div id="main" role="main" class="container">
+     5	  <div class="posts">
+     6	    {% set section = get_section(path="posts/_index.md") %}
+     7	
+     8	    {% for post in section.pages | sort(attribute="date") | reverse %}
+     9	    <article class="post">
+    10	      <header class="post-heading">
+    11	        <div class="post-heading-topline">
+    12	          <span class="post-heading-sigil" aria-hidden="true">$</span>
+    13	          <time class="post-date" datetime="{{ post.date }}">{{ post.date | date(format="%B %e, %Y") }}</time>
+    14	          {% if post.reading_time > 0 %}
+    15	          <span class="post-heading-divider" aria-hidden="true">•</span>
+    16	          <span class="post-reading-time">{{ post.reading_time }} min read</span>
+    17	          {% endif %}
+    18	        </div>
+    19	        <h1><a href="{{ post.permalink }}">{{ post.title }}</a></h1>
+    20	      </header>
+
+thinking
+**Providing final frontend-design second opinion**
+codex
+**Skill Used**
+`frontend-design` for brand-consistent visual direction.
+
+**Verdict**
+Add the subtle grid, but do it as a restrained “technical paper” texture, not an overt 80s neon motif.  
+If you push it too far, it will cheapen the site’s handcrafted tone.
+
+**Context-Based Read**
+- Your base background is currently flat (`sass/style.scss:11`).
+- You already have a grid token prepared: `--color-background-grid-line` (`sass/_variables.scss:36`, `sass/_variables.scss:74`).
+- Single posts sit on a translucent surface card (`sass/style.scss:346`), so the grid belongs behind that card, not inside it.
+- Homepage root is `#main.landing-page` (`templates/index.html:10`).
+- Post page root is `#main.container` in `templates/post.html:4`.
+- Blog index is separate (`templates/posts.html:4`) and should be treated explicitly.
+
+**Risks and Tradeoffs**
+- Visual noise: too much contrast will fight handwritten headings and dense prose.
+- Brand drift: “80s computer” can become cyberpunk fast; your palette is warm/editorial, not arcade.
+- Dark mode fragility: a line opacity that works in light mode will usually be too loud in dark mode.
+- Layering conflicts: blur + translucency + grid can look muddy if all are equally prominent.
+
+**Blind Spots**
+- “Blog posts” is ambiguous: single post pages only, or also the posts listing page?
+- If applied globally on `body`, you’ll unintentionally affect pages like `/about`, `/books`, `/travels`.
+- Accessibility: the grid must stay below readability thresholds on long-form text.
+
+**Recommended Implementation**
+- Scope it to homepage and single-post page only.
+- Apply via pseudo-element background layer on page wrapper, not `body`.
+- Keep card/content surfaces unchanged (`.explore-card`, `.post`).
+- Use 1px lines at ~28–36px spacing, with very low alpha and slight center fade.
+- Reuse `--color-background-grid-line`; do not introduce new accent colors.
+
+**Better Alternatives (if grid feels off)**
+1. Edge-only grid vignette (visible near margins, fades toward content center).
+2. Dot-matrix texture instead of full grid (same vibe, less interference with text).
+tokens used
+65,977
