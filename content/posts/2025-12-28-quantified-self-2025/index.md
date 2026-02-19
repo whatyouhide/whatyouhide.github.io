@@ -1,7 +1,7 @@
 ---
 title: Quantified Self • 2025
 description: |
-  My own sort of "wrapped" for the 2025 years.
+  My own sort of "wrapped" for the 2025 year.
 extra:
   cover_image: cover-image.jpg
 ---
