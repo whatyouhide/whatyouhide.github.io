@@ -277,6 +277,10 @@
     .card-label {
       color: var(--card-accent, var(--color-links));
     }
+
+    .card-icon {
+      transform: rotate(-5deg) translateY(-2px);
+    }
   }
 
   // Staggered entrance delays
@@ -340,6 +344,7 @@
   height: 56px;
   object-fit: contain;
   margin-bottom: 8px;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 
   &.icon-needs-invert {
     @include darkMode {
