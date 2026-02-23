@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 
-{% block meta %}{% endblock meta %}
+{% block meta %}
+<meta name="robots" content="noindex">
+{% endblock meta %}
 
 {% block content %}
-<div id="main" role="main" class="container">
-  <article class="page">
-      <h1>404 - Page not found</h1>
+<div id="main" role="main" class="container post-page not-found-page">
+  <article class="post not-found-post">
+    <p class="not-found-code" aria-hidden="true">404</p>
+    <h1>Page not found</h1>
 
-      <div class="entry">
-          <p>Wat? Back to the <a href="/">homepage?</a></p>
-      </div>
+    <div class="entry">
+      <p>Yeah something's not right in that URL. It might be old, but more likely there's a typo somewhere (or an LLM hallucinated it).</p>
+      <p class="not-found-actions">
+        <a class="not-found-primary-link" href="{{ get_url(path="@/_index.md") }}">Go Home</a>
+        <a href="{{ get_url(path="@/blog.md") }}">(Or The Blog?)</a>
+      </p>
+    </div>
   </article>
 </div>
 {% endblock content %}

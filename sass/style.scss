@@ -527,6 +527,61 @@ article.post {
   }
 }
 
+#main.container.post-page.not-found-page > article.post.not-found-post {
+  max-width: 680px;
+  text-align: center;
+
+  .not-found-code {
+    margin: 0;
+    font-family: $monoFontStack;
+    font-size: clamp(0.9rem, 1.2vw, 1rem);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--color-date-text);
+  }
+
+  h1 {
+    margin-top: 0.35em;
+  }
+
+  .entry {
+    max-width: 36ch;
+    margin: 0 auto;
+  }
+
+  .not-found-actions {
+    margin-top: 2.25rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem 1rem;
+    font-family: $monoFontStack;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+
+    a {
+      text-decoration: none;
+    }
+  }
+
+  .not-found-primary-link {
+    background: var(--color-links);
+    color: var(--color-site-background);
+    border: 1px solid var(--color-links);
+    border-radius: 999px;
+    padding: 0.65em 1.1em;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background: var(--color-links-hover);
+      border-color: var(--color-links-hover);
+      color: var(--color-site-background);
+    }
+  }
+}
+
 code {
   font-family: $monoFontStack;
 }
