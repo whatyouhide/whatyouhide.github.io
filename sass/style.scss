@@ -132,9 +132,47 @@ b {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  isolation: isolate;
 
   > #main > .container {
     animation: contentFadeIn 0.4s ease-out both;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: radial-gradient(
+        130% 120% at 50% 50%,
+        transparent 0%,
+        color-mix(in srgb, var(--color-site-background) 52%, transparent) 58%,
+        color-mix(in srgb, var(--color-site-background) 94%, transparent) 100%
+      ),
+      radial-gradient(
+        80% 60% at 12% 18%,
+        color-mix(in srgb, var(--color-background-tech-glow) 46%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        70% 55% at 88% 84%,
+        color-mix(in srgb, var(--color-background-tech-glow) 34%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        circle at 1px 1px,
+        color-mix(in srgb, var(--color-background-dot) 55%, transparent) 0.95px,
+        transparent 1.5px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-background-grid-line) 22%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px, 100% 4px;
+    background-position: center;
   }
 }
 
@@ -258,48 +296,6 @@ b {
   h2 {
     text-align: center;
     margin: 25px 0 0 0;
-  }
-}
-
-#main.landing-page,
-#main.container.post-page {
-  position: relative;
-  isolation: isolate;
-
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background-image: radial-gradient(
-        130% 120% at 50% 50%,
-        transparent 0%,
-        color-mix(in srgb, var(--color-site-background) 52%, transparent) 58%,
-        color-mix(in srgb, var(--color-site-background) 94%, transparent) 100%
-      ),
-      radial-gradient(
-        80% 60% at 12% 18%,
-        color-mix(in srgb, var(--color-background-tech-glow) 46%, transparent),
-        transparent 72%
-      ),
-      radial-gradient(
-        70% 55% at 88% 84%,
-        color-mix(in srgb, var(--color-background-tech-glow) 34%, transparent),
-        transparent 70%
-      ),
-      radial-gradient(
-        circle at 1px 1px,
-        color-mix(in srgb, var(--color-background-dot) 55%, transparent) 0.95px,
-        transparent 1.5px
-      ),
-      linear-gradient(
-        to bottom,
-        color-mix(in srgb, var(--color-background-grid-line) 22%, transparent) 1px,
-        transparent 1px
-      );
-    background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px, 100% 4px;
-    background-position: center;
   }
 }
 
