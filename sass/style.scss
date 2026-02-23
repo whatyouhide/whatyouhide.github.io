@@ -576,6 +576,20 @@ article.post {
       color: var(--color-site-background);
     }
   }
+
+  .not-found-random-link {
+    border: 1px dashed color-mix(in srgb, var(--color-links) 55%, var(--color-box-borders));
+    border-radius: 999px;
+    padding: 0.65em 1.1em;
+    color: var(--color-links);
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--color-links-hover);
+      color: var(--color-links-hover);
+      background: color-mix(in srgb, var(--color-links-hover) 12%, transparent);
+    }
+  }
 }
 
 code {

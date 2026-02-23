@@ -14,9 +14,38 @@
       <p>Yeah something's not right in that URL. It might be old, but more likely there's a typo somewhere (or an LLM hallucinated it).</p>
       <p class="not-found-actions">
         <a class="not-found-primary-link" href="{{ get_url(path="@/_index.md") }}">Go Home</a>
+        <a class="not-found-random-link" href="{{ get_url(path="@/blog.md") }}" id="not-found-random-link">Surprise me</a>
         <a href="{{ get_url(path="@/blog.md") }}">(Or The Blog?)</a>
       </p>
     </div>
   </article>
 </div>
+
+{% set posts_section = get_section(path="posts/_index.md") %}
+{% if posts_section and posts_section.pages %}
+<script>
+  (() => {
+    const randomLink = document.getElementById("not-found-random-link");
+    if (!randomLink) {
+      return;
+    }
+
+    const randomPostUrls = [
+      {% for post in posts_section.pages %}
+      "{{ post.permalink | safe }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    if (randomPostUrls.length === 0) {
+      return;
+    }
+
+    randomLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      const randomIndex = Math.floor(Math.random() * randomPostUrls.length);
+      window.location.assign(randomPostUrls[randomIndex]);
+    });
+  })();
+</script>
+{% endif %}
 {% endblock content %}
