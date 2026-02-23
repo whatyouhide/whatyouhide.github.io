@@ -4,8 +4,8 @@ template: extra_page.html
 
 # `/uses` Page
 
-Nice find! 🙌 `/uses` is a nice sort of personal-website standard where people
-post stuff they use to do their work or just in their life. I swear it is, but I
+`/uses` is a nice sort of personal-website standard where people
+post stuff they use to do their work or just in their life. I promise it is, but I
 can't find a link about this anywhere now.
 
 ## Hardware
@@ -19,20 +19,16 @@ can't find a link about this anywhere now.
 
 ## Software
 
-I'm a software engineer, so I use computers and software a lot, but who doesn't
-these days anyway.
-
-### On the Computer
+### macOS Apps
 
 I use macOS as my main OS.
 
-#### macOS Apps
-
-  * [Cursor][cursor] as my main text editor. My editor of choice used to be a
-    more stable pick—nowadays I switch to whatever has the best AI model around.
-  * [Ghostty][ghostty] as my terminal.
+  * [Zed][zed] as my main text editor these days. My editor of choice used to be a
+    more stable pick—nowadays I switch to whatever has the best AI integrations.
+  * [Ghostty][ghostty] as my terminal. Lots of [Claude Code](https://claude.com/product/claude-code)
+    and [Codex](https://openai.com/codex/) all around.
   * [1Password] for password management. I pay for a family subscription, and I
-    think 1Password might be my favorite piece of software ever?
+    think 1Password might be my favorite piece of software ever.
   * [Dash] for consulting documentation. It's an app that aggregates
     documentation from different software, programming languages, and ecosystems
     (it supports [hex.pm](https://hex.pm) packages!!). It lets you search though
@@ -42,7 +38,7 @@ I use macOS as my main OS.
   * [Fantastical] for calendars. I pay for a subscription for this and love it.
   * **Keynote.app** for giving talks.
   * [TablePlus] for talking to databases.
-  * [Raycast] to do *a lot of stuff*. I launch apps with it, run little scripts
+  * [Raycast] to do quite a few things. I launch apps with it, run little scripts
     that I wrote as extensions, use it for clipboard management, for snippets,
     as a calculator, and probably more. I used to use [Alfred] for this but nowadays Raycast has a bunch more extensions.
   * [Granola][granola] to automatically take notes when I'm in meetings.
@@ -52,7 +48,7 @@ pleasant.
 
   * I use [Magnet] to move my windows around.
   * [AltTab] lets me command-tab my way around much better than the default.
-  * [CleanShot X][cleanshot] to take screenshots. I'm a nerd for screenshots.
+  * [CleanShot X][cleanshot] to take screenshots.
   * [Klack] (and this is silly) for having mechanical-keyboard sound in my
     headphones when I type on my normal Apple keyboard—which I prefer for the
     actual typing.
@@ -62,6 +58,7 @@ pleasant.
     much time I just screw around.
 
 [cursor]: https://cursor.com/agents
+[zed]: https://zed.dev/
 [ghostty]: https://ghostty.org/
 [granola]: https://www.granola.ai/
 [1Password]: https://1password.com/
