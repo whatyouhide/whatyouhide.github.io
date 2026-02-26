@@ -2,7 +2,7 @@
 
 {% block content %}
 <div id="main" role="main" class="container">
-  <div class="posts">
+  <div class="posts posts-index">
     {% set section = get_section(path="posts/_index.md") %}
 
     {% for post in section.pages | sort(attribute="date") | reverse %}

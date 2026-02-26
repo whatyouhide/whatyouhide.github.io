@@ -7,7 +7,7 @@
 {% block content %}
 <div id="main" role="main" class="container">
   {% if section.relative_path == "posts/_index.md" %}
-  <div class="posts">
+  <div class="posts posts-index">
     {% for post in section.pages | sort(attribute="date") | reverse %}
     <article class="post">
       <header class="post-heading">
