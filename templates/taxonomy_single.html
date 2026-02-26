@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block meta %}
+{% include "snippets/meta.html" %}
+<meta name="robots" content="noindex,follow" />
+{% endblock meta %}
+
+{% block content %}
+<div id="main" role="main" class="container">
+  <div class="posts">
+    <article class="post">
+      <header class="post-heading">
+        <h1>Tag: {{ term.name }}</h1>
+      </header>
+
+      <div class="entry">
+        <ul>
+          {% for page in term.pages | sort(attribute="date") | reverse %}
+          <li>
+            <a href="{{ page.permalink }}">{{ page.title }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </article>
+  </div>
+</div>
+{% endblock content %}

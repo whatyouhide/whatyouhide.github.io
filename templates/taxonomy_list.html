@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block meta %}
+{% include "snippets/meta.html" %}
+<meta name="robots" content="noindex,follow" />
+{% endblock meta %}
+
+{% block content %}
+<div id="main" role="main" class="container">
+  <div class="posts">
+    <article class="post">
+      <header class="post-heading">
+        <h1>Tags</h1>
+      </header>
+
+      <div class="entry">
+        <ul>
+          {% for term in terms %}
+          <li>
+            <a href="{{ term.permalink }}">{{ term.name }}</a>
+            ({{ term.pages | length }})
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </article>
+  </div>
+</div>
+{% endblock content %}

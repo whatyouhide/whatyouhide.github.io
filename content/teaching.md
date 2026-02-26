@@ -4,7 +4,7 @@ template: extra_page.html
 
 Sometimes I end up teaching stuff, mostly about [Elixir] and related topics.
 Here's a more-or-less-complete list of materials, but head over to [the
-blog](/blog) as well for more.
+blog](/posts/) as well for more.
 
 ## Interactive Guide to Asynchronous Data Processing in Elixir
 
