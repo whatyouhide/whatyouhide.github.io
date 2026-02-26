@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /*?*utm_
+Disallow: /*?*utm=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: OAI-SearchBot
 Allow: /
