@@ -1,6 +1,9 @@
 ---
 title: Handling TCP connections in Elixir
 description: A look at some strategies to handle TCP connections and data flowing through them.
+aliases:
+  # Well-known bad link from someone's blog, might as well redirect.
+  - /posts/handling-tcp-connections
 taxonomies:
   tags:
     - elixir
