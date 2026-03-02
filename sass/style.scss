@@ -206,10 +206,10 @@ b {
 
   .post-heading-divider {
     font-size: 11px;
-    color: rgba(139, 69, 19, 0.4);
+    color: rgba(212, 83, 10, 0.4);
 
     @include darkMode {
-      color: rgba(206, 115, 50, 0.5);
+      color: rgba(232, 197, 71, 0.5);
     }
   }
 
@@ -624,7 +624,7 @@ aside.callout {
   --callout-accent: var(--color-links);
   --callout-surface: var(--color-content-surface);
   --callout-border: var(--color-box-borders);
-  --callout-accent-veil: rgba(139, 69, 19, 0.12);
+  --callout-accent-veil: rgba(212, 83, 10, 0.12);
   --callout-inner-glow: rgba(22, 30, 39, 0.08);
 
   position: relative;
@@ -649,7 +649,7 @@ aside.callout {
 
     @include darkMode {
       background: radial-gradient(120% 120% at -10% 50%, rgba(255, 255, 255, 0.07), transparent),
-                  linear-gradient(90deg, rgba(206, 115, 50, 0.08), transparent 55%);
+                  linear-gradient(90deg, rgba(232, 197, 71, 0.08), transparent 55%);
     }
   }
 
@@ -726,7 +726,7 @@ aside.callout {
 
   @include darkMode {
     --callout-surface: rgba(21, 27, 32, 0.88);
-    --callout-accent-veil: rgba(206, 115, 50, 0.22);
+    --callout-accent-veil: rgba(232, 197, 71, 0.22);
     --callout-inner-glow: rgba(10, 14, 19, 0.6);
   }
 }

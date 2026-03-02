@@ -24,8 +24,8 @@ $handwrittenFontStack: "Andrea", sans-serif;
 
   --color-text: #{$text};
   --color-text-dimmer: #{lighten($text, 32%)};
-  --color-links: #8b4513;
-  --color-links-hover: #a0522d;
+  --color-links: #d4530a;
+  --color-links-hover: #b8470a;
 
   --color-box-borders: #d9d6cf;
   --color-page-shadow: rgba(14, 16, 19, 0.1);
@@ -63,8 +63,8 @@ $handwrittenFontStack: "Andrea", sans-serif;
 
     --color-text: #{$text};
     --color-text-dimmer: #{rgba(216, 223, 233, 0.7)};
-    --color-links: #ce7332;
-    --color-links-hover: #eb7139;
+    --color-links: #e8c547;
+    --color-links-hover: #f0d264;
 
     --color-box-borders: rgba(238, 238, 238, 0.1);
     --color-date-text: rgba(184, 193, 205, 0.7);

@@ -121,11 +121,11 @@
         position: absolute;
         inset: 8px;
         border-radius: 12px;
-        border: 1px dashed rgba(139, 69, 19, 0.22);
+        border: 1px dashed rgba(212, 83, 10, 0.22);
         pointer-events: none;
 
         @include darkMode {
-          border-color: rgba(206, 115, 50, 0.28);
+          border-color: rgba(232, 197, 71, 0.28);
         }
       }
 
