@@ -1,6 +1,8 @@
 header {
   flex: 0 0 auto;
   padding: 24px 5vw;
+  position: relative;
+  z-index: 1;
 
   .header-link {
     display: flex;

@@ -5,6 +5,8 @@ footer {
   justify-self: flex-end;
   margin-top: auto;
   padding: 0 5vw 30px;
+  position: relative;
+  z-index: 1;
 
   .footer-divider {
     width: 60px;
