@@ -13,6 +13,17 @@
   }
 }
 
+@keyframes fadeInUpHeroPortrait {
+  from {
+    opacity: 0;
+    transform: translateY(16px) rotate(var(--hero-portrait-rotate));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--hero-portrait-rotate));
+  }
+}
+
 @keyframes cardReveal {
   from {
     opacity: 0;
@@ -66,13 +77,49 @@
     margin-bottom: 20px;
   }
 
-  #hero-portrait {
+  #hero-portrait-frame {
+    --hero-portrait-rotate: 0deg;
     display: block;
-    width: auto;
-    height: 28vw;
+    position: relative;
+    width: clamp(220px, 28vw, 320px);
+    height: auto;
+    aspect-ratio: 11 / 14;
     min-height: 180px;
     max-height: 320px;
-    animation: fadeInUp 0.6s ease-out both;
+    border-radius: 14px;
+    border: 2px solid color-mix(in srgb, var(--color-industrial-border) 35%, var(--color-box-borders));
+    overflow: hidden;
+    box-shadow: 0 22px 38px -28px var(--color-page-shadow);
+    transform: rotate(var(--hero-portrait-rotate));
+    animation: fadeInUpHeroPortrait 0.6s ease-out both;
+  }
+
+  #hero-portrait {
+    --hero-portrait-scale: 2;
+    --hero-portrait-anchor-x: 50%;
+    --hero-portrait-anchor-y: 50%;
+    --hero-portrait-offset-x: 33px;
+    --hero-portrait-offset-y: 5px;
+    position: absolute;
+    top: var(--hero-portrait-anchor-y);
+    left: var(--hero-portrait-anchor-x);
+    width: 100%;
+    height: auto;
+    max-width: none;
+    filter: contrast(1.04) saturate(1.06);
+    transform: translate(
+      calc(-1 * var(--hero-portrait-anchor-x) + var(--hero-portrait-offset-x)),
+      calc(-1 * var(--hero-portrait-anchor-y) + var(--hero-portrait-offset-y))
+    ) scale(var(--hero-portrait-scale));
+    transform-origin: center;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                filter 0.25s ease;
+  }
+
+  @include wideScreen {
+    #hero-portrait {
+      --hero-portrait-anchor-y: 96%;
+    }
   }
 
   #hero-text {
@@ -167,6 +214,34 @@
     flex-direction: column;
     align-items: center;
     position: relative;
+
+    &.portrait-treatment-clean #hero-portrait-frame {
+      --hero-portrait-rotate: -1deg;
+    }
+
+    &.portrait-treatment-drawn {
+      #hero-portrait-frame {
+        border-style: dashed;
+        border-radius: 19px 13px 21px 11px;
+        --hero-portrait-rotate: -1.8deg;
+      }
+
+      #hero-portrait {
+        --hero-portrait-scale: 1.01;
+        filter: contrast(1.08) saturate(1.03);
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 96px 8px -12px;
+        border: 2px dashed color-mix(in srgb, var(--color-links) 70%, var(--color-industrial-border));
+        border-radius: 20px 12px 18px 10px;
+        transform: rotate(1.7deg);
+        pointer-events: none;
+        opacity: 0.65;
+      }
+    }
 
     #hero-about {
       height: 100px;
