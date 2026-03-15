@@ -1,5 +1,5 @@
 ---
-title: Tech I Use — 2024
+title: Tech I Use • 2024
 description: |
   Inspired by others doing this, here's a writeup of the things I use—mostly tech—2024 edition.
 extra:
