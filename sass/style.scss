@@ -39,7 +39,7 @@ h6 {
 h1 {
   font-size: 200%;
   text-align: center;
-  letter-spacing: 0.025em;
+  letter-spacing: -0.02em;
 
   a {
     color: inherit;
@@ -139,47 +139,65 @@ b {
     animation: contentFadeIn 0.4s ease-out both;
   }
 
+  // Phosphor glow + scanlines + dot grid
   &::before {
     content: "";
     position: absolute;
     inset: 0;
-    z-index: 0;
+    z-index: -1;
     pointer-events: none;
-    background-image: radial-gradient(
-        130% 120% at 50% 50%,
-        transparent 0%,
-        color-mix(in srgb, var(--color-site-background) 52%, transparent) 58%,
-        color-mix(in srgb, var(--color-site-background) 94%, transparent) 100%
-      ),
+    background-image:
+      // Phosphor glow top-right
       radial-gradient(
-        80% 60% at 12% 18%,
-        color-mix(in srgb, var(--color-background-tech-glow) 46%, transparent),
-        transparent 72%
-      ),
-      radial-gradient(
-        70% 55% at 88% 84%,
-        color-mix(in srgb, var(--color-background-tech-glow) 34%, transparent),
+        ellipse 600px 500px at 85% 5%,
+        var(--color-background-tech-glow),
         transparent 70%
       ),
+      // Phosphor glow bottom-left
       radial-gradient(
-        circle at 1px 1px,
-        color-mix(in srgb, var(--color-background-dot) 55%, transparent) 0.95px,
-        transparent 1.5px
+        ellipse 500px 400px at 10% 90%,
+        rgba(63, 185, 80, 0.04),
+        transparent 70%
       ),
+      // Scanlines
       linear-gradient(
         to bottom,
-        color-mix(in srgb, var(--color-background-grid-line) 22%, transparent) 1px,
+        var(--color-background-scanline) 1px,
         transparent 1px
+      ),
+      // Dot grid
+      radial-gradient(
+        circle at 1px 1px,
+        var(--color-background-dot) 0.6px,
+        transparent 0.6px
       );
-    background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px, 100% 4px;
+    background-size: 100% 100%, 100% 100%, 100% 4px, 24px 24px;
     background-position: center;
+  }
+
+  // Corner vignette (CRT effect, dark mode only)
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 0% 0%, rgba(0,0,0,0.2) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, rgba(0,0,0,0.2) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 0%, rgba(0,0,0,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 100%, rgba(0,0,0,0.15) 0%, transparent 50%);
+
+    @include lightMode {
+      background: none;
+    }
   }
 }
 
 .posts>.post {
   padding-bottom: 2.5em;
   margin-bottom: 2.5em;
-  border-bottom: 1px solid var(--color-post-border);
+  border-bottom: 1px dashed var(--color-post-border);
 
   .post-heading {
     display: flex;
@@ -206,11 +224,7 @@ b {
 
   .post-heading-divider {
     font-size: 11px;
-    color: rgba(212, 83, 10, 0.4);
-
-    @include darkMode {
-      color: rgba(232, 197, 71, 0.5);
-    }
+    color: rgba(63, 185, 80, 0.5);
   }
 
   time.post-date,
@@ -243,13 +257,6 @@ b {
   max-width: $maxContentWidth;
   margin: clamp(2.5rem, 6vw, 4.5rem) auto;
   padding: clamp(2.25rem, 5vw, 3.75rem);
-  background-color: var(--color-content-surface);
-  border: 1px solid var(--color-content-surface-border);
-  border-radius: clamp(20px, 4vw, 28px);
-  box-shadow: 0 32px 64px -48px var(--color-page-shadow);
-  backdrop-filter: saturate(140%) blur(12px);
-  -webkit-backdrop-filter: saturate(140%) blur(12px);
-  overflow: hidden;
 }
 
 #main.container > .posts.posts-index > .post {
@@ -303,13 +310,10 @@ b {
 
 :not(pre)>code {
   background-color: var(--color-code-background);
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 0.88em;
-
-  @include darkMode {
-    border: 1px solid var(--color-box-borders);
-  }
+  border: 1px solid var(--color-box-borders);
 }
 
 // Main content for posts.
@@ -336,19 +340,26 @@ main.books {
   margin: 0 auto;
   padding: 0 5vw;
 
-  h1,
+  h1 {
+    font-family: $monoFontStack;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
   h2 {
-    font-family: $handwrittenFontStack;
-    font-weight: bold;
+    font-family: $displaySansFontStack;
+    font-weight: 700;
+    letter-spacing: -0.03em;
   }
 
   .entry {
     font-size: 18px;
     line-height: 1.7;
+    color: var(--color-entry-text);
 
     a {
       text-decoration: underline;
-      text-decoration-color: var(--color-post-border);
+      text-decoration-color: var(--color-box-borders);
       text-underline-offset: 3px;
       transition: color 0.15s ease, text-decoration-color 0.15s ease;
 
@@ -379,7 +390,8 @@ main.books {
     border-radius: 8px;
     font-size: 14px;
     line-height: 1.6;
-    border: 1px solid var(--color-post-border);
+    border: 1px solid var(--color-box-borders);
+    background-color: var(--color-site-background-accented);
 
     code {
       font-size: inherit;
@@ -404,10 +416,12 @@ main.books {
   blockquote {
     margin: 2em 0;
     border-left: 3px solid var(--color-links);
-    padding: 0.2em 1.5em;
+    padding: 0.8em 1.5em;
     color: var(--color-text-dimmer);
     font-size: 110%;
     font-style: italic;
+    background: var(--color-blockquote-bg);
+    border-radius: 0 8px 8px 0;
   }
 }
 
@@ -416,13 +430,6 @@ main.books {
 #main.container > main.books {
   margin: clamp(2.5rem, 6vw, 4.5rem) auto;
   padding: clamp(2.25rem, 5vw, 3.75rem);
-  background-color: var(--color-content-surface);
-  border: 1px solid var(--color-content-surface-border);
-  border-radius: clamp(20px, 4vw, 28px);
-  box-shadow: 0 32px 64px -48px var(--color-page-shadow);
-  backdrop-filter: saturate(140%) blur(12px);
-  -webkit-backdrop-filter: saturate(140%) blur(12px);
-  overflow: hidden;
 }
 
 article.post table {
@@ -430,7 +437,7 @@ article.post table {
   margin: 1em 0;
 
   thead tr {
-    border-bottom: 1px solid var(--color-text-dimmer);
+    border-bottom: 1px solid var(--color-box-borders);
   }
 
   th {
@@ -438,7 +445,7 @@ article.post table {
   }
 
   tr {
-    border-bottom: 1px solid var(--color-text-dimmer);
+    border-bottom: 1px solid var(--color-box-borders);
 
     th:first-child,
     td:first-child {
@@ -453,7 +460,7 @@ article.post table {
   th,
   td {
     padding: 0.5em 0.5em;
-    border-right: 1px solid var(--color-text-dimmer);
+    border-right: 1px solid var(--color-box-borders);
 
     &:last-child {
       border-right: none;
@@ -624,17 +631,15 @@ aside.callout {
   --callout-accent: var(--color-links);
   --callout-surface: var(--color-content-surface);
   --callout-border: var(--color-box-borders);
-  --callout-accent-veil: rgba(212, 83, 10, 0.12);
-  --callout-inner-glow: rgba(22, 30, 39, 0.08);
+  --callout-accent-veil: rgba(63, 185, 80, 0.18);
+  --callout-inner-glow: rgba(8, 12, 18, 0.3);
 
   position: relative;
   margin: 2.4em 0;
   padding: 1.5em 1.75em 1.6em 2.2em;
   border-radius: 18px;
   border: 1px solid var(--callout-border);
-  background: linear-gradient(160deg,
-    color-mix(in srgb, var(--callout-surface) 80%, var(--callout-inner-glow)) 0%,
-    color-mix(in srgb, var(--callout-surface) 68%, rgba(255, 255, 255, 0.12)) 100%);
+  background: var(--callout-surface);
   box-shadow: 0 22px 50px -38px var(--color-page-shadow);
   overflow: hidden;
 
@@ -643,14 +648,9 @@ aside.callout {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: radial-gradient(120% 120% at -10% 50%, var(--callout-inner-glow), transparent),
-                linear-gradient(95deg, color-mix(in srgb, var(--callout-accent) 22%, transparent), transparent 60%);
+    background: radial-gradient(120% 120% at -10% 50%, rgba(255, 255, 255, 0.07), transparent),
+                linear-gradient(90deg, rgba(63, 185, 80, 0.08), transparent 55%);
     pointer-events: none;
-
-    @include darkMode {
-      background: radial-gradient(120% 120% at -10% 50%, rgba(255, 255, 255, 0.07), transparent),
-                  linear-gradient(90deg, rgba(232, 197, 71, 0.08), transparent 55%);
-    }
   }
 
   &::after {
@@ -684,11 +684,12 @@ aside.callout {
   }
 
   h5 {
-    font-family: $handwrittenFontStack;
-    font-size: 26px;
+    font-family: $displaySansFontStack;
+    font-size: 20px;
+    font-weight: 600;
     margin: 0;
     text-transform: none;
-    letter-spacing: 0.01em;
+    letter-spacing: -0.01em;
     color: var(--color-text);
   }
 
@@ -724,11 +725,6 @@ aside.callout {
     --callout-inner-glow: rgba(62, 49, 24, 0.12);
   }
 
-  @include darkMode {
-    --callout-surface: rgba(21, 27, 32, 0.88);
-    --callout-accent-veil: rgba(232, 197, 71, 0.22);
-    --callout-inner-glow: rgba(10, 14, 19, 0.6);
-  }
 }
 
 @import "components/header";

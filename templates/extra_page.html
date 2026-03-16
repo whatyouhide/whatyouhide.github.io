@@ -1,10 +1,7 @@
-{% extends "base.html" %}
+{% extends "base_sidebar.html" %}
 
 {% block content %}
-<div id="main" role="main" class="container">
-  <main class="about">
-    {{ page.content | safe}}
-  </main>
-</div>
-
+<main class="about">
+  {{ page.content | safe}}
+</main>
 {% endblock content %}

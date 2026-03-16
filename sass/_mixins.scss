@@ -16,6 +16,12 @@
   }
 }
 
+@mixin lightMode {
+  @media (prefers-color-scheme: light) {
+    @content;
+  }
+}
+
 @mixin scaleUpOnHover {
   transition: all 0.1s ease-in-out;
 

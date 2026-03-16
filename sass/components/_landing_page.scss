@@ -1,11 +1,11 @@
 // ═══════════════════════════════════════════════════════
-//  Landing Page
+//  Landing Page — Terminal Hacker Direction
 // ═══════════════════════════════════════════════════════
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -13,18 +13,7 @@
   }
 }
 
-@keyframes fadeInUpHeroPortrait {
-  from {
-    opacity: 0;
-    transform: translateY(16px) rotate(var(--hero-portrait-rotate));
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) rotate(var(--hero-portrait-rotate));
-  }
-}
-
-@keyframes cardReveal {
+@keyframes shellReveal {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -32,12 +21,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes travelDash {
-  to {
-    stroke-dashoffset: -9;
   }
 }
 
@@ -53,539 +36,467 @@
 
   #content-container {
     width: 100%;
-    max-width: 1000px;
+    max-width: 1440px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: calc(min(3vh, 40px)) 5vw 0;
+    flex: 1;
+    animation: shellReveal 0.5s ease-out both;
   }
 }
 
-// ─── Hero Section ────────────────────────────────────
+// ─── Top Bar ─────────────────────────────────────────
 
-.landing-page #hero-section {
+.shell-topbar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  width: 100%;
-  margin-bottom: 16px;
-
-  @include wideScreen {
-    flex-direction: row;
-    gap: 30px;
-    justify-content: center;
-    margin-bottom: 20px;
-  }
-
-  #hero-portrait-frame {
-    --hero-portrait-rotate: 0deg;
-    display: block;
-    position: relative;
-    width: clamp(220px, 28vw, 320px);
-    height: auto;
-    aspect-ratio: 11 / 14;
-    min-height: 180px;
-    max-height: 320px;
-    border-radius: 14px;
-    border: 2px solid color-mix(in srgb, var(--color-industrial-border) 35%, var(--color-box-borders));
-    overflow: hidden;
-    box-shadow: 0 22px 38px -28px var(--color-page-shadow);
-    transform: rotate(var(--hero-portrait-rotate));
-    animation: fadeInUpHeroPortrait 0.6s ease-out both;
-  }
-
-  #hero-portrait {
-    --hero-portrait-scale: 2;
-    --hero-portrait-anchor-x: 50%;
-    --hero-portrait-anchor-y: 50%;
-    --hero-portrait-offset-x: 33px;
-    --hero-portrait-offset-y: 5px;
-    position: absolute;
-    top: var(--hero-portrait-anchor-y);
-    left: var(--hero-portrait-anchor-x);
-    width: 100%;
-    height: auto;
-    max-width: none;
-    filter: contrast(1.04) saturate(1.06);
-    transform: translate(
-      calc(-1 * var(--hero-portrait-anchor-x) + var(--hero-portrait-offset-x)),
-      calc(-1 * var(--hero-portrait-anchor-y) + var(--hero-portrait-offset-y))
-    ) scale(var(--hero-portrait-scale));
-    transform-origin: center;
-    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-                filter 0.25s ease;
-  }
-
-  @include wideScreen {
-    #hero-portrait {
-      --hero-portrait-anchor-y: 96%;
-    }
-  }
-
-  #hero-text {
-    width: 100%;
-    max-width: 380px;
-    padding: calc(min(2vh, 8px)) 0;
-    animation: fadeInUp 0.6s ease-out 0.15s both;
-    display: flex;
-    flex-direction: column;
-
-    @include wideScreen {
-      align-self: flex-end;
-      padding-bottom: 30px;
-    }
-
-    h1 {
-      font-family: $handwrittenFontStack;
-      font-size: 50pt;
-      line-height: 1;
-      text-align: center;
-      margin-top: 0;
-      margin-bottom: -8px;
-
-      @include wideScreen {
-        font-size: 100pt;
-        text-align: left;
-        margin-bottom: -18px;
-      }
-    }
-
-    .hero-meta {
-      display: inline-flex;
-      flex-direction: column;
-      gap: 6px;
-      align-self: stretch;
-      margin: 36px 0 36px;
-      padding: 16px 20px;
-      border-radius: 14px;
-      border: 1px solid var(--color-box-borders);
-      background: var(--color-content-surface);
-      box-shadow: 0 18px 45px -30px var(--color-page-shadow);
-      position: relative;
-
-      &::after {
-        content: "";
-        position: absolute;
-        inset: 8px;
-        border-radius: 12px;
-        border: 1px dashed rgba(212, 83, 10, 0.22);
-        pointer-events: none;
-
-        @include darkMode {
-          border-color: rgba(232, 197, 71, 0.28);
-        }
-      }
-
-      .hero-meta-line {
-        font-family: $monoFontStack;
-        font-size: 13px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--color-text);
-        position: relative;
-        padding-left: 18px;
-
-        &::before {
-          content: "$";
-          color: var(--color-links);
-          font-weight: 700;
-          letter-spacing: 0;
-          position: absolute;
-          left: 0;
-          top: 0;
-        }
-      }
-
-      @include wideScreen {
-        margin-top: 32px;
-        align-self: flex-start;
-      }
-    }
-
-    p {
-      max-width: 350px;
-      margin-top: 0;
-      margin-bottom: 0;
-    }
-  }
-
-  #hero-portrait-with-about-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-
-    &.portrait-treatment-clean #hero-portrait-frame {
-      --hero-portrait-rotate: -1deg;
-    }
-
-    &.portrait-treatment-drawn {
-      #hero-portrait-frame {
-        border-style: dashed;
-        border-radius: 19px 13px 21px 11px;
-        --hero-portrait-rotate: -1.8deg;
-      }
-
-      #hero-portrait {
-        --hero-portrait-scale: 1.01;
-        filter: contrast(1.08) saturate(1.03);
-      }
-
-      &::after {
-        content: "";
-        position: absolute;
-        inset: 96px 8px -12px;
-        border: 2px dashed color-mix(in srgb, var(--color-links) 70%, var(--color-industrial-border));
-        border-radius: 20px 12px 18px 10px;
-        transform: rotate(1.7deg);
-        pointer-events: none;
-        opacity: 0.65;
-      }
-    }
-
-    #hero-about {
-      height: 100px;
-      width: 100px;
-      max-height: 100px;
-
-      a {
-        display: block;
-        color: inherit;
-        font-family: $handwrittenFontStack;
-        text-align: right;
-        text-decoration: underline;
-        text-transform: lowercase;
-        position: relative;
-        top: -70px;
-        left: -30px;
-        transition: color 0.15s ease;
-
-        &:hover {
-          color: var(--color-links);
-        }
-      }
-
-      img.arrow {
-        display: block;
-        margin: 0 0 0 auto;
-        rotate: 166deg;
-        transform: scale(1, 0.8);
-        height: 100%;
-        object-fit: contain;
-
-        @include darkMode {
-          filter: invert(1);
-        }
-      }
-    }
-  }
-}
-
-// ─── Exploration Grid ────────────────────────────────
-
-#explore-grid {
-  width: 100%;
-  max-width: 860px;
-  padding-bottom: 40px;
-
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-box-borders);
+  flex-shrink: 0;
 
   @include mediumScreen {
-    grid-template-columns: 1fr 1fr;
+    padding: 16px 32px;
+  }
+}
+
+.shell-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shell-tilde {
+  font-family: $monoFontStack;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-links);
+}
+
+.shell-site-name {
+  font-family: $monoFontStack;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dimmer);
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--color-links);
+  }
+}
+
+.shell-topbar-right {
+  .shell-now-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-family: $monoFontStack;
+    font-size: 11px;
+    color: var(--color-text);
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--color-links);
+    }
+  }
+}
+
+.shell-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-links);
+  box-shadow: var(--color-status-glow);
+  flex-shrink: 0;
+}
+
+// ─── Main Layout ─────────────────────────────────────
+
+.shell-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  @include mediumScreen {
+    flex-direction: row;
+  }
+}
+
+// ─── Sidebar ─────────────────────────────────────────
+
+.shell-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--color-box-borders);
+  flex-shrink: 0;
+
+  @include mediumScreen {
+    width: 320px;
+    padding: 24px;
+    border-bottom: none;
+    border-right: 1px solid var(--color-box-borders);
+    gap: 24px;
+  }
+}
+
+#hero-portrait-frame {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  border: 1px solid var(--color-box-borders);
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: fadeInUp 0.5s ease-out 0.1s both;
+
+  @include mediumScreen {
+    width: 100%;
+    height: 240px;
+    border-radius: 8px;
+  }
+}
+
+#hero-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 56% 12%;
+  filter: var(--portrait-filter);
+}
+
+// On mobile, portrait + identity sit side by side
+.shell-sidebar {
+  > #hero-portrait-frame,
+  > .shell-identity {
+    // Mobile: inline layout handled by wrapper below
+  }
+
+  // Stack portrait and identity horizontally on mobile
+  @media screen and (max-width: 759px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+
+    > #hero-portrait-frame {
+      flex-shrink: 0;
+    }
+
+    > .shell-identity {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    > .shell-roles,
+    > .shell-nav {
+      width: 100%;
+    }
+  }
+}
+
+.shell-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeInUp 0.5s ease-out 0.15s both;
+}
+
+.shell-name {
+  font-family: $monoFontStack;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+
+  @include mediumScreen {
+    font-size: 22px;
+  }
+}
+
+.shell-bio {
+  font-family: $monoFontStack;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-text-dimmer);
+  margin: 0;
+}
+
+// ─── Roles ───────────────────────────────────────────
+
+.shell-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px dashed var(--color-box-borders);
+  background: var(--color-roles-surface);
+  animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+.shell-role-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shell-prompt {
+  font-family: $monoFontStack;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-links);
+  flex-shrink: 0;
+}
+
+.shell-role-text {
+  font-family: $monoFontStack;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--color-box-borders);
+    text-underline-offset: 3px;
+
+    &:hover {
+      color: var(--color-links);
+      text-decoration-color: var(--color-links);
+    }
+  }
+}
+
+// ─── Sidebar Nav ─────────────────────────────────────
+
+.shell-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--color-box-borders);
+  padding-top: 16px;
+  animation: fadeInUp 0.5s ease-out 0.25s both;
+
+  @media screen and (max-width: 759px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 14px;
+    border-top: 1px solid var(--color-box-borders);
+
+    .shell-nav-item {
+      padding: 4px 0;
+      border-bottom: none;
+    }
+  }
+}
+
+.shell-nav-item {
+  display: block;
+  font-family: $monoFontStack;
+  font-size: 12px;
+  color: var(--color-text-dimmer);
+  text-decoration: none;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-post-border);
+  transition: color 0.15s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    color: var(--color-links);
+  }
+
+  &.shell-nav-active {
+    color: var(--color-text);
+  }
+}
+
+// ─── Content Area ────────────────────────────────────
+
+.shell-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 20px 16px;
+  gap: 0;
+  animation: fadeInUp 0.5s ease-out 0.2s both;
+
+  @include mediumScreen {
+    padding: 24px 32px;
+  }
+}
+
+.shell-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 16px;
+}
+
+.shell-section-label {
+  font-family: $monoFontStack;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+.shell-section-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--color-box-borders);
+}
+
+// ─── Post Entries ────────────────────────────────────
+
+.shell-post {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-post-border);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+
+  @include mediumScreen {
     gap: 16px;
   }
 
-  @include wideScreen {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover strong {
+    color: var(--color-links);
   }
 }
 
-// ─── Card Base ───────────────────────────────────────
+.shell-post-prompt {
+  font-family: $monoFontStack;
+  font-size: 12px;
+  color: var(--color-links);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
 
-.explore-card {
-  --card-surface: color-mix(in srgb, var(--color-site-background) 88%, #ffffff);
-  --card-outline: color-mix(in srgb, var(--color-industrial-border) 45%, var(--color-box-borders));
-  --card-shadow: none;
-  --card-wash: color-mix(in srgb, var(--card-accent, var(--color-links)) 7%, transparent);
-
+.shell-post-body {
   display: flex;
   flex-direction: column;
-  padding: 24px 28px;
-  border-radius: 8px;
-  border: 2px solid var(--card-outline);
-  background: linear-gradient(165deg, var(--card-surface), color-mix(in srgb, var(--card-surface) 86%, var(--card-wash)));
-  text-decoration: none;
-  color: var(--color-text);
-  position: relative;
-  overflow: hidden;
-  transform: none;
-  transition: transform 0.16s ease,
-              rotate 0.16s ease,
-              box-shadow 0.16s ease,
-              border-color 0.16s ease;
-  animation: cardReveal 0.5s ease-out both;
-  box-shadow: var(--card-shadow);
+  gap: 4px;
+  flex: 1;
 
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 7px;
-    background: color-mix(in srgb, var(--card-accent, var(--color-links)) 78%, var(--color-industrial-border));
-    pointer-events: none;
-  }
-
-  &:focus-visible {
-    outline: none;
-  }
-
-  &:hover,
-  &:focus-visible {
-    transform: translateY(-1px);
-    rotate: 0deg;
-    border-color: color-mix(in srgb, var(--card-accent, var(--color-links)) 35%, var(--card-outline));
-    box-shadow: none;
-
-    .card-label {
-      color: var(--card-accent, var(--color-links));
-    }
-
-    .card-icon {
-      transform: rotate(-5deg) translateY(-2px);
-    }
-  }
-
-  // Staggered entrance delays
-  &:nth-child(1) { animation-delay: 0.15s; }
-  &:nth-child(2) { animation-delay: 0.22s; }
-  &:nth-child(3) { animation-delay: 0.29s; }
-  &:nth-child(4) { animation-delay: 0.36s; }
-  &:nth-child(5) { animation-delay: 0.43s; }
-  &:nth-child(6) { animation-delay: 0.50s; }
-  &:nth-child(7) { animation-delay: 0.57s; }
-
-  @include mediumScreen {
-    &:nth-child(1) { rotate: -0.25deg; }
-    &:nth-child(2) { rotate: 0.2deg; }
-    &:nth-child(3) { rotate: -0.2deg; }
-    &:nth-child(4) { rotate: 0.25deg; }
-    &:nth-child(5) { rotate: -0.15deg; }
-    &:nth-child(6) { rotate: 0.2deg; }
-    &:nth-child(7) { rotate: -0.2deg; }
-  }
-
-  @include darkMode {
-    --card-surface: color-mix(in srgb, var(--color-industrial-surface) 92%, rgba(255, 255, 255, 0.03));
-    --card-outline: color-mix(in srgb, var(--color-industrial-border) 80%, rgba(255, 255, 255, 0.1));
-    --card-shadow: none;
-    --card-wash: color-mix(in srgb, var(--card-accent, var(--color-links)) 10%, transparent);
-
-    &:hover,
-    &:focus-visible {
-      box-shadow: none;
-    }
+  strong {
+    font-family: $monoFontStack;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text);
+    transition: color 0.15s ease;
   }
 }
 
-// ─── Card Typography ─────────────────────────────────
-
-.card-label {
-  font-family: $handwrittenFontStack;
-  font-size: 22px;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0.01em;
-  color: var(--color-text);
-  transition: color 0.2s ease;
-  display: block;
-  margin-bottom: 4px;
-  line-height: 1.2;
-}
-
-.card-desc {
-  font-family: $sansSerifFontStack;
-  font-size: 14px;
+.shell-post-desc {
+  font-family: $monoFontStack;
+  font-size: 12px;
+  color: var(--color-text-faint);
   line-height: 1.5;
-  letter-spacing: 0.01em;
-  color: var(--color-text-dimmer);
-  display: block;
 }
 
-.card-icon {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  margin-bottom: 8px;
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+.shell-post-date {
+  font-family: $monoFontStack;
+  font-size: 11px;
+  color: var(--color-text-faintest);
+  flex-shrink: 0;
+  padding-top: 3px;
 
-  &.icon-needs-invert {
-    @include darkMode {
-      filter: invert(1);
-    }
+  // Hide on very small screens
+  @media screen and (max-width: 480px) {
+    display: none;
   }
 }
 
-// ─── Card: Blog (Featured) ───────────────────────────
+// ─── Inner Pages with Sidebar ────────────────────────
 
-.card-blog {
-  --card-accent: #9f5c2f;
+#main.with-sidebar {
+  flex: 1;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
 
-  @include darkMode {
-    --card-accent: #ca7f43;
-  }
-
-  @include mediumScreen {
-    grid-column: span 2;
-  }
-}
-
-// ─── Card: Latest Post ──────────────────────────────
-
-.card-latest-post {
-  --card-accent: #4f6472;
-  
-  // Only show this if there's enough space.
-  display: none;
-  
-  @include mediumScreen {
-    display: block;
-  }
-
-  @include darkMode {
-    --card-accent: #7f99aa;
-  }
-
-  .card-label {
-    font-family: $serifFontStack;
-    font-size: 18px;
-    font-weight: 600;
-    text-transform: none;
-    line-height: 1.35;
-  }
-}
-
-.card-eyebrow {
-  font-family: $sansSerifFontStack;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--card-accent, var(--color-links));
-  display: block;
-  margin-bottom: 6px;
-}
-
-.card-date {
-  font-family: $sansSerifFontStack;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-dimmer);
-  display: block;
-  margin-top: 6px;
-}
-
-// ─── Card: Travels ───────────────────────────────────
-
-.card-travels {
-  --card-accent: #5e765f;
-
-  @include darkMode {
-    --card-accent: #86a38a;
-  }
-
-  .travels-deco {
+  > .shell-layout {
     width: 100%;
-    max-width: 260px;
-    height: auto;
-    color: var(--card-accent);
-    margin-bottom: 6px;
-
-    path {
-      animation: travelDash 1.5s linear infinite;
-    }
+    max-width: 1440px;
+    flex: 1;
   }
 }
 
-// ─── Card: Books ─────────────────────────────────────
+.shell-content-page {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+  animation: fadeInUp 0.4s ease-out both;
 
-.card-books {
-  --card-accent: #8f7242;
-
-  @include darkMode {
-    --card-accent: #b08d4d;
+  @media screen and (max-width: 759px) {
+    padding: 20px 16px;
   }
 
-  .books-stack {
-    display: flex;
-    margin-bottom: 8px;
+  // Reset heading styles for content pages
+  h1 {
+    font-family: $monoFontStack;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-align: left;
+    margin: 0 0 0.5em;
+  }
 
-    .book-cover {
-      height: 85px;
-      width: auto;
-      object-fit: contain;
-      border-radius: 2px;
-      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.12));
-      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  // Posts index inside sidebar layout
+  .posts.posts-index {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+
+    .post {
+      max-width: none;
+      margin: 0 0 2.5em;
+      padding: 0 0 2.5em;
     }
 
-    .book-1 {
-      transform: rotate(-3deg);
-      z-index: 2;
-      position: relative;
-    }
-
-    .book-2 {
-      transform: rotate(2.5deg) translateX(-10px);
-      z-index: 1;
+    .post:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
     }
   }
 
-  &:hover .books-stack {
-    .book-1 {
-      transform: rotate(-5deg) translateY(-2px);
-    }
-
-    .book-2 {
-      transform: rotate(4deg) translateX(-10px) translateY(-1px);
-    }
+  // About/books/generic content pages
+  main.about,
+  main.books {
+    max-width: none;
+    margin: 0;
+    padding: 0;
   }
 }
 
-// ─── Card: Talks ─────────────────────────────────────
+// Make sidebar name a link
+.shell-name a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
 
-.card-talks {
-  --card-accent: #935943;
-
-  @include darkMode {
-    --card-accent: #bb7a62;
-  }
-
-  .card-icon {
-    width: 48px;
-    height: 48px;
-  }
-}
-
-// ─── Card: Teaching ──────────────────────────────────
-
-.card-teaching {
-  --card-accent: #4d6676;
-
-  @include darkMode {
-    --card-accent: #7795a8;
-  }
-}
-
-// ─── Card: Uses ──────────────────────────────────────
-
-.card-uses {
-  --card-accent: #666f56;
-
-  @include darkMode {
-    --card-accent: #8a9d76;
+  &:hover {
+    color: var(--color-links);
   }
 }

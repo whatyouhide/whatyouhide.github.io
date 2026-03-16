@@ -97,7 +97,9 @@
         {% include "snippets/header.html" %}
         {% endblock header %}
 
+        {% block body %}
         {% block content %}{% endblock content %}
+        {% endblock body %}
 
         {% include "snippets/footer.html" %}
     </div>

@@ -6,107 +6,46 @@
 {% block content %}
 {% set posts_section = get_section(path="posts/_index.md") %}
 {% set latest_post = posts_section.pages | sort(attribute="date") | reverse | first %}
+{% set recent_posts = posts_section.pages | sort(attribute="date") | reverse | slice(end=12) %}
 
 <div id="main" role="main" class="landing-page">
   <div id="content-container">
-    <section id="hero-section">
-      <div id="hero-portrait-with-about-link" class="portrait-treatment-clean">
-        <aside id="hero-about">
-          <img class="arrow"
-               src="{{ get_url(path="assets/media/arrow.png") }}"
-               alt="An arrow pointing to the About page" />
-          <a href="{{ get_url(path="@/about.md") }}">About<br/>this guy</a>
-        </aside>
-
-        <div id="hero-portrait-frame">
-          <img id="hero-portrait"
-               src="{{ get_url(path="assets/media/hero-portrait.jpg") }}"
-               alt="Portrait of Andrea" />
-        </div>
+    <div class="shell-topbar">
+      <div class="shell-topbar-left">
+        <span class="shell-tilde">~</span>
+        <a href="/" class="shell-site-name">andrealeopardi.com</a>
       </div>
-
-      <div id="hero-text">
-        <h1>Hi.</h1>
-        <div class="hero-meta">
-          <p class="hero-meta-line">Platform engineer @ <a href="https://knock.app" target="_blank">Knock</a></p>
-          <p class="hero-meta-line"><a href="https://elixir-lang.org" target="_blank">Elixir</a> core team</p>
-          <p class="hero-meta-line">Writer, teacher, public speaker</p>
-        </div>
-
-        {{ section.content | safe }}
+      <div class="shell-topbar-right">
+        <a href="{{ get_url(path="@/now.md") }}" class="shell-now-link">
+          <span class="shell-status-dot"></span>
+          <span>/now</span>
+        </a>
       </div>
-    </section>
+    </div>
 
-    <nav id="explore-grid" aria-label="Site sections">
-      <a href="{{ get_url(path="@/posts/_index.md") }}" class="explore-card card-blog">
-        <picture>
-          <source srcset="{{ get_url(path="assets/media/blog-dark.png") }}"
-                   media="(prefers-color-scheme: dark)">
+    <div class="shell-layout">
+      {% include "snippets/sidebar.html" %}
 
-          <img class="card-icon"
-              src="{{ get_url(path="assets/media/blog-light.png") }}"
-              alt="" />
-        </picture>
-        <span class="card-label">Blog</span>
-        <span class="card-desc">Writing about Elixir, distributed systems, and the craft of software.</span>
-      </a>
-
-      <a href="{{ latest_post.permalink }}" class="explore-card card-latest-post">
-        <span class="card-eyebrow">Latest post</span>
-        <span class="card-label">{{ latest_post.title }}</span>
-        <span class="card-desc">{{ latest_post.description | striptags | truncate(length=120) }}</span>
-        <time class="card-date" datetime="{{ latest_post.date }}">{{ latest_post.date | date(format="%B %e, %Y") }}</time>
-      </a>
-
-      <a href="{{ get_url(path="@/books.md") }}" class="explore-card card-books">
-        <div class="books-stack">
-          <img src="{{ get_url(path="assets/media/testing-elixir.png") }}"
-               alt="" class="book-cover book-1" />
-          <img src="{{ get_url(path="assets/media/network-programming.png") }}"
-               alt="" class="book-cover book-2" />
+      <section class="shell-content">
+        <div class="shell-section-header">
+          <span class="shell-section-label">posts</span>
+          <span class="shell-section-rule"></span>
         </div>
-        <span class="card-label">Books</span>
-        <span class="card-desc">Two published books on Elixir.</span>
-      </a>
 
-      <a href="https://youtube.com/playlist?list=PLd7I3U4fDsUJfNM-N7Kyss66gmml_OSDq"
-         target="_blank" class="explore-card card-talks">
-        <img class="card-icon icon-needs-invert"
-             src="{{ get_url(path="assets/media/mic.png") }}"
-             alt="" />
-        <span class="card-label">Talks</span>
-        <span class="card-desc">Conference talks, mostly about Elixir.</span>
-      </a>
-
-      <a href="{{ get_url(path="@/teaching.md") }}" class="explore-card card-teaching">
-          <img class="card-icon icon-needs-invert"
-               src="{{ get_url(path="assets/media/chalkboard.png") }}"
-               alt="" />
-        <span class="card-label">Teaching</span>
-        <span class="card-desc">Screencasts, interactive guides, and Livebooks.</span>
-      </a>
-
-      <a href="{{ get_url(path="@/uses.md") }}" class="explore-card card-uses">
-          <img class="card-icon icon-needs-invert"
-               src="{{ get_url(path="assets/media/uses-laptop.png") }}"
-               alt="" />
-        <span class="card-label">/uses</span>
-        <span class="card-desc">Software, hardware, and tools I use.</span>
-      </a>
-
-      <a href="{{ get_url(path="@/travels.md") }}" class="explore-card card-travels">
-        <svg class="travels-deco" viewBox="0 0 260 70" fill="none" aria-hidden="true">
-          <path d="M5 55 C25 15, 50 45, 80 30 S140 5, 170 35 S220 15, 255 48"
-                stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4" stroke-linecap="round"/>
-          <circle cx="5" cy="55" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-          <circle cx="80" cy="30" r="3" fill="currentColor"/>
-          <circle cx="170" cy="35" r="3" fill="currentColor"/>
-          <circle cx="255" cy="48" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        </svg>
-        <span class="card-label">Travels</span>
-        <span class="card-desc">An interactive map of places I've been lucky enough to visit.</span>
-      </a>
-    </nav>
+        {% for post in recent_posts %}
+        <a href="{{ post.permalink }}" class="shell-post">
+          <span class="shell-post-prompt">></span>
+          <span class="shell-post-body">
+            <strong>{{ post.title }}</strong>
+            {% if post.description %}
+            <span class="shell-post-desc">{{ post.description | striptags | truncate(length=90) }}</span>
+            {% endif %}
+          </span>
+          <span class="shell-post-date">{{ post.date | date(format="%Y-%m") }}</span>
+        </a>
+        {% endfor %}
+      </section>
+    </div>
   </div>
 </div>
 {% endblock content %}

@@ -1,10 +1,14 @@
 <header>
-  <a href="/" class="header-link">
-    <picture>
-      <img class="hero-portrait"
-           src="{{ get_url(path="assets/media/hero-portrait.jpg") }}"
-           alt="Portrait of Andrea" />
-    </picture>
-    <span class="site-name">Andrea Leopardi</span>
-  </a>
+  <div class="header-left">
+    <a href="/" class="header-link">
+      <span class="header-tilde">~</span>
+      <span class="site-name">andrealeopardi.com</span>
+    </a>
+  </div>
+  <div class="header-right">
+    <a href="{{ get_url(path="@/now.md") }}" class="header-now-link">
+      <span class="status-dot"></span>
+      <span>/now</span>
+    </a>
+  </div>
 </header>

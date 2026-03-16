@@ -1,44 +1,45 @@
-$footerIconWidth: 42px;
-
 footer {
   flex: 0 0 auto;
   justify-self: flex-end;
   margin-top: auto;
-  padding: 0 5vw 30px;
+  padding: 12px 16px;
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-box-borders);
+  background: var(--color-footer-surface);
 
-  .footer-divider {
-    width: 60px;
-    height: 1px;
-    background: var(--color-post-border);
-    margin: 30px auto 24px;
+  @include mediumScreen {
+    padding: 12px 32px;
   }
 
-  div.icons {
-    margin: 0 auto;
+  .footer-links {
     display: flex;
-    justify-content: center;
-    gap: 16px;
+    align-items: center;
+    gap: 18px;
+    font-family: $monoFontStack;
+    font-size: 11px;
 
     a {
-      display: block;
-      transition: transform 0.15s ease;
+      color: var(--color-text-faint);
+      text-decoration: none;
+      transition: color 0.15s ease;
+
+      &:first-child {
+        color: var(--color-links);
+      }
 
       &:hover {
-        transform: translateY(-3pt);
+        color: var(--color-links);
       }
     }
   }
 
-  img.footer-icon {
-    width: $footerIconWidth;
-    display: block;
-  }
-
-  #icon-github {
-    @include darkMode {
-      filter: invert(1);
-    }
+  .footer-meta {
+    font-family: $monoFontStack;
+    font-size: 11px;
+    color: var(--color-text-faintest);
   }
 }

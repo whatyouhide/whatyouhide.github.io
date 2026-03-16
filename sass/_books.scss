@@ -1,6 +1,10 @@
 main.books {
     max-width: $maxContentWidth * 1.4;
 
+    h2 {
+        font-family: $monoFontStack;
+    }
+
     @include mediumScreen {
         padding: 0;
     }

@@ -12,6 +12,8 @@ This is Andrea Leopardi's personal website (<https://andrealeopardi.com>), built
 
 ## Essential Commands
 
+Zola is installed, don't check.
+
 ### Build and Development
 
 ```bash
@@ -56,18 +58,24 @@ The project uses markdownlint for markdown files. Configuration is in `.markdown
 │       └── YYYY-MM-DD-slug/
 │           └── index.md    # Individual posts
 ├── templates/              # Tera templates
-│   ├── base.html           # Base template with header, meta tags
-│   ├── index.html          # Homepage template
-│   ├── post.html           # Blog post template
-│   ├── posts.html          # Blog listing template
+│   ├── base.html           # Master template (header, body, content blocks)
+│   ├── base_sidebar.html   # Sidebar layout (extends base, adds sidebar)
+│   ├── index.html          # Landing page (own top bar + sidebar + posts)
+│   ├── post.html           # Blog post (full-width, no sidebar)
+│   ├── posts.html          # Blog listing (with sidebar)
+│   ├── extra_page.html     # Generic page (with sidebar)
+│   ├── books.html          # Books page (with sidebar)
+│   ├── travels.html        # Travels page (with sidebar)
+│   ├── section.html        # Section template (with sidebar)
 │   ├── shortcodes/         # Custom shortcodes
 │   │   ├── callout.html
 │   │   ├── unsplash_credit.html
 │   │   ├── youtube.html
 │   │   └── ...
 │   └── snippets/           # Reusable template snippets
-│       ├── header.html
-│       ├── footer.html
+│       ├── sidebar.html    # Shared sidebar (portrait, identity, roles, nav)
+│       ├── header.html     # Top bar (~ site + /now link)
+│       ├── footer.html     # Terminal footer (social + pid)
 │       ├── meta.html
 │       └── ...
 ├── sass/                   # SCSS stylesheets
@@ -164,48 +172,108 @@ template: template_name.html  # Optional
 ---
 ```
 
-## Styling and Design
+## Design Direction: Terminal Hacker
+
+The site was redesigned in March 2026 around a **terminal/hacker aesthetic**. The guiding metaphor is a personal computer terminal — monospace typography, green accents, command-line structural patterns — applied as a personal website rather than an actual terminal emulator.
+
+### Design Philosophy
+
+* **Terminal structure, human content.** The chrome (header, sidebar, footer, nav, meta elements) is fully terminal-styled. Blog post body text uses sans-serif for comfortable long-form reading.
+* **One accent color.** Green (`#3FB950` dark / `#4A6B56` light) is the single accent, used for `$` prompts, `>` cursors, status dot, active links. No other accent colors.
+* **Monospace as the primary voice.** IBM Plex Mono is the personality of the site. IBM Plex Sans is used only where readability demands it (blog post body text, book descriptions).
+* **Persistent sidebar.** The sidebar (portrait, identity, `$`-prefixed roles, `/slash` nav) persists across all section pages (essays, books, travels, uses, teaching, now). Blog post reading pages go full-width (no sidebar) to give content room.
+* **Earned decorative elements.** Every visual element serves a purpose. The green status dot links to `/now`. The `$` prompts echo the terminal metaphor. The `pid 1 · uptime 99.9%` footer is playful but restrained.
+
+### Dual Color Scheme
+
+The site supports two modes via `prefers-color-scheme`, both expressing the same terminal personality through different physical metaphors:
+
+**Dark mode (default) — CRT Terminal:**
+* Background: `#0D1117` (void black)
+* Text: `#E6EDF3` (phosphor white)
+* Green: `#3FB950` (neon terminal green)
+* Borders: `#21262D` (dark steel)
+* Background effects: phosphor glows, scanlines (1px lines at 3% opacity), dot grid, corner vignettes
+* Status dot has a green box-shadow glow
+
+**Light mode — E-Ink Paper:**
+* Background: `#F4F1EB` (warm paper)
+* Text: `#1C1917` (warm ink)
+* Green: `#4A6B56` (forest ink, desaturated)
+* Borders: `#D8D3CB` (pencil line)
+* Background effects: all disabled (transparent) — e-ink doesn't emit light
+* Status dot has no glow — just a solid ink circle
+* No vignette, no scanlines, no glows
+
+The color swap is purely CSS variables in `_variables.scss`. Zero structural/layout changes between modes.
 
 ### Font Stack
 
-* **Serif:** "Spectral" (Google Fonts) - primary body text
-* **Sans-serif:** "Lato" (Google Fonts) - headings and UI
-* **Handwritten:** "Andrea" (custom font) - special elements
-* **Sans fallback:** Helvetica Neue, Helvetica, Arial
+* **Mono (primary):** `IBM Plex Mono` — used for all UI chrome, headings, nav, sidebar, post titles, meta elements
+* **Sans (reading):** `IBM Plex Sans` — used for blog post body text (`.entry`), book descriptions, page intro text
+* **Handwritten:** `Andrea` (custom `@font-face`) — available but rarely used
 
-### Color System
+### Color Variables
 
-CSS variables defined in `sass/_variables.scss`:
+All colors are CSS custom properties in `:root` (dark) with `@media (prefers-color-scheme: light)` overrides. Key semantic tokens:
 
-**Light mode:**
-
-* Background: `#faf7f2` (warm off-white)
-* Text: `#2d2d2d` (dark gray)
-* Links: `#8b4513` (brown)
-* Link hover: `#a0522d`
-
-**Dark mode:** Automatically applied via `@media (prefers-color-scheme: dark)`
-
-* Background: `#2a2e31` (dark blue-gray)
-* Text: `#fff`
-* Links: `#ce7332` (orange)
+* `--color-text` / `--color-text-dimmer` / `--color-text-faint` / `--color-text-faintest` — four-level text hierarchy
+* `--color-links` / `--color-links-hover` — green accent
+* `--color-box-borders` / `--color-post-border` — structural borders (two weights)
+* `--color-entry-text` — blog post body text (slightly dimmer than `--color-text` for reading comfort)
+* `--color-roles-surface` / `--color-footer-surface` — semi-transparent surface fills
+* `--color-status-glow` — box-shadow for the status dot (value or `none`)
+* `--portrait-filter` — CSS filter for the portrait image (`none` in both modes currently)
 
 ### SCSS Mixins
 
 Available in `sass/_mixins.scss`:
 
-* `@include mediumScreen { ... }` - Min-width: 760px
-* `@include wideScreen { ... }` - Min-width: 1280px
-* `@include darkMode { ... }` - Dark color scheme
-* `@include scaleUpOnHover { ... }` - Scale animation on hover
+* `@include mediumScreen { ... }` — min-width: 760px (sidebar becomes vertical)
+* `@include wideScreen { ... }` — min-width: 1280px
+* `@include darkMode { ... }` — `prefers-color-scheme: dark`
+* `@include lightMode { ... }` — `prefers-color-scheme: light`
+
+### Layout Architecture
+
+* **Landing page** (`index.html`): top bar + sidebar + post list. Extends `base.html` directly, overrides the header block (uses its own top bar instead).
+* **Section pages** (books, travels, uses, teaching, now, essays index): extend `base_sidebar.html` which wraps content in `shell-layout` with the shared sidebar. The sidebar is in `snippets/sidebar.html`.
+* **Blog posts** (`post.html`): extend `base.html` directly. Full-width, no sidebar. Just header bar + content + footer.
+* **Responsive behavior**: on mobile (<760px), the sidebar stacks above content. Nav links wrap horizontally. Portrait shrinks to 72px avatar.
+
+### Terminal Visual Patterns
+
+These patterns recur throughout and define the aesthetic:
+
+* `$` — role/credential prompt prefix (sidebar roles, post date sigil)
+* `>` — content item cursor (post entries on landing page)
+* `/slash` — nav link prefix (`/essays`, `/books`, `/now`)
+* `── LABEL ──` — section dividers with rule lines
+* `pid 1 · uptime 99.9%` — footer status line
+* `~` — tilde home symbol in header
+* Dashed borders — role boxes, used sparingly for "form field" feel
+* Right-aligned dates in `YYYY-MM` format on post entries
+
+### Background Effects (Dark Mode Only)
+
+Applied via `::before` and `::after` pseudo-elements on `.wrapper-masthead`:
+
+* **Phosphor glows** — two subtle radial gradients (top-right, bottom-left) at ~6% opacity
+* **Scanlines** — horizontal 1px green lines repeating every 4px at 3% opacity
+* **Dot grid** — 24px grid of 0.6px dots at 12% opacity
+* **Corner vignettes** — radial gradients darkening the four corners
+
+All effects use `z-index: -1` so they sit behind content. In light mode, all are set to `transparent`.
 
 ### Design Conventions
 
-* Max content width: `800px` (defined in `_variables.scss`)
-* Typography scale: h1 = 200%, h2 = 24px, h3 = 20px, h4 = 18px
-* Base font size: 18px
-* Line height: 1.5
-* Responsive: Mobile-first with `mediumScreen` and `wideScreen` breakpoints
+* Max content width: `800px` (`$maxContentWidth`)
+* Base font size: 18px, line-height: 1.6
+* Blog post entry text: 18px, line-height: 1.7
+* Code blocks: `14px` mono, background `--color-site-background-accented`, border `--color-box-borders`
+* Inline code: dark chip with border, 4px radius
+* Blockquotes: green left border + subtle green-tinted background
+* Syntax highlighting: dark theme (`ayu-dark`) in dark mode, light theme (`github-light`) in light mode
 
 ## Templates and Templating
 
@@ -228,10 +296,19 @@ Zola uses [Tera](https://keats.github.io/tera/), similar to Jinja2/Liquid.
 
 ### Key Templates
 
-* **base.html** - Master template with `<head>`, analytics, schema.org metadata
-* **post.html** - Extends base, adds article structure, Giscus comments
-* **index.html** - Homepage layout
-* **posts.html** - Blog post listing
+* **base.html** — Master template with `<head>`, analytics, schema.org metadata. Has `header`, `body`, and `content` blocks.
+* **base_sidebar.html** — Extends base. Wraps content in `shell-layout` with the shared sidebar (`snippets/sidebar.html`). Used by all section/index pages.
+* **index.html** — Landing page. Extends base directly (overrides header with its own top bar). Uses `snippets/sidebar.html` for the sidebar.
+* **post.html** — Individual blog post. Extends base directly (no sidebar, full-width).
+* **extra_page.html** — Generic content page. Extends base_sidebar. Used by uses, teaching, now.
+* **books.html** / **travels.html** — Specific page templates. Extend base_sidebar.
+* **posts.html** / **section.html** — Post listing. Extend base_sidebar.
+
+### Key Snippets
+
+* **snippets/sidebar.html** — The shared sidebar (portrait, identity, roles, nav). Single source of truth, used by both `index.html` and `base_sidebar.html`. Nav items auto-highlight based on `current_path`.
+* **snippets/header.html** — Top bar for inner pages (`~ andrealeopardi.com` + `/now` link). Not used on landing page (which has its own top bar in `index.html`).
+* **snippets/footer.html** — Terminal footer (`github email bluesky rss` + `pid 1 · uptime 99.9%`).
 
 ### Template Variables
 
@@ -384,8 +461,7 @@ These sites frequently block automated checkers.
 ### Current State
 
 * Branch: `main`
-* Clean working directory
-* Recent work: Agent skills, Umami analytics, /travels page
+* Recent work: Terminal hacker redesign (March 2026) — new visual direction, persistent sidebar, dual color scheme (dark CRT + light e-ink paper), /now page
 
 ## Working with This Codebase
 
@@ -458,7 +534,7 @@ These sites frequently block automated checkers.
 
 7. **Excerpt marker:** Use `<!-- more -->` in post content, not frontmatter.
 
-8. **Dark mode:** Automatically applied based on system preference. No manual toggle.
+8. **Color scheme:** Dark (CRT) is the `:root` default. Light (e-ink paper) applied via `prefers-color-scheme: light`. No manual toggle — follows OS preference.
 
 9. **Custom fonts:** "Andrea" font loaded via `@font-face` from `static/assets/fonts/`.
 
@@ -502,4 +578,4 @@ See `.agents/skills/frontend-design/SKILL.md` for full details.
 
 ---
 
-**Last updated:** 2026-02-15
+**Last updated:** 2026-03-16
