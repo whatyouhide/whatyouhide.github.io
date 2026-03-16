@@ -1,3 +1,7 @@
 /public
 /static/syntax-theme-dark.css
 /static/syntax-theme-light.css
+
+# AI agents and whatnot
+.playwright-cli
+mockups
