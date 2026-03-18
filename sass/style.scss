@@ -515,6 +515,9 @@ article.post .embedded-youtube-player {
 }
 
 article.post {
+  #main.container.post-page & > h1 {
+    text-align: left;
+  }
 
   h2,
   h3,
@@ -551,6 +554,67 @@ article.post {
 
   h3 a.zola-anchor {
     color: var(--color-text-dimmer);
+  }
+}
+
+#main.container.post-page > article.post .entry {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: $monoFontStack;
+    text-align: left;
+    letter-spacing: 0.01em;
+  }
+
+  h1::before,
+  h2::before,
+  h3::before,
+  h4::before,
+  h5::before,
+  h6::before {
+    display: inline-block;
+    margin-right: 0.6em;
+    color: var(--color-text-faint);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+  }
+
+  h1::before {
+    content: "#";
+  }
+
+  h2::before {
+    content: "##";
+  }
+
+  h3::before {
+    content: "###";
+  }
+
+  h4::before {
+    content: "####";
+  }
+
+  h5::before {
+    content: "#####";
+  }
+
+  h6::before {
+    content: "######";
+  }
+
+  h1 a,
+  h2 a,
+  h3 a,
+  h4 a,
+  h5 a,
+  h6 a {
+    color: inherit;
+    text-decoration: none;
   }
 }
 
@@ -684,12 +748,12 @@ aside.callout {
   }
 
   h5 {
-    font-family: $displaySansFontStack;
-    font-size: 20px;
-    font-weight: 600;
+    font-family: $monoFontStack;
+    font-size: 18px;
+    font-weight: 500;
     margin: 0;
-    text-transform: none;
-    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--color-text);
   }
 
