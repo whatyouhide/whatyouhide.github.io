@@ -717,6 +717,14 @@ aside.callout {
     --callout-inner-glow: rgba(41, 66, 78, 0.12);
   }
 
+  &.callout-note {
+    --callout-accent: #{darken(#a8b4f0, 20%)};
+    --callout-surface: rgba(168, 180, 240, 0.18);
+    --callout-border: rgba(168, 180, 240, 0.40);
+    --callout-accent-veil: rgba(168, 180, 240, 0.18);
+    --callout-inner-glow: rgba(34, 38, 62, 0.12);
+  }
+
   &.callout-warning {
     --callout-accent: #{darken(#f4d482, 25%)};
     --callout-surface: rgba(244, 212, 130, 0.24);
