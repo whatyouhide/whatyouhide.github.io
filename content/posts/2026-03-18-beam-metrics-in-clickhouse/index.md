@@ -3,7 +3,7 @@ title: BEAM Metrics in ClickHouse
 description: |
   How we are periodically dumping metrics about our most demanding BEAM processes into an easy-to-query ClickHouse table.
 extra:
-  cover_image: cover-image.jpg
+  cover_image: cover-image.png
   math: true
 ---
 
