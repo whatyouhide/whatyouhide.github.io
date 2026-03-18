@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+human_size() {
+  local bytes=$1
+  if (( bytes >= 1048576 )); then
+    printf "%.1f MiB" "$(echo "scale=1; $bytes / 1048576" | bc)"
+  elif (( bytes >= 1024 )); then
+    printf "%.1f KiB" "$(echo "scale=1; $bytes / 1024" | bc)"
+  else
+    printf "%d B" "$bytes"
+  fi
+}
+
+for cmd in pngquant gum; do
+  if ! command -v "$cmd" &>/dev/null; then
+    echo "Missing dependency: $cmd"
+    echo "  brew install $cmd"
+    exit 1
+  fi
+done
+
+# Require at least one argument.
+if [[ $# -eq 0 ]]; then
+  gum style --foreground 1 "Usage: compress-images <png-file> [png-file ...]"
+  exit 1
+fi
+
+# Validate that all files exist and are PNGs before doing anything.
+for file in "$@"; do
+  if [[ ! -f "$file" ]]; then
+    gum style --foreground 1 "File not found: $file"
+    exit 1
+  fi
+  if [[ "${file##*.}" != "png" ]]; then
+    gum style --foreground 1 "Not a PNG file: $file"
+    exit 1
+  fi
+done
+
+# Show what we're about to compress.
+gum style --bold "Files to compress:"
+for file in "$@"; do
+  size=$(du -h "$file" | cut -f1 | xargs)
+  echo "  $file ($size)"
+done
+echo
+
+# Confirm.
+if ! gum confirm "Compress these files?"; then
+  gum style --foreground 3 "Aborted."
+  exit 0
+fi
+
+echo
+
+# Create a backup directory in macOS temp.
+backup_dir=$(mktemp -d)
+
+for file in "$@"; do
+  filename=$(basename "$file")
+
+  # Back up the original.
+  cp "$file" "$backup_dir/$filename"
+
+  # Compress in-place.
+  if pngquant --force --skip-if-larger --quality 65-80 --output "$file" "$file"; then
+    original_size=$(wc -c < "$backup_dir/$filename" | xargs)
+    new_size=$(wc -c < "$file" | xargs)
+    savings=$(( (original_size - new_size) * 100 / original_size ))
+    gum style --foreground 2 "✓ $file  $(human_size "$original_size") → $(human_size "$new_size")  (-${savings}%)"
+  else
+    # pngquant returns 98 when --skip-if-larger kicks in, or 99 for other issues.
+    # Restore from backup just in case.
+    cp "$backup_dir/$filename" "$file"
+    gum style --foreground 3 "⊘ $file  (skipped, already optimized or compression would be larger)"
+  fi
+done
+
+echo
+gum style --faint "Backups saved to: $backup_dir"
