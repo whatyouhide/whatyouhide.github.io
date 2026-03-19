@@ -26,6 +26,7 @@ footer {
       color: var(--color-text-faint);
       text-decoration: none;
       transition: color 0.15s ease;
+      padding: 8px 0;
 
       &:first-child {
         color: var(--color-links);

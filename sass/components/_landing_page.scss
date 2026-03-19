@@ -298,7 +298,9 @@
 }
 
 .shell-nav-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   font-family: $monoFontStack;
   font-size: 12px;
   color: var(--color-text-dimmer);
@@ -306,6 +308,10 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--color-post-border);
   transition: color 0.15s ease;
+
+  @include mediumScreen {
+    min-height: auto;
+  }
 
   &:last-child {
     border-bottom: none;
@@ -418,6 +424,7 @@
   color: var(--color-text-faintest);
   flex-shrink: 0;
   padding-top: 3px;
+  font-variant-numeric: tabular-nums;
 
   // Hide on very small screens
   @media screen and (max-width: 480px) {
