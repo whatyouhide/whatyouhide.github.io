@@ -259,7 +259,7 @@ b {
 #main.container > .posts.posts-index {
   max-width: $maxContentWidth;
   margin: clamp(2.5rem, 6vw, 4.5rem) auto;
-  padding: clamp(2.25rem, 5vw, 3.75rem);
+  padding: clamp(1.5rem, 5vw, 3.75rem) clamp(1rem, 4vw, 3.75rem);
 }
 
 #main.container > .posts.posts-index > .post {
@@ -338,6 +338,8 @@ b {
 #main.container.post-page > article.post {
   position: relative;
   z-index: 1;
+  width: 100%;
+  min-width: 0;
 }
 
 article.post,
@@ -360,9 +362,12 @@ main.books {
   }
 
   .entry {
+    min-width: 0;
     font-size: 18px;
     line-height: 1.7;
     color: var(--color-entry-text);
+    overflow-wrap: break-word;
+    overflow-x: hidden;
 
     a {
       text-decoration: underline;
@@ -430,18 +435,27 @@ main.books {
     background: var(--color-blockquote-bg);
     border-radius: 0 8px 8px 0;
   }
+
+  .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }
 
 #main.container > article.post,
 #main.container > main.about,
 #main.container > main.books {
   margin: clamp(2.5rem, 6vw, 4.5rem) auto;
-  padding: clamp(2.25rem, 5vw, 3.75rem);
+  padding: clamp(1.5rem, 5vw, 3.75rem) clamp(1rem, 4vw, 3.75rem);
 }
 
 article.post table {
+  display: block;
   width: 100%;
+  max-width: 100%;
   margin: 1em 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 
   thead tr {
     border-bottom: 1px solid var(--color-box-borders);
@@ -520,6 +534,13 @@ article.post .embedded-youtube-player {
     width: 100%;
     height: 20em;
   }
+}
+
+article.post .giscus,
+article.post .giscus-frame {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 
 article.post {
