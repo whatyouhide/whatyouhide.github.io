@@ -70,11 +70,13 @@ a {
   color: var(--color-links);
   text-decoration: none;
   cursor: pointer;
-  transition: color 0.15s ease;
+  text-shadow: none;
+  transition: color 0.15s ease, text-shadow 0.2s ease;
 
   &:hover,
   &:active {
     color: var(--color-links-hover);
+    text-shadow: var(--link-hover-glow);
   }
 }
 

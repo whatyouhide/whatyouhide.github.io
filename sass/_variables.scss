@@ -48,6 +48,7 @@ $handwrittenFontStack: "Andrea", sans-serif;
   --color-entry-text: #C9D1D9;
   --color-blockquote-bg: rgba(63, 185, 80, 0.04);
   --color-status-glow: 0 0 8px rgba(63, 185, 80, 0.4);
+  --link-hover-glow: 0 0 0.45rem rgba(86, 211, 100, 0.32), 0 0 1rem rgba(63, 185, 80, 0.18);
   --portrait-filter: none;
 }
 
@@ -88,6 +89,7 @@ $handwrittenFontStack: "Andrea", sans-serif;
     --color-entry-text: #44403C;
     --color-blockquote-bg: rgba(74, 107, 86, 0.06);
     --color-status-glow: none;
+    --link-hover-glow: none;
     --portrait-filter: none;
   }
 }

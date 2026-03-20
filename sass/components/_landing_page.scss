@@ -373,6 +373,7 @@
   padding: 14px 0;
   border-bottom: 1px solid var(--color-post-border);
   text-decoration: none;
+  text-shadow: none;
   transition: background-color 0.15s ease;
 
   @include mediumScreen {
@@ -385,6 +386,12 @@
 
   &:hover strong {
     color: var(--color-links);
+    text-shadow: var(--link-hover-glow);
+  }
+
+  &:hover,
+  &:active {
+    text-shadow: none;
   }
 }
 
@@ -407,7 +414,8 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--color-text);
-    transition: color 0.15s ease;
+    text-shadow: none;
+    transition: color 0.15s ease, text-shadow 0.2s ease;
   }
 }
 
