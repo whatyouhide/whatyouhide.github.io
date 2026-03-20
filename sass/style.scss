@@ -327,11 +327,6 @@ b {
 
 #main {
   flex: 10 1 0px;
-
-  h2 {
-    text-align: center;
-    margin: 25px 0 0 0;
-  }
 }
 
 #main.landing-page > #content-container,
@@ -442,11 +437,48 @@ main.books {
   }
 }
 
-#main.container > article.post,
-#main.container > main.about,
-#main.container > main.books {
+#main.container > article.post {
   margin: clamp(2.5rem, 6vw, 4.5rem) auto;
   padding: clamp(1.5rem, 5vw, 3.75rem) clamp(1rem, 4vw, 3.75rem);
+}
+
+main.about {
+  .now-laquila-image {
+    display: block;
+    width: min(100%, 34rem);
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center 58%;
+    margin: 1.8rem auto 2.2rem;
+    padding: 0.35rem;
+    border: 1px solid color-mix(in srgb, var(--color-links) 22%, var(--color-box-borders));
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-content-surface) 88%, transparent), transparent),
+      linear-gradient(135deg, color-mix(in srgb, var(--color-links) 10%, transparent), transparent 55%);
+    box-shadow: 0 24px 45px -38px var(--color-page-shadow);
+    filter: saturate(0.72) contrast(0.92) brightness(0.88);
+    opacity: 0.84;
+
+    @include mediumScreen {
+      float: right;
+      width: min(42%, 18rem);
+      margin: 0.55rem 0 1.4rem 2rem;
+    }
+
+    @include darkMode {
+      filter: saturate(0.58) contrast(0.9) brightness(0.8);
+      box-shadow:
+        0 0 0 1px rgba(63, 185, 80, 0.08),
+        0 22px 48px -40px rgba(0, 0, 0, 0.7);
+    }
+
+    @include lightMode {
+      filter: saturate(0.58) contrast(0.9) brightness(0.96) sepia(0.12);
+      opacity: 0.9;
+      box-shadow: 0 16px 30px -32px rgba(0, 0, 0, 0.22);
+    }
+  }
 }
 
 article.post table {
@@ -544,7 +576,7 @@ article.post .giscus-frame {
 }
 
 article.post {
-  #main.container.post-page & > h1 {
+  > h1 {
     text-align: left;
   }
 
