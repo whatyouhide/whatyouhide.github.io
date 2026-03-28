@@ -67,5 +67,6 @@ header {
     background: var(--color-links);
     box-shadow: var(--color-status-glow);
     flex-shrink: 0;
+    animation: statusPulse 3s ease-in-out infinite;
   }
 }

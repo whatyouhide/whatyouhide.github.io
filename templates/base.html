@@ -123,6 +123,23 @@
                 dot.style.setProperty('--mouse-x', x + 'px');
                 dot.style.setProperty('--mouse-y', y + 'px');
             });
+
+            // Live uptime counter
+            var uptimeEl = document.getElementById('uptime');
+            if (uptimeEl) {
+                var start = Date.now();
+                setInterval(function() {
+                    var s = Math.floor((Date.now() - start) / 1000);
+                    var m = Math.floor(s / 60);
+                    var h = Math.floor(m / 60);
+                    s = s % 60; m = m % 60;
+                    uptimeEl.textContent = (h ? h + 'h ' : '') + (m ? m + 'm ' : '') + s + 's';
+                }, 1000);
+            }
+
+            // Console easter egg
+            console.log('%c~/andrealeopardi.com', 'color:#3FB950;font-family:monospace;font-size:16px;font-weight:bold');
+            console.log('%cCurious? Nice. https://github.com/whatyouhide', 'color:#8B949E;font-family:monospace;font-size:12px');
         });
     </script>
 </head>

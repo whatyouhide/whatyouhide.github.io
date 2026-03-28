@@ -110,6 +110,12 @@
   background: var(--color-links);
   box-shadow: var(--color-status-glow);
   flex-shrink: 0;
+  animation: statusPulse 3s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 // ─── Main Layout ─────────────────────────────────────
@@ -151,6 +157,7 @@
   overflow: hidden;
   flex-shrink: 0;
   animation: fadeInUp 0.5s ease-out 0.1s both;
+  position: relative;
 
   @include mediumScreen {
     width: 100%;
@@ -159,13 +166,24 @@
   }
 }
 
-#hero-portrait {
+#hero-portrait,
+#hero-portrait-real {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: 56% 12%;
-  filter: var(--portrait-filter);
+}
+
+#hero-portrait-real {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+#hero-portrait-frame:hover #hero-portrait-real {
+  opacity: 1;
 }
 
 // On mobile, portrait + identity sit side by side
@@ -390,6 +408,13 @@
   text-decoration: none;
   text-shadow: none;
   transition: background-color 0.15s ease;
+  animation: fadeInUp 0.4s ease-out both;
+
+  @for $i from 1 through 12 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{0.05 * $i}s;
+    }
+  }
 
   @include mediumScreen {
     gap: 16px;
