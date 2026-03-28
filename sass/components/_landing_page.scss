@@ -274,6 +274,21 @@
   }
 }
 
+// ─── Blinking Cursor ────────────────────────────────
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.shell-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: var(--color-links);
+  animation: cursorBlink 1s step-end infinite;
+}
+
 // ─── Sidebar Nav ─────────────────────────────────────
 
 .shell-nav {
