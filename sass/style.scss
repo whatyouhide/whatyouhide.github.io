@@ -171,12 +171,41 @@ b {
       ),
       // Dot grid
       radial-gradient(
-        circle at 1px 1px,
-        var(--color-background-dot) 0.6px,
-        transparent 0.6px
+        circle,
+        var(--color-background-dot) 0.5px,
+        transparent 0.5px
       );
-    background-size: 100% 100%, 100% 100%, 100% 4px, 24px 24px;
-    background-position: center;
+    background-size: 100% 100%, 100% 100%, 100% 4px, 10px 10px;
+    background-position: center, center, 0 0, 5px 5px;
+  }
+
+  // Mouse-following dot highlight (dark mode only)
+  .dot-highlight {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(
+      circle,
+      rgba(63, 185, 80, 0.5) 0.5px,
+      transparent 0.5px
+    );
+    background-size: 10px 10px;
+    background-position: 5px 5px;
+    mask-image: radial-gradient(
+      circle 120px at var(--mouse-x, -200px) var(--mouse-y, -200px),
+      black,
+      transparent
+    );
+    -webkit-mask-image: radial-gradient(
+      circle 120px at var(--mouse-x, -200px) var(--mouse-y, -200px),
+      black,
+      transparent
+    );
+
+    @include lightMode {
+      display: none;
+    }
   }
 
   // Corner vignette (CRT effect, dark mode only)

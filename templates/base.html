@@ -106,6 +106,25 @@
         // Re-enable during holidays.
         // document.addEventListener('DOMContentLoaded', createSnowflakes);
     </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var wrapper = document.querySelector('.wrapper-masthead');
+            if (!wrapper) return;
+
+            var dot = document.createElement('div');
+            dot.className = 'dot-highlight';
+            wrapper.appendChild(dot);
+
+            document.addEventListener('mousemove', function(e) {
+                var rect = wrapper.getBoundingClientRect();
+                var x = e.clientX - rect.left;
+                var y = e.clientY - rect.top + window.scrollY;
+                dot.style.setProperty('--mouse-x', x + 'px');
+                dot.style.setProperty('--mouse-y', y + 'px');
+            });
+        });
+    </script>
 </head>
 
 <body>
