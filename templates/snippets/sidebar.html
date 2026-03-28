@@ -30,7 +30,7 @@
   </div>
 
   <nav class="shell-nav" aria-label="Site sections">
-    <a href="{{ get_url(path="@/posts/_index.md") }}" class="shell-nav-item {% if current_path is starting_with("/posts") %}shell-nav-active{% endif %}">/essays</a>
+    <a href="{{ get_url(path="@/posts/_index.md") }}" class="shell-nav-item {% if current_path is starting_with("/posts") %}shell-nav-active{% endif %}">/posts</a>
     <a href="{{ get_url(path="@/teaching.md") }}" class="shell-nav-item {% if current_path is starting_with("/teaching") %}shell-nav-active{% endif %}">/teaching</a>
     <a href="{{ config.extra.talks_youtube_playlist_url }}" target="_blank" class="shell-nav-item">/talks</a>
     <a href="{{ get_url(path="@/books.md") }}" class="shell-nav-item {% if current_path is starting_with("/books") %}shell-nav-active{% endif %}">/books</a>
