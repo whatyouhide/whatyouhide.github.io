@@ -549,9 +549,19 @@
 .shell-name a {
   color: inherit;
   text-decoration: none;
-  transition: color 0.15s ease;
+}
 
-  &:hover {
-    color: var(--color-links);
+// Per-character animation for the name
+.shell-name-char {
+  display: inline-block;
+  visibility: hidden;
+  cursor: default;
+
+  &.typed {
+    visibility: visible;
+  }
+
+  &.dissolved {
+    color: transparent;
   }
 }

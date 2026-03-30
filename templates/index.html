@@ -6,7 +6,7 @@
 {% block content %}
 {% set posts_section = get_section(path="posts/_index.md") %}
 {% set latest_post = posts_section.pages | sort(attribute="date") | reverse | first %}
-{% set recent_posts = posts_section.pages | sort(attribute="date") | reverse | slice(end=12) %}
+{% set recent_posts = posts_section.pages | sort(attribute="date") | reverse | slice(end=10) %}
 
 <div id="main" role="main" class="landing-page">
   <div id="content-container">

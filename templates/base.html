@@ -140,6 +140,51 @@
             // Console easter egg
             console.log('%c~/andrealeopardi.com', 'color:#3FB950;font-family:monospace;font-size:16px;font-weight:bold');
             console.log('%cCurious? Nice. https://github.com/whatyouhide', 'color:#8B949E;font-family:monospace;font-size:12px');
+
+            // Type-out name with per-character hover interaction
+            var nameLink = document.getElementById('shell-name-link');
+            var isLandingPage = document.querySelector('.landing-page');
+            if (nameLink && isLandingPage) {
+                var name = nameLink.textContent;
+                nameLink.textContent = '';
+
+                var chars = [];
+                for (var i = 0; i < name.length; i++) {
+                    var span = document.createElement('span');
+                    span.textContent = name[i];
+                    span.className = 'shell-name-char';
+                    span.style.visibility = 'hidden';
+                    if (name[i] === ' ') span.innerHTML = '&nbsp;';
+                    nameLink.appendChild(span);
+                    chars.push(span);
+                }
+
+                // Type out characters one by one
+                var baseDelay = 90;
+                var spaceIdx = name.indexOf(' ');
+                chars.forEach(function(span, idx) {
+                    var jitter = Math.random() * 50 - 25;
+                    var extraPause = (idx > spaceIdx) ? 150 : 0;
+                    setTimeout(function() {
+                        span.style.visibility = '';
+                        span.classList.add('typed');
+                    }, idx * baseDelay + jitter + extraPause);
+                });
+
+                // Hover: dissolve character, reappear after delay
+                nameLink.addEventListener('mouseover', function(e) {
+                    var target = e.target;
+                    if (target.classList && target.classList.contains('shell-name-char')) {
+                        target.classList.add('dissolved');
+                    }
+                });
+                nameLink.addEventListener('mouseout', function(e) {
+                    var target = e.target;
+                    if (target.classList && target.classList.contains('shell-name-char')) {
+                        target.classList.remove('dissolved');
+                    }
+                });
+            }
         });
     </script>
 </head>
