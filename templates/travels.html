@@ -10,12 +10,14 @@
   </p>
 
   <div class="map-container">
+    <div class="map-titlebar"><span class="map-titlebar-title">[ scratch-map ]</span><span class="map-titlebar-status" id="map-status">READY</span></div>
     <div id="travels-map"></div>
     <div class="map-controls">
       <button id="zoom-in" aria-label="Zoom in">+</button>
       <button id="zoom-out" aria-label="Zoom out">−</button>
       <button id="zoom-reset" aria-label="Reset zoom">⟲</button>
     </div>
+    <div class="map-scanlines"></div>
   </div>
 
   <script id="travels-data" type="application/json">{{ travels | json_encode() | safe }}</script>
@@ -37,6 +39,5 @@
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://unpkg.com/topojson-client@3"></script>
-<script src="https://unpkg.com/roughjs@4.6.6/bundled/rough.js"></script>
 <script src="{{ get_url(path='assets/js/travels-map.js') }}"></script>
 {% endblock content %}

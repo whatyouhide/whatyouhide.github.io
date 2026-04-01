@@ -1,4 +1,4 @@
-// Travels page styles
+// Travels page styles — terminal/CRT aesthetic
 
 main.travels {
   max-width: 1100px;
@@ -6,7 +6,10 @@ main.travels {
   padding: 0 5vw;
 
   h1 {
+    font-family: $monoFontStack;
     font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .travels-intro {
@@ -20,14 +23,59 @@ main.travels {
 .map-container {
   position: relative;
   width: 100%;
-  border: 2px solid var(--color-box-borders);
-  border-radius: 8px;
+  border: 1px solid var(--color-box-borders);
+  border-radius: 4px;
   overflow: hidden;
   background: var(--color-site-background);
-  box-shadow: 3px 3px 0 var(--color-box-borders);
 
   @include darkMode {
-    box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 0 15px rgba(63, 185, 80, 0.08),
+      0 0 30px rgba(63, 185, 80, 0.04);
+  }
+}
+
+// Terminal-style title bar
+.map-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--color-site-background-accented);
+  border-bottom: 1px solid var(--color-box-borders);
+  font-family: $monoFontStack;
+  font-size: 12px;
+  color: var(--color-text-dimmer);
+  user-select: none;
+}
+
+.map-titlebar-title {
+  letter-spacing: 0.05em;
+}
+
+.map-titlebar-status {
+  color: var(--color-links);
+  letter-spacing: 0.08em;
+}
+
+// Scanline overlay
+.map-scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+
+  @include darkMode {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      var(--color-background-scanline) 2px,
+      var(--color-background-scanline) 4px
+    );
   }
 }
 
@@ -60,17 +108,18 @@ main.travels {
   right: 15px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
+  z-index: 3;
 
   button {
-    width: 36px;
-    height: 36px;
-    border: 2px solid var(--color-box-borders);
-    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-box-borders);
+    border-radius: 2px;
     background: var(--color-site-background);
-    color: var(--color-text);
-    font-size: 20px;
-    font-weight: bold;
+    color: var(--color-text-dimmer);
+    font-family: $monoFontStack;
+    font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -78,7 +127,7 @@ main.travels {
     transition: all 0.15s ease;
 
     &:hover {
-      background: var(--color-site-background-accented);
+      color: var(--color-links);
       border-color: var(--color-links);
     }
 
@@ -92,24 +141,24 @@ main.travels {
 .country-tooltip {
   position: absolute;
   background: var(--color-site-background);
-  border: 2px solid var(--color-box-borders);
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 14px;
-  font-family: $sansSerifFontStack;
+  border: 1px solid var(--color-box-borders);
+  border-radius: 2px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-family: $monoFontStack;
   pointer-events: none;
   z-index: 100;
-  box-shadow: 2px 2px 0 var(--color-box-borders);
   white-space: nowrap;
+  color: var(--color-links);
+  letter-spacing: 0.02em;
 
   &.home::after {
-    content: " (home)";
+    content: " [HOME]";
     color: var(--color-text-dimmer);
-    font-style: italic;
   }
 
   @include darkMode {
-    box-shadow: 2px 2px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 8px rgba(63, 185, 80, 0.15);
   }
 }
 
@@ -140,20 +189,19 @@ main.travels {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .modal-content {
   position: relative;
   background: var(--color-site-background);
-  border: 2px solid var(--color-box-borders);
-  border-radius: 8px;
-  padding: 2em;
+  border: 1px solid var(--color-box-borders);
+  border-radius: 4px;
+  padding: 0;
   max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 4px 4px 0 var(--color-box-borders);
   transform: scale(0.95);
   transition: transform 0.2s ease;
 
@@ -162,27 +210,38 @@ main.travels {
   }
 
   @include darkMode {
-    box-shadow: 4px 4px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 20px rgba(63, 185, 80, 0.1);
   }
 
   h2 {
-    margin-top: 0;
-    margin-bottom: 0.5em;
-    text-align: left;
+    font-family: $monoFontStack;
+    font-size: 1.1em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+    padding: 10px 16px;
+    background: var(--color-site-background-accented);
+    border-bottom: 1px solid var(--color-box-borders);
   }
+}
+
+.modal-body {
+  padding: 1.5em;
 }
 
 .modal-close {
   position: absolute;
-  top: 10px;
-  right: 15px;
+  top: 6px;
+  right: 12px;
   background: none;
   border: none;
-  font-size: 28px;
+  font-size: 24px;
   cursor: pointer;
   color: var(--color-text-dimmer);
+  font-family: $monoFontStack;
   line-height: 1;
   padding: 0;
+  z-index: 1;
 
   &:hover {
     color: var(--color-text);
@@ -190,8 +249,12 @@ main.travels {
 }
 
 // Trip details in modal
+#modal-trips {
+  padding: 1.2em 16px;
+}
+
 .trip-item {
-  margin-bottom: 1.5em;
+  margin-bottom: 1.2em;
   padding-bottom: 1em;
   border-bottom: 1px solid var(--color-box-borders);
 
@@ -203,9 +266,11 @@ main.travels {
 }
 
 .trip-dates {
+  font-family: $monoFontStack;
   font-weight: bold;
   color: var(--color-links);
   margin-bottom: 0.25em;
+  font-size: 14px;
 }
 
 .trip-cities {
@@ -216,21 +281,25 @@ main.travels {
 
 .trip-notes {
   font-style: italic;
-  font-size: 15px;
+  font-size: 14px;
+  color: var(--color-text-dimmer);
 }
 
 .no-trips {
   color: var(--color-text-dimmer);
-  font-style: italic;
+  font-family: $monoFontStack;
+  font-size: 14px;
 }
 
 .home-badge {
   display: inline-block;
-  background: var(--color-links);
-  color: var(--color-site-background);
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-family: $monoFontStack;
+  font-size: 11px;
+  color: var(--color-links);
+  border: 1px solid var(--color-links);
+  padding: 1px 6px;
+  border-radius: 2px;
   margin-left: 10px;
   vertical-align: middle;
+  letter-spacing: 0.08em;
 }

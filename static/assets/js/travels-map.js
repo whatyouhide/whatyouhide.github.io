@@ -1,4 +1,4 @@
-// Travels map with Rough.js sketch-style rendering
+// Travels map — terminal/CRT aesthetic, flat SVG rendering
 (function () {
   "use strict";
 
@@ -10,6 +10,7 @@
   const zoomInBtn = document.getElementById("zoom-in");
   const zoomOutBtn = document.getElementById("zoom-out");
   const zoomResetBtn = document.getElementById("zoom-reset");
+  const mapStatus = document.getElementById("map-status");
 
   // Parse travel data from the script tag
   const travelsData = JSON.parse(document.getElementById("travels-data").textContent);
@@ -24,9 +25,10 @@
       landStroke: styles.getPropertyValue("--color-box-borders").trim(),
       visited: styles.getPropertyValue("--color-links").trim(),
       visitedStroke: styles.getPropertyValue("--color-links-hover").trim(),
-      home: "#4a9d4a",
-      homeStroke: "#3d823d",
+      home: styles.getPropertyValue("--color-links-hover").trim(),
+      homeStroke: "#fff",
       water: styles.getPropertyValue("--color-site-background").trim(),
+      textDimmer: styles.getPropertyValue("--color-text-dimmer").trim(),
     };
   }
 
@@ -44,11 +46,19 @@
     .attr("height", height)
     .attr("viewBox", `0 0 ${width} ${height}`);
 
+  // Define a glow filter for the home country
+  const defs = svg.append("defs");
+  const glowFilter = defs.append("filter").attr("id", "glow");
+  glowFilter
+    .append("feGaussianBlur")
+    .attr("stdDeviation", "3")
+    .attr("result", "blur");
+  const glowMerge = glowFilter.append("feMerge");
+  glowMerge.append("feMergeNode").attr("in", "blur");
+  glowMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
   // Create a group for zoomable content
   const g = svg.append("g");
-
-  // Create Rough.js instance
-  const rc = rough.svg(svg.node());
 
   // Set up projection - Natural Earth projection centered on Europe
   const projection = d3
@@ -93,7 +103,7 @@
       document.body.appendChild(tooltip);
     }
 
-    tooltip.textContent = countryData.name;
+    tooltip.textContent = "> " + countryData.name;
     tooltip.className = "country-tooltip" + (isHome ? " home" : "");
 
     const x = event.pageX + 10;
@@ -122,7 +132,7 @@
     modalCountryName.innerHTML =
       countryData.name +
       (countryData.home
-        ? '<span class="home-badge">Home</span>'
+        ? '<span class="home-badge">HOME</span>'
         : "");
 
     if (countryData.trips && countryData.trips.length > 0) {
@@ -139,10 +149,10 @@
         .join("");
     } else if (countryData.home) {
       modalTrips.innerHTML =
-        '<p class="no-trips">This is where I\'m from!</p>';
+        '<p class="no-trips">origin_country=true</p>';
     } else {
       modalTrips.innerHTML =
-        '<p class="no-trips">Just passing through, no specific trips recorded.</p>';
+        '<p class="no-trips">No trips recorded.</p>';
     }
 
     modal.setAttribute("aria-hidden", "false");
@@ -163,6 +173,11 @@
     }
   });
 
+  // Count visited countries
+  function countVisited() {
+    return Object.values(countries).filter((c) => c.visited).length;
+  }
+
   // Render the map
   let countryElements = [];
 
@@ -179,68 +194,42 @@
     // Draw each country
     countriesGeo.features.forEach((feature) => {
       const countryId = feature.id;
-      // Pad country ID to 3 digits to match ISO format (e.g., 32 -> "032")
       const paddedId = String(countryId).padStart(3, "0");
       const alpha3 = numericToAlpha3[paddedId];
       const countryData = alpha3 ? countries[alpha3] : null;
       const isVisited = countryData && countryData.visited;
       const isHome = countryData && countryData.home;
 
-      // Generate the path
       const pathData = path(feature);
       if (!pathData) return;
 
       // Determine colors
-      let fillColor, strokeColor;
+      let fillColor, strokeColor, strokeWidth;
       if (isHome) {
         fillColor = colors.home;
         strokeColor = colors.homeStroke;
+        strokeWidth = "1.2";
       } else if (isVisited) {
         fillColor = colors.visited;
         strokeColor = colors.visitedStroke;
+        strokeWidth = "0.8";
       } else {
         fillColor = colors.land;
         strokeColor = colors.landStroke;
+        strokeWidth = "0.3";
       }
 
-      let node;
+      const node = g
+        .append("path")
+        .attr("d", pathData)
+        .attr("fill", fillColor)
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", strokeWidth)
+        .attr("fill-opacity", isVisited ? 0.7 : 0.4)
+        .node();
 
-      if (isVisited) {
-        // For visited countries: sketchy hachure fill + clean border
-        // Create a group to hold both layers
-        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.node().appendChild(group);
-
-        // Layer 1: Rough.js hachure fill (no stroke)
-        const roughFill = rc.path(pathData, {
-          fill: fillColor,
-          stroke: "none",
-          fillStyle: "hachure",
-          fillWeight: 0.5,
-          hachureGap: 4,
-          hachureAngle: isHome ? 45 : 60,
-          roughness: 0.4,
-          bowing: 0.2,
-        });
-        group.appendChild(roughFill);
-
-        // Layer 2: Clean SVG border on top
-        const cleanBorder = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        cleanBorder.setAttribute("d", pathData);
-        cleanBorder.setAttribute("fill", "none");
-        cleanBorder.setAttribute("stroke", strokeColor);
-        cleanBorder.setAttribute("stroke-width", "1");
-        group.appendChild(cleanBorder);
-
-        node = group;
-      } else {
-        // For non-visited countries: clean SVG path
-        const cleanPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        cleanPath.setAttribute("d", pathData);
-        cleanPath.setAttribute("fill", fillColor);
-        cleanPath.setAttribute("stroke", strokeColor);
-        cleanPath.setAttribute("stroke-width", "0.5");
-        node = g.node().appendChild(cleanPath);
+      if (isHome) {
+        d3.select(node).attr("filter", "url(#glow)").attr("fill-opacity", 0.85);
       }
 
       // Add interactivity for visited countries
@@ -249,11 +238,22 @@
           .style("cursor", "pointer")
           .on("mouseenter", function (event) {
             showTooltip(event, countryData, isHome);
-            // Bring to front
+            d3.select(this)
+              .transition()
+              .duration(120)
+              .attr("fill-opacity", 1)
+              .attr("stroke-width", "1.5");
             this.parentNode.appendChild(this);
           })
           .on("mousemove", moveTooltip)
-          .on("mouseleave", hideTooltip)
+          .on("mouseleave", function () {
+            hideTooltip();
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .attr("fill-opacity", isHome ? 0.85 : 0.7)
+              .attr("stroke-width", isHome ? "1.2" : "0.8");
+          })
           .on("click", function () {
             hideTooltip();
             openModal(alpha3, countryData);
@@ -268,11 +268,16 @@
         isHome,
       });
     });
+
+    // Update status line
+    mapStatus.textContent = countVisited() + " VISITED";
   }
 
   // Load country code mapping and map data, then render
   let numericToAlpha3 = {};
   let worldData = null;
+
+  mapStatus.textContent = "LOADING...";
 
   Promise.all([
     d3.json("/assets/geo/country-codes.json"),
