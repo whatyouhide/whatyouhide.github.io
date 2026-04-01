@@ -1,14 +1,8 @@
-@font-face {
-  font-family: "Andrea";
-  src: url('assets/fonts/Andrea 2dot0.otf') format('opentype');
-}
-
 // Font stacks
 $sansSerifFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
 $serifFontStack: "Spectral", "Iowan Old Style", Georgia, serif;
 $displaySansFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
 $monoFontStack: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
-$handwrittenFontStack: "Andrea", sans-serif;
 
 // Colors — Terminal Hacker (Dark: CRT / Light: E-Ink Paper)
 
