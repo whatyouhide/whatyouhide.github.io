@@ -17,6 +17,10 @@
   const countries = travelsData.countries;
   const settings = travelsData.settings;
 
+  // Parse places data
+  const placesData = JSON.parse(document.getElementById("places-data").textContent);
+  const countryPlacesEl = document.getElementById("country-places");
+
   // Get CSS colors from the document
   function getColors() {
     const styles = getComputedStyle(document.documentElement);
@@ -173,6 +177,25 @@
     }
   });
 
+  // Show place posts for a country below the map
+  function showCountryPlaces(countryCode, countryData) {
+    const places = placesData.filter((p) => p.country === countryCode);
+
+    if (places.length === 0) {
+      countryPlacesEl.hidden = true;
+      return;
+    }
+
+    const links = places
+      .map((p) => `<a href="${p.path}">${p.title}</a>`)
+      .join("");
+
+    countryPlacesEl.innerHTML =
+      `<span class="country-places-label">> ${countryData.name}:</span> ${links}`;
+    countryPlacesEl.hidden = false;
+    countryPlacesEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   // Count visited countries
   function countVisited() {
     return Object.values(countries).filter((c) => c.visited).length;
@@ -254,9 +277,19 @@
               .attr("fill-opacity", isHome ? 0.85 : 0.7)
               .attr("stroke-width", isHome ? "1.2" : "0.8");
           })
-          .on("click", function () {
-            hideTooltip();
-            openModal(alpha3, countryData);
+          .on("pointerdown", function (event) {
+            this.__clickStart = { x: event.clientX, y: event.clientY };
+          })
+          .on("pointerup", function (event) {
+            const start = this.__clickStart;
+            if (!start) return;
+            const dx = event.clientX - start.x;
+            const dy = event.clientY - start.y;
+            // Only treat as click if pointer barely moved (not a drag/pan)
+            if (dx * dx + dy * dy < 25) {
+              hideTooltip();
+              showCountryPlaces(alpha3, countryData);
+            }
           });
       }
 

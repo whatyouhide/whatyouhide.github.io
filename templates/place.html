@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<main class="place-page {{ page.extra.place_class | default(value='') }}">
+  <section class="place-hero">
+    {% if page.extra.country_name %}
+    <div class="place-hero-flag">
+      {% if page.extra.flag %}<span class="place-hero-flag-emoji">{{ page.extra.flag }}</span>{% endif %}
+      <span>{{ page.extra.country_name }}</span>
+    </div>
+    {% endif %}
+    <h1>
+      {{ page.title }}
+      {% if page.extra.subtitle %}<em>{{ page.extra.subtitle }}</em>{% endif %}
+    </h1>
+    {% if page.date %}<div class="place-hero-date">{{ page.date | date(format="%B %Y") }}</div>{% endif %}
+  </section>
+
+  <div class="place-band"><div class="place-band-inner"></div></div>
+
+  <article class="place-content">
+    {{ page.content | safe }}
+  </article>
+</main>
+{% endblock content %}

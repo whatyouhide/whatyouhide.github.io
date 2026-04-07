@@ -1,0 +1,4 @@
+<figure class="place-figure"{% if width %} style="max-width: {{ width }}"{% endif %}>
+  <img src="{{ src }}" alt="{{ alt | default(value='') }}" loading="lazy">
+  {% if body %}<figcaption>{{ body | markdown(inline=true) | safe }}</figcaption>{% endif %}
+</figure>

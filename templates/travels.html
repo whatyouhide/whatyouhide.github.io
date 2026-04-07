@@ -22,6 +22,13 @@
 
   <script id="travels-data" type="application/json">{{ travels | json_encode() | safe }}</script>
 
+  {% set places_section = get_section(path="places/_index.md") %}
+  <script id="places-data" type="application/json">
+    [{% for page in places_section.pages %}{"title": {{ page.title | json_encode() | safe }}, "path": {{ page.path | json_encode() | safe }}, "country": {{ page.extra.country | json_encode() | safe }}}{% if not loop.last %},{% endif %}{% endfor %}]
+  </script>
+
+  <div id="country-places" class="country-places" hidden></div>
+
   <div id="country-modal" class="modal" aria-hidden="true">
     <div class="modal-backdrop"></div>
     <div class="modal-content">
@@ -30,6 +37,20 @@
       <div id="modal-trips"></div>
     </div>
   </div>
+
+  {% if places_section.pages | length > 0 %}
+  <div class="places-index">
+    <h2>Place Notes</h2>
+    <ul>
+      {% for page in places_section.pages %}
+      <li>
+        <a href="{{ page.path }}">{{ page.title }}</a>
+        {% if page.extra.country_name %}<span class="places-index-country">{{ page.extra.country_name }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
 
   <p class="travels-intro">
     If you want to see more details, I've got all this data available on

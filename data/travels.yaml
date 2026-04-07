@@ -6,6 +6,9 @@ countries:
     name: "Italy"
     visited: true
     home: true
+  ALB:
+    name: "Albania"
+    visited: true
   ARG:
     name: "Argentina"
     visited: true
