@@ -1,6 +1,6 @@
 import type { APIContext } from "astro";
 import { siteConfig } from "../config";
-import { getSortedPosts, postUrl } from "../lib/posts";
+import { getSortedPosts, postSlug, postUrl } from "../lib/posts";
 
 const PROSE = `# Andrea Leopardi
 
@@ -55,7 +55,7 @@ The blog covers technical topics including:
 
 - RSS Feed: Available at BASE/feed.xml for blog updates
 - Tags: Blog posts are categorized by tags, with individual tag feeds available
-- Raw Markdown: Every post page (e.g. BASE/posts/<slug>/) also exposes its source as BASE/posts/<slug>/index.md
+- Raw Markdown: Every post page (e.g. BASE/posts/<slug>/) also exposes its source as BASE/posts/<slug>.md
 `;
 
 export async function GET(_: APIContext) {
@@ -63,7 +63,8 @@ export async function GET(_: APIContext) {
   const postList = posts
     .map((post) => {
       const url = `${siteConfig.baseUrl}${postUrl(post)}`;
-      return `- [${post.data.title}](${url}) — ${post.data.description} (raw: ${url}index.md)`;
+      const rawUrl = `${siteConfig.baseUrl}/posts/${postSlug(post)}.md`;
+      return `- [${post.data.title}](${url}) — ${post.data.description} (raw: ${rawUrl})`;
     })
     .join("\n");
 
