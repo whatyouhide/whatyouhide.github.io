@@ -1,0 +1,7 @@
+name = "andrealeopardi-markdown"
+main = "src/index.js"
+compatibility_date = "2026-04-23"
+
+[[routes]]
+pattern = "andrealeopardi.com/*"
+zone_name = "andrealeopardi.com"
