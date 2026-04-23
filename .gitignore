@@ -1,6 +1,9 @@
-/public
-/static/syntax-theme-dark.css
-/static/syntax-theme-light.css
+node_modules/
+dist/
+.astro/
+.env
+.env.production
+.DS_Store
 
 # AI agents and whatnot
 .playwright-cli

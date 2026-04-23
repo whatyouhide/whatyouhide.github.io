@@ -1,0 +1,29 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Sidebar from "../components/Sidebar.astro";
+
+type Props = {
+  title?: string;
+  description?: string;
+  mainClass?: string;
+  frontmatter?: { title?: string; description?: string; mainClass?: string };
+};
+
+const fm = Astro.props.frontmatter ?? {};
+const title = Astro.props.title ?? fm.title;
+const description = Astro.props.description ?? fm.description;
+const mainClass = Astro.props.mainClass ?? fm.mainClass ?? "about";
+---
+
+<BaseLayout title={title} description={description}>
+  <div id="main" role="main" class="with-sidebar">
+    <div class="shell-layout">
+      <Sidebar />
+      <div class="shell-content-page">
+        <main class={mainClass}>
+          <slot />
+        </main>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

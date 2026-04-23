@@ -1,0 +1,57 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import { siteConfig } from "../config";
+
+type Props = {
+  title: string;
+  description: string;
+  date: Date;
+  updated?: Date;
+  coverImageUrl?: string;
+  math?: boolean;
+};
+
+const { title, description, date, updated, coverImageUrl, math } = Astro.props;
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
+const formattedDate = dateFormatter.format(date);
+const formattedUpdated = updated ? dateFormatter.format(updated) : null;
+
+const absoluteCover = coverImageUrl
+  ? new URL(coverImageUrl, siteConfig.baseUrl).toString()
+  : undefined;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  coverImageUrl={absoluteCover}
+  ogType="article"
+  publishedDate={date}
+  math={math}
+>
+  <div id="main" role="main" class="container post-page">
+    <article class="post">
+      <h1>{title}</h1>
+
+      <time class="post-meta-top" datetime={date.toISOString()}>
+        {formattedDate}
+        {formattedUpdated && ` · Updated ${formattedUpdated}`}
+      </time>
+
+      <div class="entry">
+        <slot />
+      </div>
+
+      <time class="posted-at" datetime={date.toISOString()}>
+        Written on {formattedDate}
+        {formattedUpdated && ` · Last updated on ${formattedUpdated}`}
+      </time>
+    </article>
+  </div>
+</BaseLayout>

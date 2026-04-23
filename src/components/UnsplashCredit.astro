@@ -1,0 +1,12 @@
+---
+type Props = {
+  name: string;
+  link: string;
+};
+
+const { name, link } = Astro.props;
+---
+
+<span class="unsplash-credit">
+  Photo by <a href={link}>{name}</a> on <a href="https://unsplash.com">Unsplash</a>
+</span>

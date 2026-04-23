@@ -1,0 +1,25 @@
+---
+type Props = {
+  src: string;
+  alt?: string;
+  width?: string;
+};
+
+const { src, alt = "", width } = Astro.props;
+const hasCaption = Astro.slots.has("default");
+
+const m = src.match(/^(.+)\.(png|jpg|jpeg)$/i);
+const webpSrc = m ? `${m[1]}.webp` : null;
+---
+
+<figure class="place-figure" style={width ? `max-width: ${width}` : undefined}>
+  {webpSrc ? (
+    <picture>
+      <source type="image/webp" srcset={webpSrc} />
+      <img src={src} alt={alt} loading="lazy" />
+    </picture>
+  ) : (
+    <img src={src} alt={alt} loading="lazy" />
+  )}
+  {hasCaption && <figcaption><slot /></figcaption>}
+</figure>

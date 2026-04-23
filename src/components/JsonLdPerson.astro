@@ -1,0 +1,33 @@
+---
+import { siteConfig } from "../config";
+
+const data = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": `${siteConfig.baseUrl}/#person`,
+  name: siteConfig.fullName,
+  alternateName: siteConfig.username,
+  pronouns: "he/him",
+  url: siteConfig.baseUrl,
+  email: siteConfig.email,
+  image: `${siteConfig.baseUrl}/assets/media/hero-portrait.jpg`,
+  jobTitle: "Principal engineer, Elixir core team, author, public speaker",
+  description:
+    "Andrea is a software engineer from Italy working as a platform engineer at Knock. Member of the Elixir programming language core team since 2016, active contributor to the open-source community. His work focuses on Elixir, distributed systems, testing, and system architecture.",
+  sameAs: [
+    `https://twitter.com/${siteConfig.twitterUsername}`,
+    `https://github.com/${siteConfig.githubUsername}`,
+    siteConfig.linkedinUrl,
+    siteConfig.blueskyUrl,
+  ],
+  knowsAbout: [
+    "Elixir programming language",
+    "Distributed systems",
+    "Software architecture",
+    "Testing methodologies",
+    "Open-source software",
+  ],
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(data)} />

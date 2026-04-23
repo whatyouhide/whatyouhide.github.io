@@ -1,0 +1,68 @@
+---
+import { siteConfig } from "../config";
+
+const pathname = Astro.url.pathname;
+
+function isActive(prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(prefix);
+}
+
+const navItems: Array<{ href: string; label: string; prefix?: string; external?: boolean }> = [
+  { href: "/posts/", label: "/posts", prefix: "/posts" },
+  { href: "/teaching/", label: "/teaching", prefix: "/teaching" },
+  { href: siteConfig.talksYoutubePlaylistUrl, label: "/talks", external: true },
+  { href: "/books/", label: "/books", prefix: "/books" },
+  { href: "/uses/", label: "/uses", prefix: "/uses" },
+  { href: "/travels/", label: "/travels", prefix: "/travels" },
+];
+---
+
+<aside class="shell-sidebar">
+  <div id="hero-portrait-frame">
+    <img id="hero-portrait" src="/assets/media/dither.webp" alt="Portrait of Andrea" />
+    <img id="hero-portrait-real" src="/assets/media/hero-portrait.jpg" alt="" aria-hidden="true" />
+  </div>
+
+  <div class="shell-identity">
+    <h1 class="shell-name"><a href="/" id="shell-name-link">Andrea Leopardi</a></h1>
+    <p class="shell-bio">Software engineer. Distributed systems, platforms, and Elixir.</p>
+  </div>
+
+  <div class="shell-roles">
+    <div class="shell-role-line">
+      <span class="shell-prompt">$</span>
+      <span class="shell-role-text">
+        platform eng @ <a href="https://knock.app" target="_blank">knock</a>
+      </span>
+    </div>
+    <div class="shell-role-line">
+      <span class="shell-prompt">$</span>
+      <span class="shell-role-text">
+        <a href="https://elixir-lang.org" target="_blank">elixir</a> core team
+      </span>
+    </div>
+    <div class="shell-role-line">
+      <span class="shell-prompt">$</span>
+      <span class="shell-role-text">writer, teacher, speaker</span>
+    </div>
+    <div class="shell-role-line">
+      <span class="shell-prompt">$</span>
+      <span class="shell-cursor"></span>
+    </div>
+  </div>
+
+  <nav class="shell-nav" aria-label="Site sections">
+    {navItems.map((item) => {
+      const active = item.prefix && isActive(item.prefix);
+      return (
+        <a
+          href={item.href}
+          target={item.external ? "_blank" : undefined}
+          class={`shell-nav-item${active ? " shell-nav-active" : ""}`}
+        >
+          {item.label}
+        </a>
+      );
+    })}
+  </nav>
+</aside>

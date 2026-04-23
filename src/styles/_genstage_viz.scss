@@ -1,0 +1,217 @@
+// ---- GenStage playground ----
+
+.gs-playground {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 5vw 4em;
+
+  h1 {
+    font-family: $monoFontStack;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-align: center;
+    margin-bottom: 1em;
+  }
+}
+
+.gs-scene-body {
+  font-family: $monoFontStack;
+  font-size: 14px;
+}
+
+// -- Single rate slider --
+
+.gs-rate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  margin-bottom: 1em;
+
+  span {
+    font-size: 12px;
+    color: var(--color-text-dimmer);
+  }
+
+  strong {
+    color: var(--color-links);
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--color-links);
+  }
+}
+
+.gs-rate-hint {
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+// -- SVG --
+
+.gs-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  margin: 0.5em 0;
+}
+
+.gs-box {
+  fill: var(--color-site-background-accented);
+  stroke: var(--color-box-borders);
+  stroke-width: 1;
+}
+
+.gs-box-label {
+  fill: var(--color-text-dimmer);
+  font-family: $monoFontStack;
+  font-size: 11px;
+}
+
+.gs-lbl {
+  fill: var(--color-text-dimmer);
+  font-family: $monoFontStack;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gs-track {
+  stroke: var(--color-box-borders);
+  stroke-width: 1;
+}
+
+.gs-dot {
+  fill: #58a6ff;
+}
+
+.gs-drop {
+  fill: #f85149;
+}
+
+// Queue
+.gs-q-bg {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: var(--color-box-borders);
+  stroke-width: 0.5;
+}
+
+.gs-q-fill {
+  fill: rgba(88, 166, 255, 0.35);
+
+  &--warn {
+    fill: rgba(244, 212, 130, 0.45);
+  }
+
+  &--danger {
+    fill: rgba(248, 81, 73, 0.45);
+  }
+}
+
+.gs-q-count {
+  fill: var(--color-text-dimmer);
+  font-family: $monoFontStack;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-bar-pct {
+  fill: var(--color-text-faint);
+  font-family: $monoFontStack;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-bar-label {
+  fill: var(--color-text-faint);
+  font-family: $monoFontStack;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+// Progress bar
+.gs-bar-bg {
+  fill: rgba(255, 255, 255, 0.06);
+}
+
+.gs-bar-fg {
+  fill: var(--color-links);
+}
+
+// -- Stats --
+
+.gs-stats {
+  display: flex;
+  gap: 1.2em;
+  margin: 0.5em 0;
+  font-family: $monoFontStack;
+  font-size: 11px;
+  color: var(--color-text-dimmer);
+
+  strong {
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.gs-stat--drop {
+  color: #f85149;
+
+  strong {
+    color: #f85149;
+  }
+}
+
+// -- Buttons --
+
+.gs-controls-row {
+  display: flex;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+
+.gs-btn {
+  font-family: $monoFontStack;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.45em 1.3em;
+  border: 1px solid var(--color-box-borders);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-dimmer);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease,
+    border-color 0.12s ease, transform 0.06s ease;
+
+  &:hover {
+    border-color: var(--color-text-dimmer);
+    color: var(--color-text);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.gs-btn--go {
+  border-color: var(--color-links);
+  color: var(--color-links);
+
+  &:hover {
+    background: var(--color-links);
+    color: var(--color-site-background);
+  }
+}
+
+.gs-btn--on {
+  background: var(--color-links);
+  color: var(--color-site-background);
+  border-color: var(--color-links);
+
+  &:hover {
+    background: transparent;
+    color: var(--color-links);
+  }
+}

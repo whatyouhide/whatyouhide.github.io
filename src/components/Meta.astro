@@ -1,0 +1,55 @@
+---
+import { siteConfig } from "../config";
+
+type Props = {
+  title?: string;
+  description?: string;
+  coverImageUrl?: string;
+  ogType?: "article" | "website";
+  publishedDate?: Date;
+  canonical?: string;
+};
+
+const {
+  title = siteConfig.title,
+  description = siteConfig.description,
+  coverImageUrl = `${siteConfig.baseUrl}${siteConfig.defaultCoverImage}`,
+  ogType = "website",
+  publishedDate,
+  canonical,
+} = Astro.props;
+
+const pageTitle = title === siteConfig.title ? title : `${title} – ${siteConfig.title}`;
+---
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<title>{pageTitle}</title>
+<meta name="description" content={description} />
+<meta name="author" content={siteConfig.fullName} />
+
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<meta name="HandheldFriendly" content="True" />
+<meta name="MobileOptimized" content="320" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+{canonical && <link rel="canonical" href={canonical} />}
+
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+{canonical && <meta property="og:url" content={canonical} />}
+<meta property="og:image" content={coverImageUrl} />
+<meta property="og:site_name" content={siteConfig.title} />
+<meta property="og:type" content={ogType} />
+{ogType === "article" && publishedDate && (
+  <meta property="article:published_time" content={publishedDate.toISOString()} />
+)}
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content={`@${siteConfig.twitterUsername}`} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={coverImageUrl} />

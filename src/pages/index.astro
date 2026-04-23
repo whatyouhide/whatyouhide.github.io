@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Sidebar from "../components/Sidebar.astro";
+import { getSortedPosts, postUrl } from "../lib/posts";
+
+const recentPosts = (await getSortedPosts()).slice(0, 10);
+
+function truncate(text: string, max: number): string {
+  const stripped = text.replace(/<[^>]*>/g, "");
+  return stripped.length > max ? stripped.slice(0, max).trimEnd() + "…" : stripped;
+}
+
+function ym(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+---
+
+<BaseLayout hideHeader>
+  <div id="main" role="main" class="landing-page">
+    <div id="content-container">
+      <div class="shell-topbar">
+        <div class="shell-topbar-left">
+          <span class="shell-tilde">~</span>
+          <a href="/" class="shell-site-name">andrealeopardi.com</a>
+        </div>
+        <div class="shell-topbar-right">
+          <a href="/now/" class="shell-now-link">
+            <span class="shell-status-dot"></span>
+            <span>/now</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="shell-layout">
+        <Sidebar />
+
+        <section class="shell-content">
+          <div class="shell-section-header">
+            <span class="shell-section-label">posts</span>
+          </div>
+
+          {recentPosts.map((post) => (
+            <a href={postUrl(post)} class="shell-post">
+              <span class="shell-post-prompt">&gt;</span>
+              <span class="shell-post-body">
+                <strong>{post.data.title}</strong>
+                {post.data.description && (
+                  <span class="shell-post-desc">{truncate(post.data.description, 90)}</span>
+                )}
+              </span>
+              <span class="shell-post-date">{ym(post.data.date)}</span>
+            </a>
+          ))}
+        </section>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,78 @@
+---
+import yaml from "js-yaml";
+import travelsYaml from "../data/travels.yaml?raw";
+import { getCollection } from "astro:content";
+import ExtraPageLayout from "../layouts/ExtraPageLayout.astro";
+
+const travels = yaml.load(travelsYaml) as Record<string, unknown>;
+
+const places = await getCollection("places");
+const placesData = places.map((p) => ({
+  title: p.data.title,
+  path: `/places/${p.id.replace(/\/index$/, "")}/`,
+  country: p.data.country,
+}));
+
+const placeNotes = places.map((p) => ({
+  href: `/places/${p.id.replace(/\/index$/, "")}/`,
+  title: p.data.title,
+  countryName: p.data.countryName,
+}));
+---
+
+<ExtraPageLayout title="Travels" description="Places I've been lucky enough to visit." mainClass="travels">
+  <h1>Scratch Map</h1>
+
+  <p class="travels-intro">Places I've been lucky enough to visit.</p>
+
+  <div class="map-container">
+    <div class="map-titlebar">
+      <span class="map-titlebar-title">[ scratch-map ]</span>
+      <span class="map-titlebar-status" id="map-status">READY</span>
+    </div>
+    <div id="travels-map"></div>
+    <div class="map-controls">
+      <button id="zoom-in" aria-label="Zoom in">+</button>
+      <button id="zoom-out" aria-label="Zoom out">−</button>
+      <button id="zoom-reset" aria-label="Reset zoom">⟲</button>
+    </div>
+    <div class="map-scanlines"></div>
+  </div>
+
+  <script id="travels-data" type="application/json" set:html={JSON.stringify(travels)} />
+  <script id="places-data" type="application/json" set:html={JSON.stringify(placesData)} />
+
+  <div id="country-places" class="country-places" hidden></div>
+
+  <div id="country-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close" aria-label="Close">&times;</button>
+      <h2 id="modal-country-name"></h2>
+      <div id="modal-trips"></div>
+    </div>
+  </div>
+
+  {placeNotes.length > 0 && (
+    <div class="places-index">
+      <h2>Place Notes</h2>
+      <ul>
+        {placeNotes.map((p) => (
+          <li>
+            <a href={p.href}>{p.title}</a>
+            {p.countryName && <span class="places-index-country">{p.countryName}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+
+  <p class="travels-intro">
+    If you want to see more details, I've got all this data available on{" "}
+    <a href="https://share.skratch.world/045saE8YdC/visited" target="_blank">Skratch</a>.
+  </p>
+
+  <script is:inline src="https://d3js.org/d3.v7.min.js"></script>
+  <script is:inline src="https://unpkg.com/topojson-client@3"></script>
+  <script is:inline src="/assets/js/travels-map.js"></script>
+</ExtraPageLayout>

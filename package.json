@@ -1,0 +1,30 @@
+{
+  "name": "whatyouhide-astro",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "generate-webp": "node scripts/generate-webp.mjs",
+    "predev": "npm run generate-webp",
+    "prebuild": "npm run generate-webp",
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.0.0",
+    "@astrojs/rss": "^4.0.0",
+    "@astrojs/sitemap": "^3.2.0",
+    "astro": "^5.0.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
+    "sass": "^1.80.0"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.1",
+    "sharp": "^0.34.5",
+    "unist-util-visit": "^5.1.0"
+  }
+}

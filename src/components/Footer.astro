@@ -1,0 +1,13 @@
+---
+import { siteConfig } from "../config";
+---
+
+<footer>
+  <nav class="footer-links">
+    <a href={`https://github.com/${siteConfig.githubUsername}`} target="_blank">github</a>
+    <a href={`mailto:${siteConfig.email}`}>email</a>
+    <a href={siteConfig.blueskyUrl} target="_blank">bluesky</a>
+    <a href="/feed.xml">rss</a>
+  </nav>
+  <span class="footer-meta">pid 1 · up <span id="uptime">0s</span></span>
+</footer>

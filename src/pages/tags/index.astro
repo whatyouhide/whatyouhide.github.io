@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getTagCounts } from "../../lib/posts";
+
+const tags = [...(await getTagCounts()).entries()].sort((a, b) =>
+  a[0].localeCompare(b[0])
+);
+---
+
+<BaseLayout title="Tags" description="Browse posts by tag." noindex>
+  <main id="main" role="main" class="container">
+    <div class="posts">
+      <article class="post">
+        <header class="post-heading">
+          <h1>Tags</h1>
+        </header>
+        <div class="entry">
+          <ul>
+            {tags.map(([name, posts]) => (
+              <li>
+                <a href={`/tags/${name}/`}>{name}</a> ({posts.length})
+              </li>
+            ))}
+          </ul>
+        </div>
+      </article>
+    </div>
+  </main>
+</BaseLayout>

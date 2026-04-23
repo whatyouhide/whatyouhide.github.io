@@ -1,0 +1,165 @@
+---
+import "../styles/style.scss";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Meta from "../components/Meta.astro";
+import JsonLdPerson from "../components/JsonLdPerson.astro";
+import { siteConfig } from "../config";
+
+type Props = {
+  title?: string;
+  description?: string;
+  coverImageUrl?: string;
+  ogType?: "article" | "website";
+  publishedDate?: Date;
+  math?: boolean;
+  hideHeader?: boolean;
+  noindex?: boolean;
+};
+
+const {
+  title,
+  description,
+  coverImageUrl,
+  ogType = "website",
+  publishedDate,
+  math = false,
+  hideHeader = false,
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, siteConfig.baseUrl).toString();
+---
+
+<!doctype html>
+<html prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#" lang="en" xml:lang="en">
+  <head>
+    <Meta
+      title={title}
+      description={description}
+      coverImageUrl={coverImageUrl}
+      ogType={ogType}
+      publishedDate={publishedDate}
+      canonical={canonical}
+    />
+
+    {noindex && <meta name="robots" content="noindex,follow" />}
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Mono:wght@200;300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap"
+    />
+
+    <link rel="stylesheet" href="/syntax-theme-dark.css" media="(prefers-color-scheme: dark)" />
+    <link rel="stylesheet" href="/syntax-theme-light.css" media="(prefers-color-scheme: light)" />
+
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href="/feed.xml" />
+
+    <JsonLdPerson />
+    <slot name="json-ld" />
+
+    <script
+      is:inline
+      defer
+      src="https://analytics.andrealeopardi.com/script.js"
+      data-website-id={siteConfig.analyticsUmamiWebsiteId}></script>
+
+    {math && (
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+    )}
+  </head>
+
+  <body>
+    <div class="wrapper-masthead">
+      {!hideHeader && <Header />}
+      <slot />
+      <Footer />
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const wrapper = document.querySelector(".wrapper-masthead");
+        if (!wrapper) return;
+
+        const dot = document.createElement("div");
+        dot.className = "dot-highlight";
+        wrapper.appendChild(dot);
+
+        document.addEventListener("mousemove", function (e) {
+          const rect = wrapper.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top + window.scrollY;
+          (dot as HTMLElement).style.setProperty("--mouse-x", x + "px");
+          (dot as HTMLElement).style.setProperty("--mouse-y", y + "px");
+        });
+
+        const uptimeEl = document.getElementById("uptime");
+        if (uptimeEl) {
+          const start = Date.now();
+          setInterval(function () {
+            let s = Math.floor((Date.now() - start) / 1000);
+            let m = Math.floor(s / 60);
+            const h = Math.floor(m / 60);
+            s = s % 60;
+            m = m % 60;
+            uptimeEl.textContent = (h ? h + "h " : "") + (m ? m + "m " : "") + s + "s";
+          }, 1000);
+        }
+
+        console.log(
+          "%c~/andrealeopardi.com",
+          "color:#3FB950;font-family:monospace;font-size:16px;font-weight:bold"
+        );
+        console.log(
+          "%cCurious? Nice. https://github.com/whatyouhide",
+          "color:#8B949E;font-family:monospace;font-size:12px"
+        );
+
+        const nameLink = document.getElementById("shell-name-link");
+        const isLandingPage = document.querySelector(".landing-page");
+        if (nameLink && isLandingPage) {
+          const name = nameLink.textContent || "";
+          nameLink.textContent = "";
+
+          const chars: HTMLSpanElement[] = [];
+          for (let i = 0; i < name.length; i++) {
+            const span = document.createElement("span");
+            span.textContent = name[i];
+            span.className = "shell-name-char";
+            span.style.visibility = "hidden";
+            if (name[i] === " ") span.innerHTML = "&nbsp;";
+            nameLink.appendChild(span);
+            chars.push(span);
+          }
+
+          const baseDelay = 90;
+          const spaceIdx = name.indexOf(" ");
+          chars.forEach(function (span, idx) {
+            const jitter = Math.random() * 50 - 25;
+            const extraPause = idx > spaceIdx ? 150 : 0;
+            setTimeout(function () {
+              span.style.visibility = "";
+              span.classList.add("typed");
+            }, idx * baseDelay + jitter + extraPause);
+          });
+
+          nameLink.addEventListener("mouseover", function (e) {
+            const target = e.target as HTMLElement;
+            if (target.classList && target.classList.contains("shell-name-char")) {
+              target.classList.add("dissolved");
+            }
+          });
+          nameLink.addEventListener("mouseout", function (e) {
+            const target = e.target as HTMLElement;
+            if (target.classList && target.classList.contains("shell-name-char")) {
+              target.classList.remove("dissolved");
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

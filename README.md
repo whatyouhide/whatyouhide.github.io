@@ -2,12 +2,14 @@
 
 This is my personal website hosted at <https://andrealeopardi.com>.
 
-It's built with [Zola]. The original visual theme comes from [jekyll-now], back
-when I was building this website with [Jekyll], but many changes happened since
-then.
+It's built with [Astro] and MDX. Deployed to GitHub Pages via Actions.
+
+```bash
+npm install
+npm run dev        # http://localhost:4321
+npm run build      # emits dist/
+```
 
 ![Screenshot of the website](https://i.imgur.com/1a742tH.png)
 
-[Zola]: https://www.getzola.org
-[Jekyll]: https://jekyllrb.com
-[jekyll-now]: https://github.com/barryclark/jekyll-now
+[Astro]: https://astro.build

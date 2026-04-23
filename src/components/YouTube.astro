@@ -1,0 +1,19 @@
+---
+type Props = {
+  id: string;
+  class?: string;
+  playlist?: string;
+};
+
+const { id, class: className, playlist } = Astro.props;
+const src = `https://www.youtube-nocookie.com/embed/${id}${playlist ? `?list=${playlist}` : ""}`;
+---
+
+<div class={className}>
+  <iframe
+    src={src}
+    webkitallowfullscreen
+    mozallowfullscreen
+    allowfullscreen
+  ></iframe>
+</div>

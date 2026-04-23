@@ -1,0 +1,41 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getSortedPosts, postUrl } from "../lib/posts";
+
+const posts = await getSortedPosts();
+const postUrls = posts.map((p) => postUrl(p));
+---
+
+<BaseLayout title="Page not found" description="404 — the requested page does not exist." noindex>
+  <div id="main" role="main" class="container post-page not-found-page">
+    <article class="post not-found-post">
+      <p class="not-found-code" aria-hidden="true">404</p>
+      <h1>Page not found</h1>
+
+      <div class="entry">
+        <p>
+          Yeah something's not right in that URL. It might be old, but more likely there's a
+          typo somewhere (or an LLM hallucinated it).
+        </p>
+        <p class="not-found-actions">
+          <a class="not-found-primary-link" href="/">Go Home</a>
+          <a class="not-found-random-link" href="/posts/" id="not-found-random-link">Surprise me</a>
+          <a href="/posts/">(Or The Blog?)</a>
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <script is:inline define:vars={{ postUrls }}>
+    (() => {
+      const randomLink = document.getElementById("not-found-random-link");
+      if (!randomLink || !postUrls.length) return;
+
+      randomLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        const randomIndex = Math.floor(Math.random() * postUrls.length);
+        window.location.assign(postUrls[randomIndex]);
+      });
+    })();
+  </script>
+</BaseLayout>
