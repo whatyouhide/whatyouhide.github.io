@@ -46,6 +46,19 @@ function acceptsHtml(accept) {
   );
 }
 
+// Astro emits content-hashed filenames under /_astro/, safe to cache forever.
+// Fonts never change, so also get a long TTL. Other static assets are left
+// with origin cache headers: their filenames are stable, so replacing them
+// in place would strand stale versions in browsers for too long.
+const IMMUTABLE_PATH = /^\/_astro\//;
+const LONG_LIVED_PATH = /^\/assets\/fonts\//;
+
+function cacheControlFor(pathname) {
+  if (IMMUTABLE_PATH.test(pathname)) return "public, max-age=31536000, immutable";
+  if (LONG_LIVED_PATH.test(pathname)) return "public, max-age=2592000";
+  return null;
+}
+
 export default {
   async fetch(request) {
     // Content negotiation only applies to safe, read-only methods.
@@ -77,6 +90,8 @@ export default {
       const res = await fetch(request);
       const out = new Response(res.body, res);
       out.headers.append("Vary", "Accept");
+      const cc = cacheControlFor(url.pathname);
+      if (cc) out.headers.set("Cache-Control", cc);
       return out;
     }
 
