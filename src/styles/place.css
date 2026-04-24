@@ -39,8 +39,8 @@
 }
 
 @keyframes place-slide-up {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { transform: translateY(30px); }
+  to { transform: translateY(0); }
 }
 
 .place-hero-flag {
