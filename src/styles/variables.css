@@ -9,7 +9,6 @@
 :root {
   /* Font stacks */
   --font-sans: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-serif: "Spectral", "Iowan Old Style", Georgia, serif;
   --font-display: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
 

@@ -15,6 +15,7 @@ type Props = {
   math?: boolean;
   hideHeader?: boolean;
   noindex?: boolean;
+  playfairDisplay?: boolean;
 };
 
 const {
@@ -26,9 +27,21 @@ const {
   math = false,
   hideHeader = false,
   noindex = false,
+  playfairDisplay = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, siteConfig.baseUrl).toString();
+
+const fontFamilies = [
+  "IBM+Plex+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700",
+  "IBM+Plex+Mono:wght@200;300;400;500;600;700",
+];
+if (playfairDisplay) {
+  fontFamilies.push("Playfair+Display:ital,wght@0,400;0,700;0,900;1,400");
+}
+const googleFontsHref = `https://fonts.googleapis.com/css2?${fontFamilies
+  .map((f) => `family=${f}`)
+  .join("&")}&display=swap`;
 ---
 
 <!doctype html>
@@ -47,13 +60,7 @@ const canonical = new URL(Astro.url.pathname, siteConfig.baseUrl).toString();
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Mono:wght@200;300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap"
-    />
-
-    <link rel="stylesheet" href="/syntax-theme-dark.css" media="(prefers-color-scheme: dark)" />
-    <link rel="stylesheet" href="/syntax-theme-light.css" media="(prefers-color-scheme: light)" />
+    <link rel="stylesheet" href={googleFontsHref} />
 
     <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap-index.xml" />
     <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href="/feed.xml" />

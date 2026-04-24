@@ -18,7 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 ---
 
-<BaseLayout title={title} description={`${title} — a place note.`}>
+<BaseLayout title={title} description={`${title} — a place note.`} playfairDisplay>
   <main class={`place-page${placeClass ? ` ${placeClass}` : ""}`}>
     <section class="place-hero">
       <div class="place-hero-flag">
