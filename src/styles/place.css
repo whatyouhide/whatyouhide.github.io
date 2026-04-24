@@ -1,20 +1,19 @@
-// Place pages — per-country editorial layouts
-//
-// Each country gets a class (e.g. .place-albania) that sets
-// --place-primary and --place-dark, used by the shared chrome.
+/* Place pages — per-country editorial layouts
 
-$displayFontStack: "Playfair Display", Georgia, serif;
+   Each country gets a class (e.g. .place-albania) that sets
+   --place-primary and --place-dark, used by the shared chrome. */
 
-// ── Base place page ──
+/* ── Base place page ── */
 
 .place-page {
   --place-primary: var(--color-links);
   --place-dark: var(--color-site-background);
+  --font-place-display: "Playfair Display", Georgia, serif;
 
   width: 100%;
 }
 
-// ── Hero ──
+/* ── Hero ── */
 
 .place-hero {
   background:
@@ -67,7 +66,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
   }
 
   span {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.15em;
@@ -76,7 +75,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
 }
 
 .place-hero h1 {
-  font-family: $displayFontStack;
+  font-family: var(--font-place-display);
   font-weight: 900;
   font-size: clamp(36px, 5vw, 56px);
   line-height: 0.9;
@@ -97,13 +96,13 @@ $displayFontStack: "Playfair Display", Georgia, serif;
 }
 
 .place-hero-date {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 13px;
   color: rgba(255, 255, 255, 0.35);
   letter-spacing: 0.05em;
 }
 
-// ── Decorative band ──
+/* ── Decorative band ── */
 
 .place-band {
   background: var(--place-primary);
@@ -125,7 +124,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
   background-position: 0 0, 0 12px, 12px -12px, 12px 0;
 }
 
-// ── Content ──
+/* ── Content ── */
 
 .place-content {
   max-width: 720px;
@@ -140,7 +139,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
   }
 
   h2 {
-    font-family: $displayFontStack;
+    font-family: var(--font-place-display);
     font-weight: 700;
     font-size: 28px;
     line-height: 1.2;
@@ -153,7 +152,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
 
     &::before {
       content: counter(place-section, decimal-leading-zero);
-      font-family: $displayFontStack;
+      font-family: var(--font-place-display);
       font-weight: 900;
       font-size: 40px;
       line-height: 1;
@@ -164,7 +163,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
   }
 
   h3 {
-    font-family: $displayFontStack;
+    font-family: var(--font-place-display);
     font-weight: 700;
     font-size: 22px;
     margin-top: 40px;
@@ -175,7 +174,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
     margin: 48px 0;
     padding: 32px 0 32px 32px;
     border-left: 3px solid var(--place-primary);
-    font-family: $displayFontStack;
+    font-family: var(--font-place-display);
     font-size: 24px;
     font-style: italic;
     line-height: 1.5;
@@ -208,7 +207,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
 
     figcaption {
       margin-top: 8px;
-      font-family: $monoFontStack;
+      font-family: var(--font-mono);
       font-size: 13px;
       color: var(--color-text-dimmer);
       letter-spacing: 0.01em;
@@ -220,7 +219,7 @@ $displayFontStack: "Playfair Display", Georgia, serif;
   }
 }
 
-// ── Country: Albania ──
+/* ── Country: Albania ── */
 
 .place-albania {
   --place-primary: #E41E20;

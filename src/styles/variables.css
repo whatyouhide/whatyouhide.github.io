@@ -1,13 +1,22 @@
-// Font stacks
-$sansSerifFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
-$serifFontStack: "Spectral", "Iowan Old Style", Georgia, serif;
-$displaySansFontStack: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
-$monoFontStack: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+/* Custom media queries — equivalent to the old SCSS mixins. */
+@custom-media --medium (min-width: 760px);
+@custom-media --wide (min-width: 1280px);
+@custom-media --dark (prefers-color-scheme: dark);
+@custom-media --light (prefers-color-scheme: light);
 
-// Colors — Terminal Hacker (Dark: CRT / Light: E-Ink Paper)
+/* Colors — Terminal Hacker (Dark: CRT / Light: E-Ink Paper) */
 
 :root {
-  // Dark mode (default) — CRT terminal
+  /* Font stacks */
+  --font-sans: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-serif: "Spectral", "Iowan Old Style", Georgia, serif;
+  --font-display: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+
+  /* The maximum size of website content, such as posts, on any screen. */
+  --max-content-width: 800px;
+
+  /* Dark mode (default) — CRT terminal */
   --color-site-background: #0D1117;
   --color-site-background-accented: #0A0E13;
   --color-code-background: rgba(10, 16, 22, 0.82);
@@ -46,8 +55,8 @@ $monoFontStack: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "C
   --portrait-filter: none;
 }
 
-// Light mode — E-Ink Paper
-@include lightMode {
+/* Light mode — E-Ink Paper */
+@media (--light) {
   :root {
     --color-site-background: #F4F1EB;
     --color-site-background-accented: #EAE5DD;
@@ -87,8 +96,3 @@ $monoFontStack: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "C
     --portrait-filter: none;
   }
 }
-
-// Sizes
-
-// The maximum size of website content, such as posts, on any screen.
-$maxContentWidth: 800px;

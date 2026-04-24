@@ -1,6 +1,6 @@
-// ═══════════════════════════════════════════════════════
-//  Landing Page — Terminal Hacker Direction
-// ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+    Landing Page — Terminal Hacker Direction
+   ═══════════════════════════════════════════════════════ */
 
 @keyframes fadeInUp {
   from {
@@ -24,7 +24,7 @@
   }
 }
 
-// ─── Page Shell ──────────────────────────────────────
+/* ─── Page Shell ────────────────────────────────────── */
 
 #main.landing-page {
   flex: 1 100%;
@@ -44,7 +44,7 @@
   }
 }
 
-// ─── Top Bar ─────────────────────────────────────────
+/* ─── Top Bar ───────────────────────────────────────── */
 
 .shell-topbar {
   display: flex;
@@ -54,7 +54,7 @@
   border-bottom: 1px solid var(--color-box-borders);
   flex-shrink: 0;
 
-  @include mediumScreen {
+  @media (--medium) {
     padding: 16px 32px;
   }
 }
@@ -66,14 +66,14 @@
 }
 
 .shell-tilde {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 500;
   color: var(--color-links);
 }
 
 .shell-site-name {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.04em;
@@ -92,7 +92,7 @@
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-text);
     transition: color 0.15s ease;
@@ -118,19 +118,19 @@
   50% { opacity: 0.4; }
 }
 
-// ─── Main Layout ─────────────────────────────────────
+/* ─── Main Layout ───────────────────────────────────── */
 
 .shell-layout {
   display: flex;
   flex-direction: column;
   flex: 1;
 
-  @include mediumScreen {
+  @media (--medium) {
     flex-direction: row;
   }
 }
 
-// ─── Sidebar ─────────────────────────────────────────
+/* ─── Sidebar ───────────────────────────────────────── */
 
 .shell-sidebar {
   display: flex;
@@ -140,7 +140,7 @@
   border-bottom: 1px solid var(--color-box-borders);
   flex-shrink: 0;
 
-  @include mediumScreen {
+  @media (--medium) {
     width: 320px;
     padding: 24px;
     border-bottom: none;
@@ -159,7 +159,7 @@
   animation: fadeInUp 0.5s ease-out 0.1s both;
   position: relative;
 
-  @include mediumScreen {
+  @media (--medium) {
     width: 100%;
     height: 240px;
     border-radius: 8px;
@@ -186,14 +186,14 @@
   opacity: 1;
 }
 
-// On mobile, portrait + identity sit side by side
+/* On mobile, portrait + identity sit side by side */
 .shell-sidebar {
   > #hero-portrait-frame,
   > .shell-identity {
-    // Mobile: inline layout handled by wrapper below
+    /* Mobile: inline layout handled by wrapper below */
   }
 
-  // Stack portrait and identity horizontally on mobile
+  /* Stack portrait and identity horizontally on mobile */
   @media screen and (max-width: 759px) {
     flex-direction: row;
     flex-wrap: wrap;
@@ -223,7 +223,7 @@
 }
 
 .shell-name {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 20px;
   font-weight: 700;
   color: var(--color-text);
@@ -232,13 +232,13 @@
   padding: 0;
   text-align: left;
 
-  @include mediumScreen {
+  @media (--medium) {
     font-size: 22px;
   }
 }
 
 .shell-bio {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 400;
   line-height: 1.6;
@@ -246,7 +246,7 @@
   margin: 0;
 }
 
-// ─── Roles ───────────────────────────────────────────
+/* ─── Roles ─────────────────────────────────────────── */
 
 .shell-roles {
   display: flex;
@@ -266,7 +266,7 @@
 }
 
 .shell-prompt {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   color: var(--color-links);
@@ -274,7 +274,7 @@
 }
 
 .shell-role-text {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.04em;
   color: var(--color-text);
@@ -292,7 +292,7 @@
   }
 }
 
-// ─── Blinking Cursor ────────────────────────────────
+/* ─── Blinking Cursor ──────────────────────────────── */
 
 @keyframes cursorBlink {
   0%, 100% { opacity: 1; }
@@ -307,7 +307,7 @@
   animation: cursorBlink 1s step-end infinite;
 }
 
-// ─── Sidebar Nav ─────────────────────────────────────
+/* ─── Sidebar Nav ───────────────────────────────────── */
 
 .shell-nav {
   display: flex;
@@ -334,7 +334,7 @@
   display: flex;
   align-items: center;
   min-height: 44px;
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-text-dimmer);
   text-decoration: none;
@@ -342,7 +342,7 @@
   border-bottom: 1px solid var(--color-post-border);
   transition: color 0.15s ease;
 
-  @include mediumScreen {
+  @media (--medium) {
     min-height: auto;
   }
 
@@ -359,7 +359,7 @@
   }
 }
 
-// ─── Content Area ────────────────────────────────────
+/* ─── Content Area ──────────────────────────────────── */
 
 .shell-content {
   display: flex;
@@ -369,7 +369,7 @@
   gap: 0;
   animation: fadeInUp 0.5s ease-out 0.2s both;
 
-  @include mediumScreen {
+  @media (--medium) {
     padding: 24px 32px;
   }
 }
@@ -382,7 +382,7 @@
 }
 
 .shell-section-label {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.12em;
@@ -397,7 +397,7 @@
   background: var(--color-box-borders);
 }
 
-// ─── Post Entries ────────────────────────────────────
+/* ─── Post Entries ──────────────────────────────────── */
 
 .shell-post {
   display: flex;
@@ -410,13 +410,20 @@
   transition: background-color 0.15s ease;
   animation: fadeInUp 0.4s ease-out both;
 
-  @for $i from 1 through 12 {
-    &:nth-child(#{$i}) {
-      animation-delay: #{0.05 * $i}s;
-    }
-  }
+  &:nth-child(1)  { animation-delay: 0.05s; }
+  &:nth-child(2)  { animation-delay: 0.1s; }
+  &:nth-child(3)  { animation-delay: 0.15s; }
+  &:nth-child(4)  { animation-delay: 0.2s; }
+  &:nth-child(5)  { animation-delay: 0.25s; }
+  &:nth-child(6)  { animation-delay: 0.3s; }
+  &:nth-child(7)  { animation-delay: 0.35s; }
+  &:nth-child(8)  { animation-delay: 0.4s; }
+  &:nth-child(9)  { animation-delay: 0.45s; }
+  &:nth-child(10) { animation-delay: 0.5s; }
+  &:nth-child(11) { animation-delay: 0.55s; }
+  &:nth-child(12) { animation-delay: 0.6s; }
 
-  @include mediumScreen {
+  @media (--medium) {
     gap: 16px;
   }
 
@@ -436,7 +443,7 @@
 }
 
 .shell-post-prompt {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-links);
   flex-shrink: 0;
@@ -450,7 +457,7 @@
   flex: 1;
 
   strong {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 14px;
     font-weight: 500;
     color: var(--color-text);
@@ -460,27 +467,27 @@
 }
 
 .shell-post-desc {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-text-faint);
   line-height: 1.5;
 }
 
 .shell-post-date {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--color-text-faintest);
   flex-shrink: 0;
   padding-top: 3px;
   font-variant-numeric: tabular-nums;
 
-  // Hide on very small screens
+  /* Hide on very small screens */
   @media screen and (max-width: 480px) {
     display: none;
   }
 }
 
-// ─── Inner Pages with Sidebar ────────────────────────
+/* ─── Inner Pages with Sidebar ──────────────────────── */
 
 #main.with-sidebar {
   flex: 1;
@@ -508,9 +515,9 @@
     padding: 20px 16px;
   }
 
-  // Reset heading styles for content pages
+  /* Reset heading styles for content pages */
   h1 {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -518,7 +525,7 @@
     margin: 0 0 0.5em;
   }
 
-  // Posts index inside sidebar layout
+  /* Posts index inside sidebar layout */
   .posts.posts-index {
     max-width: none;
     margin: 0;
@@ -536,7 +543,7 @@
     }
   }
 
-  // About/books/generic content pages
+  /* About/books/generic content pages */
   main.about,
   main.books {
     max-width: none;
@@ -545,13 +552,13 @@
   }
 }
 
-// Make sidebar name a link
+/* Make sidebar name a link */
 .shell-name a {
   color: inherit;
   text-decoration: none;
 }
 
-// Per-character animation for the name
+/* Per-character animation for the name */
 .shell-name-char {
   display: inline-block;
   visibility: hidden;

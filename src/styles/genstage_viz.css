@@ -1,4 +1,4 @@
-// ---- GenStage playground ----
+/* ---- GenStage playground ---- */
 
 .gs-playground {
   max-width: 720px;
@@ -6,7 +6,7 @@
   padding: 0 5vw 4em;
 
   h1 {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-weight: 700;
     letter-spacing: -0.03em;
     text-align: center;
@@ -15,11 +15,11 @@
 }
 
 .gs-scene-body {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 14px;
 }
 
-// -- Single rate slider --
+/* -- Single rate slider -- */
 
 .gs-rate {
   display: flex;
@@ -47,7 +47,7 @@
   color: var(--color-text-faint);
 }
 
-// -- SVG --
+/* -- SVG -- */
 
 .gs-svg {
   display: block;
@@ -65,13 +65,13 @@
 
 .gs-box-label {
   fill: var(--color-text-dimmer);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 
 .gs-lbl {
   fill: var(--color-text-dimmer);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -90,7 +90,7 @@
   fill: #f85149;
 }
 
-// Queue
+/* Queue */
 .gs-q-bg {
   fill: rgba(255, 255, 255, 0.03);
   stroke: var(--color-box-borders);
@@ -111,26 +111,26 @@
 
 .gs-q-count {
   fill: var(--color-text-dimmer);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-variant-numeric: tabular-nums;
 }
 
 .gs-bar-pct {
   fill: var(--color-text-faint);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-variant-numeric: tabular-nums;
 }
 
 .gs-bar-label {
   fill: var(--color-text-faint);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 0.06em;
 }
 
-// Progress bar
+/* Progress bar */
 .gs-bar-bg {
   fill: rgba(255, 255, 255, 0.06);
 }
@@ -139,13 +139,13 @@
   fill: var(--color-links);
 }
 
-// -- Stats --
+/* -- Stats -- */
 
 .gs-stats {
   display: flex;
   gap: 1.2em;
   margin: 0.5em 0;
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--color-text-dimmer);
 
@@ -163,7 +163,7 @@
   }
 }
 
-// -- Buttons --
+/* -- Buttons -- */
 
 .gs-controls-row {
   display: flex;
@@ -172,7 +172,7 @@
 }
 
 .gs-btn {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;

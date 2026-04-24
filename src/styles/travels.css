@@ -1,4 +1,4 @@
-// Travels page styles — terminal/CRT aesthetic
+/* Travels page styles — terminal/CRT aesthetic */
 
 main.travels {
   max-width: 1100px;
@@ -6,7 +6,7 @@ main.travels {
   padding: 0 5vw;
 
   h1 {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -28,14 +28,14 @@ main.travels {
   overflow: hidden;
   background: var(--color-site-background);
 
-  @include darkMode {
+  @media (--dark) {
     box-shadow:
       0 0 15px rgba(63, 185, 80, 0.08),
       0 0 30px rgba(63, 185, 80, 0.04);
   }
 }
 
-// Terminal-style title bar
+/* Terminal-style title bar */
 .map-titlebar {
   display: flex;
   justify-content: space-between;
@@ -43,7 +43,7 @@ main.travels {
   padding: 6px 12px;
   background: var(--color-site-background-accented);
   border-bottom: 1px solid var(--color-box-borders);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-text-dimmer);
   user-select: none;
@@ -58,7 +58,7 @@ main.travels {
   letter-spacing: 0.08em;
 }
 
-// Scanline overlay
+/* Scanline overlay */
 .map-scanlines {
   position: absolute;
   top: 0;
@@ -68,7 +68,7 @@ main.travels {
   pointer-events: none;
   z-index: 2;
 
-  @include darkMode {
+  @media (--dark) {
     background: repeating-linear-gradient(
       0deg,
       transparent,
@@ -84,11 +84,11 @@ main.travels {
   height: 400px;
   cursor: grab;
 
-  @include mediumScreen {
+  @media (--medium) {
     height: 500px;
   }
 
-  @include wideScreen {
+  @media (--wide) {
     height: 600px;
   }
 
@@ -118,7 +118,7 @@ main.travels {
     border-radius: 2px;
     background: var(--color-site-background);
     color: var(--color-text-dimmer);
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 16px;
     cursor: pointer;
     display: flex;
@@ -137,7 +137,7 @@ main.travels {
   }
 }
 
-// Country tooltip
+/* Country tooltip */
 .country-tooltip {
   position: absolute;
   background: var(--color-site-background);
@@ -145,7 +145,7 @@ main.travels {
   border-radius: 2px;
   padding: 4px 10px;
   font-size: 13px;
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   pointer-events: none;
   z-index: 100;
   white-space: nowrap;
@@ -157,12 +157,12 @@ main.travels {
     color: var(--color-text-dimmer);
   }
 
-  @include darkMode {
+  @media (--dark) {
     box-shadow: 0 0 8px rgba(63, 185, 80, 0.15);
   }
 }
 
-// Modal styles
+/* Modal styles */
 .modal {
   position: fixed;
   top: 0;
@@ -209,12 +209,12 @@ main.travels {
     transform: scale(1);
   }
 
-  @include darkMode {
+  @media (--dark) {
     box-shadow: 0 0 20px rgba(63, 185, 80, 0.1);
   }
 
   h2 {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 1.1em;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -238,7 +238,7 @@ main.travels {
   font-size: 24px;
   cursor: pointer;
   color: var(--color-text-dimmer);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   line-height: 1;
   padding: 0;
   z-index: 1;
@@ -248,7 +248,7 @@ main.travels {
   }
 }
 
-// Trip details in modal
+/* Trip details in modal */
 #modal-trips {
   padding: 1.2em 16px;
 }
@@ -266,7 +266,7 @@ main.travels {
 }
 
 .trip-dates {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-weight: bold;
   color: var(--color-links);
   margin-bottom: 0.25em;
@@ -287,13 +287,13 @@ main.travels {
 
 .no-trips {
   color: var(--color-text-dimmer);
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 14px;
 }
 
-// Country places links shown below the map
+/* Country places links shown below the map */
 .country-places {
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 14px;
   padding: 12px 16px;
   margin-top: 1.5em;
@@ -316,12 +316,12 @@ main.travels {
   }
 }
 
-// Places index below the map
+/* Places index below the map */
 .places-index {
   margin-top: 2.5em;
 
   h2 {
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -337,7 +337,7 @@ main.travels {
   li {
     padding: 8px 0;
     border-bottom: 1px solid var(--color-box-borders);
-    font-family: $monoFontStack;
+    font-family: var(--font-mono);
     font-size: 14px;
 
     &::before {
@@ -355,7 +355,7 @@ main.travels {
 
 .home-badge {
   display: inline-block;
-  font-family: $monoFontStack;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--color-links);
   border: 1px solid var(--color-links);

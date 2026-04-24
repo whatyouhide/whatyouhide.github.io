@@ -1,11 +1,11 @@
 main.books {
-    max-width: $maxContentWidth * 1.4;
+    max-width: calc(var(--max-content-width) * 1.4);
 
     h2 {
-        font-family: $monoFontStack;
+        font-family: var(--font-mono);
     }
 
-    @include mediumScreen {
+    @media (--medium) {
         padding: 0;
     }
 
@@ -15,7 +15,7 @@ main.books {
         flex-direction: column;
         align-items: center;
 
-        @include wideScreen {
+        @media (--wide) {
             flex-direction: row;
             gap: 2em;
         }
@@ -43,7 +43,7 @@ main.books {
         flex: 1 1 0px;
         flex-direction: column;
 
-        @include mediumScreen {
+        @media (--medium) {
             flex-direction: row;
             align-items: center;
             gap: 1em;
@@ -54,7 +54,7 @@ main.books {
         }
     }
 
-    @include wideScreen {
+    @media (--wide) {
         hr {
             display: none;
         }
