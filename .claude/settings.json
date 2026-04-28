@@ -1,5 +1,5 @@
 {
   "permissions": {
-    "allow": ["Bash(zola:*)", "Bash(ls:*)", "Skill(playwright-cli)"]
+    "allow": ["Bash(npm run build:*)", "Bash(ls:*)", "Skill(playwright-cli)"]
   }
 }
