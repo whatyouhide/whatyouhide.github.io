@@ -4,6 +4,7 @@
 @import "./components/header.css";
 @import "./components/footer.css";
 @import "./components/landing_page.css";
+@import "./components/code_tabs.css";
 @import "./books.css";
 @import "./travels.css";
 @import "./place.css";

@@ -1,0 +1,122 @@
+.code-tabs {
+  --tab-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  margin: 1.8em 0;
+}
+
+/* Visually hide the radios but keep them focusable for keyboard arrow nav. */
+.code-tabs-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.code-tabs-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.4em;
+}
+
+.code-tabs-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* `$ ` prompt prefix — ties the tab row into the site's existing terminal
+   motif (sidebar roles, post date sigils). Picks up the same phosphor glow
+   the active label has, so the prompt and the "currently selected"
+   language read as one piece of UI. */
+.code-tabs-options::before {
+  content: "$";
+  color: var(--color-links);
+  letter-spacing: normal;
+  text-shadow: var(--color-status-glow);
+}
+
+.code-tabs-button {
+  padding: 4px 8px;
+  color: var(--color-text-faintest);
+  cursor: pointer;
+  user-select: none;
+  transition: color 200ms var(--tab-ease);
+}
+
+/* Hover suggests activation with a terminal-style green underline — matches
+   the site's `.entry a:hover` pattern. */
+.code-tabs-button:hover {
+  color: var(--color-text-dimmer);
+  text-decoration: underline;
+  text-decoration-color: var(--color-links);
+  text-underline-offset: 4px;
+}
+
+/* Tactile press — keypress-on-CRT feel. */
+.code-tabs-button:active {
+  transform: translateY(1px);
+}
+
+/* Hide every panel by default; the indexed :checked rules below reveal one. */
+.code-tabs-panels > * {
+  display: none;
+}
+
+/* Match input N → panel N (max 5 tabs). */
+.code-tabs > .code-tabs-radio:nth-of-type(1):checked ~ .code-tabs-panels > *:nth-child(1),
+.code-tabs > .code-tabs-radio:nth-of-type(2):checked ~ .code-tabs-panels > *:nth-child(2),
+.code-tabs > .code-tabs-radio:nth-of-type(3):checked ~ .code-tabs-panels > *:nth-child(3),
+.code-tabs > .code-tabs-radio:nth-of-type(4):checked ~ .code-tabs-panels > *:nth-child(4),
+.code-tabs > .code-tabs-radio:nth-of-type(5):checked ~ .code-tabs-panels > *:nth-child(5) {
+  display: block;
+}
+
+/* Active label — phosphor glow (dark mode only via the site's existing
+   --color-status-glow var) plus an `ct-ignite` pulse that runs on every
+   activation, including initial load. The text-decoration override prevents
+   the hover underline from doubling up when the active label is hovered. */
+.code-tabs > .code-tabs-radio:nth-of-type(1):checked ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(1),
+.code-tabs > .code-tabs-radio:nth-of-type(2):checked ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(2),
+.code-tabs > .code-tabs-radio:nth-of-type(3):checked ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(3),
+.code-tabs > .code-tabs-radio:nth-of-type(4):checked ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(4),
+.code-tabs > .code-tabs-radio:nth-of-type(5):checked ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(5) {
+  color: var(--color-links);
+  text-shadow: var(--color-status-glow);
+  text-decoration: none;
+  animation: ct-ignite 420ms var(--tab-ease) both;
+}
+
+@keyframes ct-ignite {
+  0%   { color: var(--color-links-hover); }
+  100% { color: var(--color-links); }
+}
+
+/* Subtle keyboard focus indicator on the active label. */
+.code-tabs > .code-tabs-radio:nth-of-type(1):focus-visible ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(1),
+.code-tabs > .code-tabs-radio:nth-of-type(2):focus-visible ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(2),
+.code-tabs > .code-tabs-radio:nth-of-type(3):focus-visible ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(3),
+.code-tabs > .code-tabs-radio:nth-of-type(4):focus-visible ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(4),
+.code-tabs > .code-tabs-radio:nth-of-type(5):focus-visible ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button:nth-of-type(5) {
+  outline: 1px dashed var(--color-text-dimmer);
+  outline-offset: 1px;
+}
+
+/* Drop the pre's own block margins — the wrapper handles outer spacing. */
+.code-tabs > .code-tabs-panels > pre,
+.code-tabs > .code-tabs-panels > pre[data-language] {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-tabs > .code-tabs-radio:checked ~ .code-tabs-bar > .code-tabs-options > .code-tabs-button {
+    animation: none;
+  }
+  .code-tabs-button:active {
+    transform: none;
+  }
+}

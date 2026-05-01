@@ -1,0 +1,35 @@
+---
+type Props = {
+  labels: string[];
+  class?: string;
+};
+
+const { labels, class: className = "" } = Astro.props;
+const id = `ct-${Math.random().toString(36).slice(2, 8)}`;
+
+if (labels.length > 5) {
+  console.warn(
+    `<CodeTabs> supports up to 5 labels; got ${labels.length}. Extra panels won't be selectable via the CSS-only selector chain.`,
+  );
+}
+---
+
+<div class={`code-tabs ${className}`.trim()}>
+  {labels.map((_, i) => (
+    <input
+      type="radio"
+      name={id}
+      id={`${id}-${i}`}
+      class="code-tabs-radio"
+      checked={i === 0}
+    />
+  ))}
+  <div class="code-tabs-bar">
+    <div class="code-tabs-options">
+      {labels.map((label, i) => (
+        <label class="code-tabs-button" for={`${id}-${i}`}>{label}</label>
+      ))}
+    </div>
+  </div>
+  <div class="code-tabs-panels"><slot /></div>
+</div>
