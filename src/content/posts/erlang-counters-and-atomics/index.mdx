@@ -1,0 +1,291 @@
+---
+title: 'Counting Fast in Erlang with :counters and :atomics'
+description: Two BEAM escape hatches for counting fast—shared, mutable, off-heap integer arrays. How :atomics and :counters work, what they guarantee, and when to reach for each.
+date: '2026-05-01'
+coverImage: ./cover-image.png
+tags: 
+  - erlang
+  - elixir
+math: true
+---
+
+import { Image } from "astro:assets";
+import Callout from "../../../components/Callout.astro";
+import Figure from "../../../components/Figure.astro";
+import CodeTabs from "../../../components/CodeTabs.astro";
+import BenchChart from "../../../components/BenchChart.astro";
+import benchData from "./benchmark.json";
+import atomicsArrayImg from "./atomics-array.svg";
+import countersMulticoreLayoutImg from "./counters-multicore-layout.svg";
+import countersGetOperationImg from "./counters-get-operation.svg";
+import countersOutOfOrderReadsImg from "./counters-out-of-order-reads.svg";
+
+export const languages = ["Elixir", "Erlang"];
+
+I'm just back from giving a training at ElixirConf EU about advanced concurrency patterns in Elixir. I love Erlang's process model to death. But I also love the things that the OTP team shipped in the past few years focused on essentially *escaping* that model.
+
+Many languages seem to start from mutable, fast data structures and then build concurrency features, thread isolation, all that. Erlang went the opposite direction. Start with concurrency primitives, immutable data, per-process memory. Then, introduce escape hatches that let processes pry into shared areas of memory and (safely!) modify them.
+
+ETS is the one everybody knows and reaches for when needing a form of somewhat-mutable, shared memory space. In recent OTP releases, however, we got a few wonderful additions to our toolbox. We'll focus on the ones for *counting stuff*: `:atomics` and `:counters`.
+
+## `:atomics`
+
+An atomics array is an off-heap, shared, mutable block of **N × 64-bit integers** (signed or unsigned). That's a mouthful. To break it down:
+
+  * **Off-heap**: it doesn't live in the heap of a process. It lives in a magical place somewhere in the BEAM.
+  * **Shared**: no process owns it—the BEAM does.
+  * **Mutable**: when you update this lil' data structure, you actually change the bytes in memory, as opposed to updating Erlang/Elixir data structures (which copies them because they're immutable).
+
+The "array" part means that whenever you create a "`:atomics` data structure", you're creating an array of $n$ integers:
+
+<Image
+  src={atomicsArrayImg}
+  alt="Hand-drawn sketch of an array of 64-bit integers"
+  class="invert-in-dark-mode"
+/>
+
+Create such a data structure and mess around with it:
+
+<CodeTabs labels={languages}>
+
+```elixir
+ref = :atomics.new(n, [])
+
+:atomics.add(ref, _index = 1, 23)
+
+# Add in a different process... it's shared anyways.
+fn -> :atomics.add(ref, _index = 1, 19) end
+|> Task.async()
+|> Task.await()
+
+:atomics.get(ref, 1)
+#=> 42
+```
+
+```erlang
+Ref = atomics:new(N, []),
+atomics:add(Ref, 1, 23),
+
+%% Add in a different process... it's shared anyways.
+{_, Ref} = spawn_monitor(fun() -> atomics:add(Ref, 1, 19) end),
+receive
+  {'DOWN', Ref, process, _Pid, _Reason} ->
+    atomics:get(Ref, 1)
+end.
+%=> 42
+```
+
+</CodeTabs>
+
+Erlang hides what the data looks like under the hood and just returns a `ref` here. The array itself is a pretty low-level data structure. For example, there's no overflow check: if you use unsigned integers and try to set one of these numbers to $2^{64} + 1$, it'll just wrap around to $1$. No specific process owns this data. It is garbage-collected when the last reference to the array is gone.
+
+What `:atomics` brings to the table is überfast, atomic operations on these integers. These map pretty much directly to CPU instructions, so when I say fast I mean *fast*.
+
+Adding and getting numbers is not that much fun. What is fun is operations like `add_get/3`, which lets you atomically add to the number at the given array index *and* get the updated value:
+
+<CodeTabs labels={languages}>
+
+```elixir
+:atomics.add_get(ref, _index = 1, 10)
+#=> 52
+```
+
+```erlang
+atomics:add_get(Ref, 1, 10).
+%=> 52
+```
+
+</CodeTabs>
+
+*Atomically* means that nothing happens between increasing the number and fetching it, so there cannot be a race condition where some other process alters the number before the caller is able to read it back.
+
+Another atomic operation you can do is *exchange* the value at the given index and get the old value:
+
+<CodeTabs labels={languages}>
+
+```elixir
+:atomics.exchange(ref, _index = 1, 0)
+#=> 52
+:atomics.get(ref, _index = 1)
+#=> 0
+```
+
+```erlang
+atomics:exchange(Ref, 1, 0).
+%=> 52
+atomics:get(Ref, 1).
+%=> 0
+```
+
+</CodeTabs>
+
+Last but not least, a well-known operation often used for synchronization in concurrent environments: [Compare-and-swap (CAS)](https://en.wikipedia.org/wiki/Compare-and-swap). You provide an "expected value" and a "desired value", and if the integer is equal to the expected then you set it to the desired value—all atomically of course.
+
+<CodeTabs labels={languages}>
+
+```elixir
+:atomics.compare_exchange(ref, _index = 1, _expected = 10, _desired = 42)
+#=> 0 (old value)
+:atomics.compare_exchange(ref, _index = 1, _expected = 0, _desired = 42)
+#=> :ok
+:atomics.get(ref, _index = 1)
+#=> 42
+```
+
+```erlang
+atomics:compare_exchange(Ref, 1, 10, 42).
+%=> 0 (old value)
+atomics:compare_exchange(Ref, 1, 0, 42).
+%=> :ok
+atomics:get(Ref, 1).
+%=> 42
+```
+
+</CodeTabs>
+
+`:atomics` arrays also guarantee sequentially-consistent ordering of operations *across different cells* in the same array. Say a writer process calls:
+
+<CodeTabs labels={languages}>
+
+```elixir
+:atomics.put(ref, _index = 1, 42)
+:atomics.put(ref, _index = 2, 19)
+```
+
+```erlang
+atomics:put(Ref, 1, 42),
+atomics:put(Ref, 2, 19).
+```
+
+</CodeTabs>
+
+Then, a reader process will **never** see the value at the second index but *not* the value at the first index. This is really about visibility: readers that see an operation are guaranteed to see all the operations that happened before it. Something to take for granted in BEAM-land, right? Well, properties like this is what turns a data structure like this from a simple collection of integers into a powerful synchronization primitive for multithreading and concurrency.
+
+## `:counters`
+
+Pretty close sibling to `:atomics`, with a smaller API surface and a different memory model. `:counters` is still an array of 64-bit integers in a separate memory space, but integers can only be *signed* and there are no atomic primitives (like `exchange` or CAS).
+
+<CodeTabs labels={languages}>
+
+```elixir
+ref = :counters.new(n, [:write_concurrency])
+
+:counters.add(ref, _index = 1, 23)
+:counters.add(ref, _index = 1, 19)
+
+:counters.get(ref, 1)
+#=> 42
+```
+
+```erlang
+Ref = counters:new(N, [write_concurrency]),
+
+counters:add(Ref, 1, 23),
+counters:add(Ref, 1, 19),
+
+counters:get(Ref, 1).
+%=> 42
+```
+
+</CodeTabs>
+
+There's no atomic way here to write-then-read (what we'd get with `:atomics.add_get/3`).
+
+Now for the interesting part and the main difference with `:atomics`: the underlying data structure. Here, the array is made of **one integer per scheduler**. This means that a single-element `counters` array is actually *fourteen* integers on my machine, because:
+
+<CodeTabs labels={languages}>
+
+```elixir
+System.schedulers_online()
+#=> 14
+```
+
+```erlang
+erlang:system_info(schedulers_online).
+%=> 14
+```
+
+</CodeTabs>
+
+This architecture makes writes *extremely* fast, because there's no contention on the same core. Each scheduler keeps its own array of integers and writes are local—they only end up affecting the integer for the scheduler that the write operation is happening on.
+
+<Image
+  src={countersMulticoreLayoutImg}
+  alt="Hand-drawn sketch of the architecture of a :counters array, showing the per-scheduler integers"
+  class="invert-in-dark-mode"
+/>
+
+The complexity is shifted to the read side: `:counters.get/2` essentially sums up the integers for each scheduler to get the total value.
+
+<Image
+  src={countersGetOperationImg}
+  alt="Hand-drawn sketch of the :counters.get/2 operation, showing the sum of the per-scheduler integers"
+  class="invert-in-dark-mode"
+/>
+
+Setting a counter to a specific value with `:counters.put/3` is even more expensive, as the operation consists of resetting each scheduler's integer to `0` and then adding the new value to just one of them.
+
+With this data structure powering counters, reads are not guaranteed to see all writes in order. A concurrent reader doesn't see a consistent snapshot of the counter. If write A happens before write B, the returned sum might reflect both, just A, or just B—depending on which per-scheduler cells had landed by the time the read scanned them.
+
+<Image
+  src={countersOutOfOrderReadsImg}
+  alt="Hand-drawn sketch of how a concurrent reader might see the counter in a different order than the writes that happened"
+  class="invert-in-dark-mode"
+/>
+
+Write operations cannot be lost, and will all be seen at some point, but concurrent readers can only expect eventually-consistent results.
+
+<Callout type="info">
+I snuck in a `[:write_concurrency]` option when creating the counter. This option is what dictates the per-scheduler memory model I just described. `:counters` also supports a `[:atomics]` mode (the default), which essentially turns the counters array into pretty much an `:atomics` array.
+</Callout>
+
+## Benchmarks
+
+I ran some benchmarks to get a sense of the performance of each strategy, using ETS as a baseline. ETS provides `ets:update_counter/4` which can be used for some of the things that `:counters` and `:atomics` can do.
+
+In this particular benchmark, I'm just incrementing a counter by `1` in a loop, with a varying number of concurrent writers to see how things change when concurrency scales up.
+
+<BenchChart data={benchData}>
+  Throughput of each strategy as concurrent writers scale up. Both axes are log.
+  Higher is better (= faster).
+</BenchChart>
+
+<details>
+
+<summary>Specs</summary>
+
+These are the specs of the machine I used to run the benchmarks.
+
+```
+Operating System: macOS
+CPU Information: Apple M4 Pro
+Number of Available Cores: 14
+Available memory: 24 GB
+Elixir 1.19.2
+Erlang 28.1
+JIT enabled: true
+```
+
+</details>
+
+With one writer, all solutions perform similarly. There's no contention at the cores level or between Erlang processes.
+
+As writers scale up, things get more interesting. ETS performance goes down significantly once we go above the number of cores on the machine (remember it's 14 cores in my case). `atomics` (and `counters` in `[:atomics]` mode) perform better than ETS, showing a consistent throughput of operations as writes scale up. `counters`, expectedly, performs *really well*. Throughput goes up as we parallelize writes because writers are not fighting each other for shared resources. Up to the point where we reach the number of cores on the machine, throughput **increases** as we add writers—there's no contention, so parallelizing helps. After that, performance plateaus and importantly *does not* degrade.
+
+## Conclusion
+
+We explored two interesting data structures on the BEAM: `:atomics` and `:counters`. As with most things in our industry, I'll leave you with this: **pick the right tool for the job**.
+
+`:atomics` is what you want when you need *real* atomic primitives—compare-and-swap, exchange, atomic add-and-get—plus the sequential-consistency guarantees that turn an array of integers into an actual synchronization primitive. For a real-world example, look no further than [Broadway](https://elixir-broadway.org/), whose rate-limiting functionality [is implemented on top of `:atomics`](https://github.com/dashbitco/broadway/blob/d3a668c885342ae223b5ebcd9571efe4a0f18c41/lib/broadway/topology/rate_limiter.ex).
+
+Reach for `:counters` in `[:write_concurrency]` mode when you write a lot and read rarely: hit counters, request counters, anything where you just want to bump a number from many processes without those processes ever fighting over the same cache line. ETS still has its place, but for this specific kind of problem these two give you both better numbers and tighter semantics.
+
+What I love about all of this is the philosophy behind it. Erlang designed narrow, well-scoped primitives that act as *escape hatches* for the process model when needed. These data structures are about as fast as anything you'll find in any language that does what they do.
+
+---
+
+Resources:
+
+  * [Documentation for `counters`](https://www.erlang.org/doc/apps/erts/counters.html)
+  * [Documentation for `atomics`](https://www.erlang.org/doc/apps/erts/atomics.html)
+  * [*Decentralized ETS Counters for Better Scalability*](https://www.erlang.org/blog/scalable-ets-counters/) by Kjell Winblad
