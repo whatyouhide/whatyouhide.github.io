@@ -1,0 +1,301 @@
+---
+// Huge component that lets me chart Benchee JSON benchmark results (at least a
+// specific one for now) as line charts, with Benchee inputs as X axis and ops/s
+// as Y axis.
+
+type Stats = {
+  job_name: string;
+  input_name: string;
+  run_time_data: {
+    statistics: {
+      ips: number;
+      std_dev_ips?: number;
+    };
+  };
+};
+
+interface Props {
+  data: Stats[];
+  incrementsPerWriter?: number;
+  height?: number;
+}
+
+const {
+  data,
+  incrementsPerWriter = 10_000,
+  height = 380,
+} = Astro.props;
+
+const hasCaption = Astro.slots.has("default");
+
+const ORDER = [
+  "ETS update_counter",
+  ":atomics",
+  ":counters (atomics)",
+  ":counters (write_concurrency)",
+];
+
+const parseWriters = (name: string): number => {
+  const m = name.match(/^(\d+)/);
+  return m ? Number(m[1]) : NaN;
+};
+
+type SeriesOut = { name: string; data: [number, number][] };
+const seriesMap = new Map<string, SeriesOut>();
+for (const name of ORDER) seriesMap.set(name, { name, data: [] });
+
+for (const s of data) {
+  const w = parseWriters(s.input_name);
+  if (Number.isNaN(w)) continue;
+  const ips = s.run_time_data?.statistics?.ips ?? 0;
+  const ops = ips * w * incrementsPerWriter;
+  const series = seriesMap.get(s.job_name);
+  if (series) series.data.push([w, ops]);
+}
+for (const s of seriesMap.values()) s.data.sort((a, b) => a[0] - b[0]);
+
+const seriesOut = Array.from(seriesMap.values()).filter((s) => s.data.length > 0);
+
+const id = `bench-chart-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<figure class="bench-chart">
+  <div
+    class="bench-chart__canvas"
+    id={id}
+    data-series={JSON.stringify(seriesOut)}
+    data-height={String(height)}
+    style={`min-height: ${height}px;`}
+    role="img"
+    aria-label="Benchmark: ops per second by number of concurrent writers, comparing ETS update_counter, :atomics, :counters (atomics), and :counters (write_concurrency)"
+  >
+  </div>
+  {hasCaption && <figcaption><slot /></figcaption>}
+</figure>
+
+<script>
+  import * as echarts from "echarts/core";
+  import { LineChart } from "echarts/charts";
+  import {
+    GridComponent,
+    TooltipComponent,
+    LegendComponent,
+    AriaComponent,
+  } from "echarts/components";
+  import { SVGRenderer } from "echarts/renderers";
+
+  echarts.use([
+    LineChart,
+    GridComponent,
+    TooltipComponent,
+    LegendComponent,
+    AriaComponent,
+    SVGRenderer,
+  ]);
+
+  type SeriesData = { name: string; data: [number, number][] };
+
+  const cssVar = (name: string): string =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  const fmtOps = (n: number): string => {
+    const trim = (v: number, suffix: string) =>
+      (v >= 10 ? v.toFixed(0) : v.toFixed(1).replace(/\.0$/, "")) + suffix;
+    if (n >= 1e9) return trim(n / 1e9, "B");
+    if (n >= 1e6) return trim(n / 1e6, "M");
+    if (n >= 1e3) return trim(n / 1e3, "k");
+    return n.toFixed(0);
+  };
+
+  const SHORT_NAMES: Record<string, string> = {
+    "ETS update_counter": "ETS",
+    ":atomics": ":atomics",
+    ":counters (atomics)": ":counters / atomics",
+    ":counters (write_concurrency)": ":counters / wc",
+  };
+
+  const init = (root: HTMLElement) => {
+    const seriesData: SeriesData[] = JSON.parse(root.dataset.series || "[]");
+    const isLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const palette = isLight
+      ? ["#A56F1A", "#4A6B56", "#3A6EA5", "#A04074"]
+      : ["#D29922", "#3FB950", "#58A6FF", "#F778BA"];
+
+    const textDimmer = cssVar("--color-text-dimmer");
+    const textFaintest = cssVar("--color-text-faintest");
+    const text = cssVar("--color-text");
+    const surface = cssVar("--color-content-surface");
+    const border = cssVar("--color-content-surface-border");
+    const monoFont = cssVar("--font-mono") || "monospace";
+
+    const chart = echarts.init(root, null, {
+      renderer: "svg",
+      height: Number(root.dataset.height) || 380,
+    });
+
+    chart.setOption({
+      backgroundColor: "transparent",
+      textStyle: { fontFamily: monoFont },
+      aria: {
+        enabled: true,
+        decal: { show: false },
+      },
+      grid: {
+        left: 56,
+        right: 24,
+        top: 60,
+        bottom: 56,
+        containLabel: false,
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "cross",
+          snap: true,
+          lineStyle: { color: textDimmer, type: "dashed", width: 1 },
+          crossStyle: { color: textDimmer, type: "dashed" },
+          label: {
+            backgroundColor: surface,
+            borderColor: border,
+            borderWidth: 1,
+            color: text,
+            fontFamily: monoFont,
+            fontSize: 11,
+            padding: [4, 6],
+            formatter: (p: any) => {
+              if (p.axisDimension === "x") return `${p.value} writer(s)`;
+              return fmtOps(p.value);
+            },
+          },
+        },
+        backgroundColor: surface,
+        borderColor: border,
+        borderWidth: 1,
+        padding: [10, 12],
+        textStyle: { color: text, fontFamily: monoFont, fontSize: 12 },
+        formatter: (params: any) => {
+          const arr = Array.isArray(params) ? params : [params];
+          const writers = arr[0]?.value?.[0] ?? "";
+          const rows = arr
+            .slice()
+            .sort((a: any, b: any) => b.value[1] - a.value[1])
+            .map(
+              (p: any) =>
+                `<div style="display:flex;justify-content:space-between;gap:18px;line-height:1.6">
+                   <span style="color:${textDimmer}">
+                     <span style="display:inline-block;width:10px;height:2px;background:${p.color};margin-right:8px;vertical-align:middle"></span>${p.seriesName}
+                   </span>
+                   <span><strong style="color:${text}">${fmtOps(p.value[1])}</strong><span style="color:${textDimmer};margin-left:4px">ops/s</span></span>
+                 </div>`,
+            )
+            .join("");
+          return `<div style="font-family:${monoFont};font-size:12px">
+                    <div style="color:${textDimmer};margin-bottom:6px;letter-spacing:0.04em">${writers} writer(s)</div>
+                    ${rows}
+                  </div>`;
+        },
+      },
+      legend: {
+        show: true,
+        top: 6,
+        left: "center",
+        width: "96%",
+        textStyle: { fontFamily: monoFont, fontSize: 11 },
+        itemGap: 14,
+        itemWidth: 0,
+        itemHeight: 0,
+        icon: "none",
+        formatter: (name: string) => SHORT_NAMES[name] ?? name,
+        data: seriesData.map((s, i) => ({
+          name: s.name,
+          textStyle: { color: palette[i] },
+        })),
+      },
+      xAxis: {
+        type: "log",
+        logBase: 2,
+        name: "concurrent writers",
+        nameLocation: "middle",
+        nameGap: 32,
+        nameTextStyle: {
+          color: textDimmer,
+          fontFamily: monoFont,
+          fontSize: 11,
+          fontStyle: "italic",
+        },
+        axisLine: { lineStyle: { color: textFaintest } },
+        axisTick: { show: false },
+        axisLabel: {
+          color: textDimmer,
+          fontFamily: monoFont,
+          fontSize: 11,
+          formatter: (v: number) => String(v),
+        },
+        splitLine: { show: false },
+        min: "dataMin",
+        max: "dataMax",
+      },
+      yAxis: {
+        type: "log",
+        logBase: 10,
+        name: "ops / second",
+        nameLocation: "end",
+        nameGap: 12,
+        nameTextStyle: {
+          color: textDimmer,
+          fontFamily: monoFont,
+          fontSize: 11,
+          fontStyle: "italic",
+          align: "left",
+        },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: {
+          color: textDimmer,
+          fontFamily: monoFont,
+          fontSize: 11,
+          formatter: (v: number) => fmtOps(v),
+        },
+        splitLine: {
+          lineStyle: { color: textFaintest, type: "dashed", opacity: 0.7 },
+        },
+      },
+      animation: !reduceMotion,
+      animationDuration: 1400,
+      animationEasing: "cubicOut",
+      series: seriesData.map((s, i) => ({
+        name: s.name,
+        type: "line",
+        smooth: 0.35,
+        symbol: "circle",
+        symbolSize: 6,
+        showSymbol: true,
+        emphasis: { focus: "series", scale: 1.4 },
+        z: 10 + i,
+        lineStyle: {
+          color: palette[i],
+          width: 2,
+          shadowColor: palette[i],
+          shadowBlur: 7,
+          cap: "round",
+          join: "round",
+        },
+        itemStyle: {
+          color: palette[i],
+          borderColor: cssVar("--color-site-background"),
+          borderWidth: isLight ? 0 : 1.5,
+        },
+        data: s.data,
+      })),
+    });
+
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(root);
+  };
+
+  document
+    .querySelectorAll<HTMLElement>(".bench-chart__canvas")
+    .forEach(init);
+</script>

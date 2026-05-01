@@ -1,0 +1,55 @@
+/* ---- Bench chart (ECharts SVG) ---- */
+
+.bench-chart {
+  margin: 2.5em 0;
+  padding: 1.2em 0.4em 0.8em;
+  border: 1px solid var(--color-box-borders);
+  background-color: var(--color-site-background-accented);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+}
+
+.bench-chart__canvas {
+  width: 100%;
+  /* min-height set inline by the component for first-paint stability */
+}
+
+.bench-chart__canvas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.bench-chart figcaption {
+  text-align: left;
+  color: var(--color-text-dimmer);
+  margin: 1em 0.4em 0;
+  font-family: var(--font-mono);
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+.bench-chart figcaption,
+.bench-chart figcaption :is(p, ul, ol, li) {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bench-chart figcaption :is(p, ul, ol) {
+  margin: 0 0 0.4em;
+}
+
+.bench-chart figcaption :is(p, ul, ol):last-child {
+  margin-bottom: 0;
+}
+
+.bench-chart figcaption :is(code, kbd) {
+  font-style: normal;
+}
+
+@media (--medium) {
+  .bench-chart {
+    padding: 1.5em 1em 1em;
+  }
+}
