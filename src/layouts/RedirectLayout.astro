@@ -1,0 +1,21 @@
+---
+import { siteConfig } from "../config";
+
+type Props = { to: string };
+const { to } = Astro.props;
+const absolute = `${siteConfig.baseUrl}${to}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={absolute} />
+    <meta http-equiv="refresh" content={`0; url=${to}`} />
+    <script is:inline define:vars={{ to }}>window.location.replace(to)</script>
+  </head>
+  <body>
+    <p>This page has moved to <a href={to}>{to}</a>.</p>
+  </body>
+</html>

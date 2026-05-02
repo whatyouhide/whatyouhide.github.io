@@ -1,28 +1,44 @@
 ---
 import { getCollection, render } from "astro:content";
 import PostLayout from "../../layouts/PostLayout.astro";
-import { postSlug } from "../../lib/posts";
+import RedirectLayout from "../../layouts/RedirectLayout.astro";
+import { postSlug, postUrl } from "../../lib/posts";
 
 export async function getStaticPaths() {
   const posts = await getCollection("posts");
-  return posts.map((post) => ({
-    params: { slug: postSlug(post) },
-    props: { post },
-  }));
+  const entries = [];
+  for (const post of posts) {
+    entries.push({
+      params: { slug: postSlug(post) },
+      props: { post, redirectTo: null },
+    });
+    for (const alias of post.data.aliases) {
+      const aliasSlug = alias.replace(/^\/posts\//, "").replace(/\/$/, "");
+      entries.push({
+        params: { slug: aliasSlug },
+        props: { post, redirectTo: postUrl(post) },
+      });
+    }
+  }
+  return entries;
 }
 
-const { post } = Astro.props;
-const { Content } = await render(post);
+const { post, redirectTo } = Astro.props;
 const { title, description, date, updated, coverImage, math } = post.data;
+const Content = redirectTo ? null : (await render(post)).Content;
 ---
 
-<PostLayout
-  title={title}
-  description={description}
-  date={date}
-  updated={updated}
-  coverImage={coverImage}
-  math={math}
->
-  <Content />
-</PostLayout>
+{redirectTo ? (
+  <RedirectLayout to={redirectTo} />
+) : (
+  <PostLayout
+    title={title}
+    description={description}
+    date={date}
+    updated={updated}
+    coverImage={coverImage}
+    math={math}
+  >
+    <Content />
+  </PostLayout>
+)}

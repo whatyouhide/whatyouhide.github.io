@@ -11,6 +11,7 @@ const posts = defineCollection({
     coverImage: z.union([z.string().startsWith("/"), image()]).optional(),
     math: z.boolean().default(false),
     tags: z.array(z.string()).default([]),
+    aliases: z.array(z.string().startsWith("/posts/")).default([]),
   }),
 });
 
