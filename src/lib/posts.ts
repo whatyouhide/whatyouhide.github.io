@@ -3,7 +3,7 @@ import { getCollection, type CollectionEntry } from "astro:content";
 export type PostEntry = CollectionEntry<"posts">;
 
 export function postSlug(post: PostEntry): string {
-  return post.id.replace(/\/index$/, "");
+  return post.id.replace(/\/index$/, "").replace(/^\d{4}-\d{2}-\d{2}-/, "");
 }
 
 export function postUrl(post: PostEntry): string {
