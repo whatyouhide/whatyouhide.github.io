@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
+import "../styles/fonts-playfair.css";
 
 type Props = {
   title: string;
@@ -18,7 +19,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 });
 ---
 
-<BaseLayout title={title} description={`${title} — a place note.`} playfairDisplay>
+<BaseLayout title={title} description={`${title} — a place note.`}>
   <main class={`place-page${placeClass ? ` ${placeClass}` : ""}`}>
     <section class="place-hero">
       <div class="place-hero-flag">

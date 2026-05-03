@@ -24,7 +24,7 @@ but for network challenges). You can find all the videos in this post.
 
 Here's the playlist on YouTube:
 
-<iframe width="100%" height="400px" src="https://www.youtube.com/embed/videoseries?list=PLd7I3U4fDsULTLqbRAkWzA002-IzMe8fl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<iframe width="100%" height="400px" src="https://www.youtube-nocookie.com/embed/videoseries?list=PLd7I3U4fDsULTLqbRAkWzA002-IzMe8fl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 [Elixir]: https://elixir-lang.org
 [livebook]: https://livebook.dev
