@@ -3,7 +3,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Sidebar from "../components/Sidebar.astro";
 import { getSortedPosts, postUrl } from "../lib/posts";
 
-const recentPosts = (await getSortedPosts()).slice(0, 10);
+const allPosts = await getSortedPosts();
+const recentPosts = allPosts.slice(0, 10);
+const remainingCount = allPosts.length - recentPosts.length;
 
 function truncate(text: string, max: number): string {
   const stripped = text.replace(/<[^>]*>/g, "");
@@ -51,6 +53,15 @@ function ym(date: Date): string {
               <span class="shell-post-date">{ym(post.data.date)}</span>
             </a>
           ))}
+
+          <a href="/posts/" class="shell-post-more">
+            <span class="shell-post-more-prompt">&gt;</span>
+            <span class="shell-post-more-label">view all posts</span>
+            {remainingCount > 0 && (
+              <span class="shell-post-more-count">{remainingCount} more</span>
+            )}
+            <span class="shell-post-more-arrow" aria-hidden="true">→</span>
+          </a>
         </section>
       </div>
     </div>

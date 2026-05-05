@@ -475,6 +475,64 @@
   }
 }
 
+/* ─── "View all posts" Link ─────────────────────────── */
+
+.shell-post-more {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 16px 0 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+  text-shadow: none;
+  color: var(--color-text-faint);
+  transition: color 0.15s ease;
+  animation: fadeInUp 0.4s ease-out 0.6s both;
+
+  @media (--medium) {
+    gap: 16px;
+  }
+
+  &:hover {
+    color: var(--color-links);
+    text-shadow: var(--link-hover-glow);
+
+    .shell-post-more-arrow {
+      transform: translateX(3px);
+    }
+  }
+
+  &:hover,
+  &:active {
+    text-shadow: none;
+  }
+}
+
+.shell-post-more-prompt {
+  color: var(--color-links);
+  flex-shrink: 0;
+}
+
+.shell-post-more-label {
+  font-weight: 500;
+}
+
+.shell-post-more-count {
+  color: var(--color-text-faintest);
+
+  &::before {
+    content: "# ";
+  }
+}
+
+.shell-post-more-arrow {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--color-links);
+  transition: transform 0.2s ease;
+}
+
 /* ─── Inner Pages with Sidebar ──────────────────────── */
 
 #main.with-sidebar {
