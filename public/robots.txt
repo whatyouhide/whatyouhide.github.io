@@ -4,6 +4,7 @@ Disallow: /*?*utm_
 Disallow: /*?*utm=
 Disallow: /*?*fbclid=
 Disallow: /*?*gclid=
+Disallow: /*?*ck_subscriber_id=
 
 User-agent: OAI-SearchBot
 Allow: /
