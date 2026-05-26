@@ -1,25 +1,30 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
+import { siteConfig } from "../config";
 import "../styles/fonts-playfair.css";
 
 type Props = {
   title: string;
   subtitle?: string;
+  description?: string;
   date?: Date;
   countryName: string;
   flag?: string;
   placeClass?: string;
 };
 
-const { title, subtitle, date, countryName, flag, placeClass } = Astro.props;
+const { title, subtitle, description, date, countryName, flag, placeClass } = Astro.props;
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
   year: "numeric",
 });
+
+const metaDescription =
+  description ?? `Travel notes from ${title}, ${countryName}, by ${siteConfig.fullName}.`;
 ---
 
-<BaseLayout title={title} description={`${title} — a place note.`}>
+<BaseLayout title={title} description={metaDescription}>
   <main class={`place-page${placeClass ? ` ${placeClass}` : ""}`}>
     <section class="place-hero">
       <div class="place-hero-flag">
