@@ -1,20 +1,14 @@
 ---
-import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getSortedPosts, postUrl } from "../../lib/posts";
 
-const posts = (await getCollection("posts")).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime()
-);
+const posts = await getSortedPosts();
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
   year: "numeric",
 });
-
-function slugFor(id: string): string {
-  return id.replace(/\/index$/, "");
-}
 ---
 
 <BaseLayout title="Posts" description="Writings by Andrea Leopardi on Elixir, systems, and software.">
@@ -30,12 +24,12 @@ function slugFor(id: string): string {
               </time>
             </div>
             <h1>
-              <a href={`/posts/${slugFor(post.id)}/`}>{post.data.title}</a>
+              <a href={postUrl(post)}>{post.data.title}</a>
             </h1>
           </header>
           <div class="entry">
             <p>{post.data.description}</p>
-            <a href={`/posts/${slugFor(post.id)}/`} class="read-more">Read post</a>
+            <a href={postUrl(post)} class="read-more">Read post</a>
           </div>
         </article>
       ))}

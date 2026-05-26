@@ -8,12 +8,17 @@ export async function getStaticPaths() {
   const posts = await getCollection("posts");
   const entries = [];
   for (const post of posts) {
+    const slug = postSlug(post);
     entries.push({
-      params: { slug: postSlug(post) },
+      params: { slug },
       props: { post, redirectTo: null },
     });
-    for (const alias of post.data.aliases) {
+    const aliases = new Set(post.data.aliases);
+    const legacyId = post.id.replace(/\/index$/, "");
+    if (legacyId !== slug) aliases.add(`/posts/${legacyId}/`);
+    for (const alias of aliases) {
       const aliasSlug = alias.replace(/^\/posts\//, "").replace(/\/$/, "");
+      if (aliasSlug === slug) continue;
       entries.push({
         params: { slug: aliasSlug },
         props: { post, redirectTo: postUrl(post) },
