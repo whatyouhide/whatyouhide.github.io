@@ -235,3 +235,68 @@
     }
   }
 }
+
+/* ── Country: Spain (Granada) ──
+   Alhambra-inspired: pomegranate red on warm parchment cream,
+   Moorish 8-point star pattern, horseshoe arch band, Roman numerals. */
+
+.place-spain {
+  --place-primary: #7A1F2B;
+  --place-cream: #F2E5CC;
+  --place-dark: #2A1411;
+  --place-gold: #B07A1F;
+
+  .place-hero {
+    background:
+      url("/places/granada/alhambra-tile.svg") repeat,
+      linear-gradient(180deg, #F4E8D0 0%, #EFDFC2 100%);
+    background-size: 120px 120px, auto;
+    background-blend-mode: normal;
+    color: var(--place-dark);
+  }
+
+  .place-hero h1 {
+    color: var(--place-primary);
+
+    em {
+      color: var(--place-gold);
+      font-weight: 400;
+    }
+  }
+
+  .place-hero-flag {
+    background: rgba(122, 31, 43, 0.06);
+    border-color: rgba(122, 31, 43, 0.22);
+
+    .place-hero-flag-emoji {
+      background: rgba(122, 31, 43, 0.12);
+      border-color: rgba(122, 31, 43, 0.28);
+    }
+
+    span {
+      color: rgba(42, 20, 17, 0.62);
+    }
+  }
+
+  .place-hero-date {
+    color: rgba(42, 20, 17, 0.45);
+  }
+
+  .place-band {
+    background:
+      url("/places/granada/horseshoe-arches.svg") repeat-x center / 48px 56px,
+      var(--place-cream);
+    height: 56px;
+  }
+
+  .place-band-inner { display: none; }
+
+  .place-content {
+    h2 {
+      &::before {
+        content: counter(place-section, upper-roman) ".";
+        opacity: 0.55;
+      }
+    }
+  }
+}
