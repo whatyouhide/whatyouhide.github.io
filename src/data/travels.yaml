@@ -108,6 +108,9 @@ countries:
   MCO:
     name: "Monaco"
     visited: true
+  MKD:
+    name: "North Macedonia"
+    visited: true
   NLD:
     name: "Netherlands"
     visited: true
