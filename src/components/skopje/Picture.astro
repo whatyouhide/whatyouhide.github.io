@@ -1,27 +1,27 @@
 ---
 // A catalogued monument: a framed photograph with an italic caption and a plate number.
+import { Picture as AstroPicture } from "astro:assets";
+
 type Props = {
-    src?: string;
+    // Local images are imported (ImageMetadata) and optimized by astro:assets;
+    // remote URLs (e.g. Unsplash) stay as plain strings.
+    src?: ImageMetadata | string;
     alt?: string;
     no?: string;
     wide?: boolean;
 };
 const { src, alt = "", no, wide = false } = Astro.props;
 
-const m = src?.match(/^(.+)\.(png|jpg|jpeg)$/i);
-const webpSrc = m ? `${m[1]}.webp` : null;
+const isLocal = src != null && typeof src !== "string";
 ---
 
 <figure class={`mon-plate${wide ? " mon-plate--wide" : ""}`}>
     <div class="mon-plate-frame">
         {
-            webpSrc ? (
-                <picture>
-                    <source type="image/webp" srcset={webpSrc} />
-                    <img src={src} alt={alt} loading="lazy" />
-                </picture>
+            isLocal ? (
+                <AstroPicture src={src} formats={["avif", "webp"]} alt={alt} loading="lazy" />
             ) : (
-                <img src={src} alt={alt} loading="lazy" />
+                <img src={src as string} alt={alt} loading="lazy" />
             )
         }
     </div>

@@ -1,6 +1,10 @@
 ---
+import { Picture as AstroPicture } from "astro:assets";
+
 type Props = {
-  src: string;
+  // Local images are imported (ImageMetadata) and optimized by astro:assets;
+  // string paths (legacy posts) keep the .webp-sibling behavior.
+  src: ImageMetadata | string;
   alt?: string;
   width?: string;
 };
@@ -8,12 +12,15 @@ type Props = {
 const { src, alt = "", width } = Astro.props;
 const hasCaption = Astro.slots.has("default");
 
-const m = src.match(/^(.+)\.(png|jpg|jpeg)$/i);
+const isLocal = typeof src !== "string";
+const m = typeof src === "string" ? src.match(/^(.+)\.(png|jpg|jpeg)$/i) : null;
 const webpSrc = m ? `${m[1]}.webp` : null;
 ---
 
 <figure class="place-figure" style={width ? `max-width: ${width}` : undefined}>
-  {webpSrc ? (
+  {isLocal ? (
+    <AstroPicture src={src} formats={["avif", "webp"]} alt={alt} loading="lazy" />
+  ) : webpSrc ? (
     <picture>
       <source type="image/webp" srcset={webpSrc} />
       <img src={src} alt={alt} loading="lazy" />
