@@ -1,0 +1,517 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Skopje — a civic feature, set in marble.
+   A bespoke editorial layout for the Skopje place page. Where Granada is a warm,
+   ornate parchment manuscript, this is its opposite: a clean, light, neo-classical
+   spread — pale marble, high-contrast Playfair display over an EB Garamond text,
+   sparing antique gold, a single flag-carmine accent, and the eight-ray
+   Macedonian sun as a quiet crest. The conceit (a city of manufactured grandeur,
+   its "unsettling amount of statues") lives in structure and copy, not clip-art.
+   Fixed light theme regardless of the site's light/dark mode.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.skopje-monument {
+    /* ── Palette: pale marble, espresso ink, antique gold, flag carmine ── */
+    --sk-marble: #f6f2ea;
+    --sk-marble-deep: #efe9db;
+    --sk-panel: #fbf8f1;
+    --sk-ink: #211e18;
+    --sk-ink-soft: #5f574a;
+    --sk-ink-faint: #8c8475;
+    --sk-line: #ddd4c2;
+    --sk-gold: #9c7a2c;
+    --sk-gold-lit: #c69a3f;
+    --sk-gold-deep: #7a5e1f;
+    --sk-red: #a8112a;
+    --sk-red-deep: #7e0c20;
+
+    --sk-display: "Playfair Display", Georgia, serif;
+    --sk-body: "EB Garamond", Georgia, "Times New Roman", serif;
+
+    --sk-page: 1140px;
+    --sk-column: 660px;
+    --sk-gutter: clamp(16px, 4vw, 56px);
+
+    width: 100%;
+    color: var(--sk-ink);
+    font-family: var(--sk-body);
+    font-size: 21px;
+    line-height: 1.68;
+    background-color: var(--sk-marble);
+    background-image:
+    /* fine paper grain for a physical, printed feel */ url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+.skopje-monument *::selection {
+    background: rgba(168, 17, 42, 0.14);
+}
+
+/* ── Masthead ─────────────────────────────────────────────────────────── */
+
+.mon-masthead {
+    position: relative;
+    text-align: center;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: clamp(36px, 6vw, 80px) var(--sk-gutter) clamp(22px, 4vw, 44px);
+}
+
+.mon-sun {
+    width: clamp(64px, 9vw, 92px);
+    height: clamp(64px, 9vw, 92px);
+    margin: 0 auto clamp(16px, 2.2vw, 24px);
+}
+.mon-sun img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.mon-eyebrow {
+    margin: 0 0 clamp(14px, 2.2vw, 22px);
+    font-family: var(--sk-body);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: var(--sk-ink-soft);
+}
+
+.mon-title {
+    margin: 0;
+    font-family: var(--sk-display);
+    font-weight: 800;
+    font-size: clamp(52px, 11vw, 124px);
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+    color: var(--sk-ink);
+}
+.mon-title em {
+    display: block;
+    margin: clamp(14px, 2vw, 22px) auto 0;
+    max-width: 24ch;
+    font-family: var(--sk-body);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(19px, 2.6vw, 27px);
+    line-height: 1.35;
+    letter-spacing: 0;
+    color: var(--sk-red);
+}
+
+.mon-meta-date {
+    font-style: normal;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--sk-ink-faint);
+}
+
+/* The thin meander frieze closing the masthead. */
+.mon-frieze {
+    height: 18px;
+    max-width: var(--sk-page);
+    margin: clamp(28px, 4vw, 44px) auto 0;
+    background: url("/places/skopje/meander.svg") repeat-x center / auto 18px;
+    opacity: 0.7;
+}
+
+/* ── Body: a reading column with marginalia gutters ───────────────────── */
+
+.mon-body {
+    position: relative;
+    display: grid;
+    grid-template-columns:
+        [full-start] minmax(var(--sk-gutter), 1fr)
+        [main-start] minmax(0, var(--sk-column))
+        [main-end] minmax(var(--sk-gutter), 1fr)
+        [full-end];
+    column-gap: clamp(20px, 3vw, 44px);
+    max-width: var(--sk-page);
+    margin: 0 auto;
+    padding: clamp(28px, 5vw, 56px) 0 clamp(56px, 9vw, 110px);
+    counter-reset: mon-section;
+}
+
+.mon-body > * {
+    grid-column: main-start / main-end;
+    min-width: 0;
+}
+
+.mon-body > p {
+    margin: 0 0 1.05em;
+}
+
+/* Refined drop-cap on the opening paragraph. */
+.mon-body > p:first-of-type::first-letter {
+    float: left;
+    font-family: var(--sk-display);
+    font-weight: 700;
+    font-size: 4.4em;
+    line-height: 0.78;
+    margin: 0.04em 0.12em 0 0;
+    color: var(--sk-gold);
+}
+
+.mon-body em {
+    font-style: italic;
+    color: var(--sk-ink);
+}
+.mon-body strong {
+    font-weight: 600;
+    color: var(--sk-ink);
+}
+
+.mon-body a {
+    color: var(--sk-red);
+    text-decoration: underline;
+    text-decoration-color: rgba(168, 17, 42, 0.32);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition:
+        color 0.18s ease,
+        text-decoration-color 0.18s ease;
+}
+.mon-body a:hover {
+    color: var(--sk-red-deep);
+    text-decoration-color: var(--sk-gold);
+}
+
+/* ── Section heads — each a numbered "monument" ───────────────────────── */
+
+.mon-body h2 {
+    grid-column: main-start / main-end;
+    counter-increment: mon-section;
+    margin: clamp(52px, 7vw, 84px) 0 clamp(22px, 3vw, 32px);
+    font-family: var(--sk-display);
+    font-weight: 700;
+    font-size: clamp(30px, 4.4vw, 44px);
+    line-height: 1.08;
+    letter-spacing: -0.005em;
+    color: var(--sk-ink);
+}
+.mon-body h2::before {
+    content: "№ " counter(mon-section, decimal-leading-zero);
+    display: block;
+    margin-bottom: 14px;
+    font-family: var(--sk-body);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--sk-gold-deep);
+}
+.mon-body h2::after {
+    content: "";
+    display: block;
+    width: 52px;
+    height: 2px;
+    margin-top: 20px;
+    background: var(--sk-gold);
+}
+
+.mon-body h3 {
+    grid-column: main-start / main-end;
+    margin: 44px 0 12px;
+    font-family: var(--sk-display);
+    font-weight: 600;
+    font-size: 25px;
+    color: var(--sk-ink);
+}
+
+/* ── Lists ────────────────────────────────────────────────────────────── */
+
+.mon-body ul {
+    list-style: none;
+    margin: 0 0 1.05em;
+    padding-left: 1.5em;
+}
+.mon-body ul > li {
+    position: relative;
+    margin-bottom: 0.4em;
+}
+.mon-body ul > li::before {
+    content: "";
+    position: absolute;
+    left: -1.4em;
+    top: 0.62em;
+    width: 7px;
+    height: 7px;
+    background: var(--sk-gold);
+    transform: rotate(45deg);
+}
+
+.mon-body ol {
+    list-style: none;
+    counter-reset: mon-list;
+    margin: 1.4em 0;
+    padding: 0;
+}
+.mon-body ol > li {
+    counter-increment: mon-list;
+    position: relative;
+    padding-left: 3.4em;
+    margin-bottom: 1.1em;
+    min-height: 2em;
+}
+.mon-body ol > li::before {
+    content: counter(mon-list);
+    position: absolute;
+    left: 0;
+    top: 0.06em;
+    width: 2em;
+    height: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sk-display);
+    font-weight: 600;
+    font-size: 0.82em;
+    color: var(--sk-gold-deep);
+    border: 1px solid var(--sk-gold);
+    border-radius: 50%;
+}
+
+/* ── Pull-quote — a large engraved inscription ────────────────────────── */
+
+.mon-body blockquote {
+    grid-column: main-start / main-end;
+    margin: clamp(40px, 6vw, 64px) 0;
+    padding: 0;
+    text-align: center;
+    font-family: var(--sk-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(26px, 3.4vw, 38px);
+    line-height: 1.28;
+    color: var(--sk-ink);
+}
+.mon-body blockquote p {
+    margin: 0;
+}
+.mon-body blockquote::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 1px;
+    margin: 0 auto 28px;
+    background: var(--sk-gold);
+}
+.mon-body blockquote::after {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 1px;
+    margin: 28px auto 0;
+    background: var(--sk-gold);
+}
+
+/* ── Figures / plates ─────────────────────────────────────────────────── */
+
+.mon-body .place-figure,
+.mon-plate {
+    grid-column: main-start / main-end;
+    margin: clamp(36px, 5vw, 56px) 0;
+}
+.mon-plate--wide {
+    grid-column: full-start / full-end;
+    padding-inline: var(--sk-gutter);
+}
+.mon-plate-frame,
+.mon-body .place-figure img {
+    width: 100%;
+    background: var(--sk-panel);
+    border: 1px solid var(--sk-line);
+    box-shadow: 0 18px 40px -30px rgba(33, 30, 24, 0.5);
+}
+.mon-plate-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* Pending state — no photograph installed yet. Clean, light, unobtrusive. */
+.mon-plate-pending {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 200px;
+    padding: 48px 24px;
+    color: var(--sk-ink-faint);
+    border: 1px dashed var(--sk-line);
+    margin: 1px;
+}
+.mon-plate-pending .mon-plate-rule {
+    width: 26px;
+    height: 1px;
+    background: var(--sk-gold);
+}
+.mon-plate-pending span {
+    font-family: var(--sk-body);
+    font-size: 14px;
+    font-style: italic;
+    letter-spacing: 0.04em;
+}
+
+.mon-plate figcaption,
+.mon-body .place-figure figcaption {
+    margin-top: 14px;
+    font-family: var(--sk-body);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--sk-ink-soft);
+    text-align: center;
+}
+.mon-plate .mon-plate-no {
+    display: block;
+    margin-bottom: 4px;
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--sk-gold-deep);
+}
+
+/* ── Placard — a quiet marginal note in the gutter ────────────────────── */
+
+.mon-placard {
+    grid-column: main-end / full-end;
+    align-self: start;
+    margin-top: 8px;
+    padding-left: 16px;
+    border-left: 1px solid var(--sk-gold);
+    font-family: var(--sk-body);
+    font-size: 16px;
+    font-style: italic;
+    line-height: 1.45;
+    color: var(--sk-ink-soft);
+}
+.mon-placard .mon-placard-label {
+    display: block;
+    margin-bottom: 8px;
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--sk-gold-deep);
+}
+.mon-placard.mon-placard--left {
+    grid-column: full-start / main-start;
+    text-align: right;
+    padding-left: 0;
+    padding-right: 16px;
+    border-left: none;
+    border-right: 1px solid var(--sk-gold);
+}
+
+/* ── Tally — the running statue inventory (the wink), as a centred plate ── */
+
+.mon-tally {
+    grid-column: main-start / main-end;
+    margin: clamp(44px, 7vw, 72px) 0;
+    text-align: center;
+    padding: clamp(28px, 4vw, 40px) 0;
+    border-top: 1px solid var(--sk-line);
+    border-bottom: 1px solid var(--sk-line);
+}
+.mon-tally-count {
+    display: block;
+    font-family: var(--sk-display);
+    font-weight: 800;
+    font-size: clamp(64px, 11vw, 104px);
+    line-height: 0.9;
+    color: var(--sk-gold);
+}
+.mon-tally-label {
+    display: block;
+    margin-top: 14px;
+    font-family: var(--sk-body);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--sk-ink-soft);
+}
+.mon-tally-note {
+    display: block;
+    margin-top: 6px;
+    font-family: var(--sk-body);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--sk-ink-faint);
+}
+
+/* ── Standalone frieze divider ────────────────────────────────────────── */
+
+.mon-ornament {
+    grid-column: full-start / full-end;
+    height: 16px;
+    margin: clamp(32px, 5vw, 52px) auto;
+    max-width: 320px;
+    background: url("/places/skopje/meander.svg") repeat-x center / auto 16px;
+    opacity: 0.6;
+}
+
+/* ── Entrance — one quiet, staggered reveal ───────────────────────────── */
+
+@keyframes mon-rise {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.mon-masthead > * {
+    animation: mon-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mon-masthead > *:nth-child(1) {
+    animation-delay: 0.02s;
+}
+.mon-masthead > *:nth-child(2) {
+    animation-delay: 0.1s;
+}
+.mon-masthead > *:nth-child(3) {
+    animation-delay: 0.18s;
+}
+.mon-masthead > *:nth-child(4) {
+    animation-delay: 0.26s;
+}
+.mon-masthead > *:nth-child(5) {
+    animation-delay: 0.34s;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+
+@media (max-width: 880px) {
+    .skopje-monument {
+        font-size: 19px;
+    }
+    .mon-body {
+        grid-template-columns:
+            [full-start main-start] minmax(0, 1fr)
+            [main-end full-end];
+    }
+    .mon-placard,
+    .mon-placard.mon-placard--left {
+        grid-column: main-start / main-end;
+        margin: 24px 0;
+        text-align: left;
+        padding: 0 0 0 16px;
+        border-left: 1px solid var(--sk-gold);
+        border-right: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mon-masthead > * {
+        animation: none;
+    }
+}

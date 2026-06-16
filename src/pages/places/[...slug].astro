@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from "astro:content";
 import PlaceLayout from "../../layouts/PlaceLayout.astro";
+import MonumentLayout from "../../layouts/MonumentLayout.astro";
 
 export async function getStaticPaths() {
   const places = await getCollection("places");
@@ -12,8 +13,10 @@ export async function getStaticPaths() {
 
 const { place } = Astro.props;
 const { Content } = await render(place);
+
+const Layout = place.data.variant === "monument" ? MonumentLayout : PlaceLayout;
 ---
 
-<PlaceLayout {...place.data}>
+<Layout {...place.data}>
   <Content />
-</PlaceLayout>
+</Layout>

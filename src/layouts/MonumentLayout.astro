@@ -1,0 +1,52 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import { siteConfig } from "../config";
+import "../styles/fonts-monument.css";
+import "../styles/monument.css";
+
+type Props = {
+    title: string;
+    subtitle?: string;
+    description?: string;
+    date?: Date;
+    countryName: string;
+    flag?: string;
+    folio?: string;
+};
+
+const { title, subtitle, description, date, countryName, folio } = Astro.props;
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+});
+
+const folioLabel = folio ?? countryName;
+
+const metaDescription =
+    description ??
+    `Travel notes from ${title}, ${countryName}, by ${siteConfig.fullName}.`;
+---
+
+<BaseLayout title={title} description={metaDescription}>
+    <main class="skopje-monument">
+        <div class="mon-masthead">
+            <figure class="mon-sun" aria-hidden="true">
+                <img src="/places/skopje/sun.svg" alt="" />
+            </figure>
+
+            <p class="mon-eyebrow">{folioLabel}</p>
+
+            <h1 class="mon-title">
+                {title}
+                {subtitle && <em>{subtitle}</em>}
+            </h1>
+
+            <div class="mon-frieze" aria-hidden="true"></div>
+        </div>
+
+        <article class="mon-body">
+            <slot />
+        </article>
+    </main>
+</BaseLayout>

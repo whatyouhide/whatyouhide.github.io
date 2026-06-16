@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 24" fill="none" stroke="#a07d2c" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+  <!-- A fine Greek-key (meander) tile. The baseline tiles seamlessly on the
+       x-axis; a square spiral hook sits on each unit. Drawn as thin gold line. -->
+  <path d="M0 21 H40"/>
+  <path d="M6 21 V5 H32 V17 H17 V11 H25"/>
+</svg>

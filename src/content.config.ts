@@ -26,6 +26,12 @@ const places = defineCollection({
     countryName: z.string(),
     flag: z.string().optional(),
     placeClass: z.string().optional(),
+    // Bespoke per-place layouts (ignored by the shared PlaceLayout):
+    variant: z.enum(["monument"]).optional(),
+    folio: z.string().optional(),
+    tagline: z.string().optional(),
+    heroStatue: z.string().startsWith("/").optional(),
+    heroAlt: z.string().optional(),
   }),
 });
 

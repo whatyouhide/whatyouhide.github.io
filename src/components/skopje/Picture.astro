@@ -1,0 +1,33 @@
+---
+// A catalogued monument: a framed photograph with an italic caption and a plate number.
+type Props = {
+    src?: string;
+    alt?: string;
+    no?: string;
+    wide?: boolean;
+};
+const { src, alt = "", no, wide = false } = Astro.props;
+
+const m = src?.match(/^(.+)\.(png|jpg|jpeg)$/i);
+const webpSrc = m ? `${m[1]}.webp` : null;
+---
+
+<figure class={`mon-plate${wide ? " mon-plate--wide" : ""}`}>
+    <div class="mon-plate-frame">
+        {
+            webpSrc ? (
+                <picture>
+                    <source type="image/webp" srcset={webpSrc} />
+                    <img src={src} alt={alt} loading="lazy" />
+                </picture>
+            ) : (
+                <img src={src} alt={alt} loading="lazy" />
+            )
+        }
+    </div>
+
+    <figcaption>
+        {no && <span class="mon-plate-no">{no}</span>}
+        {alt}
+    </figcaption>
+</figure>

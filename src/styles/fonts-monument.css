@@ -1,0 +1,16 @@
+/* Skopje — editorial-luxury type: Playfair Display (high-contrast display serif,
+   the inscription) paired with EB Garamond (a refined classical body). */
+
+@import "@fontsource/playfair-display/400.css";
+@import "@fontsource/playfair-display/500.css";
+@import "@fontsource/playfair-display/600.css";
+@import "@fontsource/playfair-display/700.css";
+@import "@fontsource/playfair-display/800.css";
+@import "@fontsource/playfair-display/400-italic.css";
+@import "@fontsource/playfair-display/500-italic.css";
+
+@import "@fontsource/eb-garamond/400.css";
+@import "@fontsource/eb-garamond/500.css";
+@import "@fontsource/eb-garamond/600.css";
+@import "@fontsource/eb-garamond/400-italic.css";
+@import "@fontsource/eb-garamond/500-italic.css";
