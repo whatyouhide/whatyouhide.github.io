@@ -266,7 +266,14 @@
               .duration(120)
               .attr("fill-opacity", 1)
               .attr("stroke-width", "1.5");
-            this.parentNode.appendChild(this);
+            // Raise to the top so the highlighted stroke isn't occluded by
+            // neighbouring countries. Guard against re-raising when already on
+            // top: re-inserting the hovered node fires a fresh `mouseenter`,
+            // which would loop forever and swallow the eventual `mouseleave`
+            // (leaving the country stuck at full opacity).
+            if (this.parentNode.lastChild !== this) {
+              this.parentNode.appendChild(this);
+            }
           })
           .on("mousemove", moveTooltip)
           .on("mouseleave", function () {
