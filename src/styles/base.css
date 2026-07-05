@@ -461,8 +461,8 @@ main.books {
 }
 
 #main.container > article.post {
-  margin: clamp(2.5rem, 6vw, 4.5rem) auto;
-  padding: clamp(1.5rem, 5vw, 3.75rem) clamp(1rem, 4vw, 3.75rem);
+  margin: clamp(1rem, 2.5vw, 1.75rem) auto clamp(2.5rem, 6vw, 4.5rem);
+  padding: clamp(0.5rem, 1.5vw, 1rem) clamp(1rem, 4vw, 3.75rem) clamp(1.5rem, 5vw, 3.75rem);
 }
 
 main.about {
@@ -667,6 +667,7 @@ article.post .giscus-frame {
 article.post {
   > h1 {
     text-align: left;
+    margin-top: 0;
   }
 
   h2,
