@@ -1,0 +1,172 @@
+---
+export interface PieSlice {
+    name: string;
+    value: number;
+}
+
+interface Props {
+    data: PieSlice[];
+    height?: number;
+    unit?: string;
+    ariaLabel: string;
+}
+
+const { data, height = 320, unit = "", ariaLabel } = Astro.props;
+const id = `pie-chart-${Math.random().toString(36).slice(2, 8)}`;
+const hasCaption = Astro.slots.has("default");
+---
+
+<figure class="pie-chart">
+    <div
+        class="pie-chart__canvas"
+        id={id}
+        data-slices={JSON.stringify(data)}
+        data-unit={unit}
+        data-height={height}
+        style={`min-height: ${height}px`}
+        role="img"
+        aria-label={ariaLabel}
+    >
+    </div>
+    {
+        hasCaption && (
+            <figcaption>
+                <slot />
+            </figcaption>
+        )
+    }
+</figure>
+
+<script>
+    import * as echarts from "echarts/core";
+    import { PieChart } from "echarts/charts";
+    import { TooltipComponent, AriaComponent } from "echarts/components";
+    import { SVGRenderer } from "echarts/renderers";
+
+    echarts.use([PieChart, TooltipComponent, AriaComponent, SVGRenderer]);
+
+    // Categorical, 8-way — validated for CVD separation and contrast against
+    // --color-content-surface in both light and dark.
+    const PALETTE_DARK = [
+        "#D29922",
+        "#3FB950",
+        "#58A6FF",
+        "#F778BA",
+        "#BC8CFF",
+        "#F85149",
+        "#79C0FF",
+        "#7EE787",
+    ];
+    const PALETTE_LIGHT = [
+        "#A56F1A",
+        "#4A6B56",
+        "#3A6EA5",
+        "#A04074",
+        "#6E4A9E",
+        "#B23B3B",
+        "#2B6CB0",
+        "#2F8F5B",
+    ];
+
+    function cssVar(name: string): string {
+        return getComputedStyle(document.documentElement)
+            .getPropertyValue(name)
+            .trim();
+    }
+
+    function fmtNumber(n: number, unit: string): string {
+        const formatted = n.toLocaleString("en-US");
+        return unit ? `${formatted} ${unit}` : formatted;
+    }
+
+    function renderPieChart(el: HTMLElement) {
+        const slices: PieSliceData[] = JSON.parse(el.dataset.slices ?? "[]");
+        const unit = el.dataset.unit ?? "";
+
+        const isLight = window.matchMedia(
+            "(prefers-color-scheme: light)",
+        ).matches;
+        const palette = isLight ? PALETTE_LIGHT : PALETTE_DARK;
+
+        const text = cssVar("--color-text");
+        const textDimmer = cssVar("--color-text-dimmer");
+        const surface = cssVar("--color-content-surface");
+        const border = cssVar("--color-content-surface-border");
+        const background = cssVar("--color-site-background");
+        const fontMono = cssVar("--font-mono") || "monospace";
+        const reduceMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)",
+        ).matches;
+
+        const chart = echarts.init(el, null, {
+            renderer: "svg",
+            height: Number(el.dataset.height) || 320,
+        });
+
+        chart.setOption({
+            backgroundColor: "transparent",
+            textStyle: { fontFamily: fontMono },
+            aria: { enabled: true, decal: { show: false } },
+            color: palette,
+            tooltip: {
+                trigger: "item",
+                backgroundColor: surface,
+                borderColor: border,
+                borderWidth: 1,
+                padding: [8, 10],
+                textStyle: { color: text, fontFamily: fontMono, fontSize: 12 },
+                formatter: (p: any) =>
+                    `<div style="display:flex;justify-content:space-between;gap:18px;align-items:center">
+             <span style="color:${textDimmer}">
+               <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.color};margin-right:8px;vertical-align:middle"></span>${p.name}
+             </span>
+             <span><strong style="color:${text}">${fmtNumber(p.value, unit)}</strong> <span style="color:${textDimmer}">(${p.percent}%)</span></span>
+           </div>`,
+            },
+            animation: !reduceMotion,
+            animationDuration: 900,
+            animationEasing: "cubicOut",
+            series: [
+                {
+                    type: "pie",
+                    radius: "72%",
+                    center: ["50%", "50%"],
+                    avoidLabelOverlap: true,
+                    itemStyle: { borderColor: background, borderWidth: 2 },
+                    label: {
+                        color: textDimmer,
+                        fontFamily: fontMono,
+                        fontSize: 11,
+                        formatter: "{b}\n{d}%",
+                    },
+                    labelLine: { lineStyle: { color: border } },
+                    emphasis: { scale: true, scaleSize: 6 },
+                    data: slices.map((s) => ({ name: s.name, value: s.value })),
+                },
+            ],
+        });
+
+        new ResizeObserver(() => chart.resize()).observe(el);
+    }
+
+    type PieSliceData = { name: string; value: number };
+
+    document
+        .querySelectorAll<HTMLElement>(".pie-chart__canvas")
+        .forEach(renderPieChart);
+</script>
+
+<style>
+    .pie-chart {
+        margin: 2rem 0;
+    }
+    .pie-chart__canvas {
+        width: 100%;
+    }
+    .pie-chart figcaption {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--color-text-dimmer);
+        text-align: center;
+    }
+</style>
