@@ -1,0 +1,249 @@
+---
+export interface LocSeries {
+  name: string;
+  data: [string, number][]; // [date, value]
+}
+
+export interface LocAnnotation {
+  date: string;
+  label: string;
+}
+
+interface Props {
+  series: LocSeries[];
+  annotations?: LocAnnotation[];
+  height?: number;
+  ariaLabel: string;
+}
+
+const { series, annotations = [], height = 380, ariaLabel } = Astro.props;
+const id = `loc-chart-${Math.random().toString(36).slice(2, 8)}`;
+const hasCaption = Astro.slots.has("default");
+---
+
+<figure class="loc-chart">
+  <div
+    class="loc-chart__canvas"
+    id={id}
+    data-series={JSON.stringify(series)}
+    data-annotations={JSON.stringify(annotations)}
+    data-height={height}
+    style={`min-height: ${height}px`}
+    role="img"
+    aria-label={ariaLabel}
+  ></div>
+  {hasCaption && <figcaption><slot /></figcaption>}
+</figure>
+
+<script>
+  import * as echarts from "echarts/core";
+  import { LineChart } from "echarts/charts";
+  import {
+    GridComponent,
+    TooltipComponent,
+    LegendComponent,
+    MarkLineComponent,
+    AriaComponent,
+  } from "echarts/components";
+  import { SVGRenderer } from "echarts/renderers";
+
+  echarts.use([
+    LineChart,
+    GridComponent,
+    TooltipComponent,
+    LegendComponent,
+    MarkLineComponent,
+    AriaComponent,
+    SVGRenderer,
+  ]);
+
+  // Categorical: core driver / cluster subsystem — validated for CVD separation
+  // and contrast against --color-content-surface in both light and dark.
+  const PALETTE = ["#008300", "#2a78d6"];
+
+  function cssVar(name: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function fmtNumber(n: number): string {
+    return n.toLocaleString("en-US");
+  }
+
+  function renderLocChart(el: HTMLElement) {
+    const series: LocSeriesData[] = JSON.parse(el.dataset.series ?? "[]");
+    const annotations: { date: string; label: string }[] = JSON.parse(
+      el.dataset.annotations ?? "[]"
+    );
+
+    const textFaint = cssVar("--color-text-dimmer");
+    const textFaintest = cssVar("--color-text-faintest");
+    const text = cssVar("--color-text");
+    const surface = cssVar("--color-content-surface");
+    const border = cssVar("--color-content-surface-border");
+    const fontMono = cssVar("--font-mono") || "monospace";
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const chart = echarts.init(el, null, {
+      renderer: "svg",
+      height: Number(el.dataset.height) || 380,
+    });
+
+    chart.setOption({
+      backgroundColor: "transparent",
+      textStyle: { fontFamily: fontMono },
+      aria: { enabled: true, decal: { show: false } },
+      grid: { left: 56, right: 16, top: 44, bottom: 40, containLabel: false },
+      legend: {
+        show: series.length > 1,
+        top: 4,
+        left: "center",
+        textStyle: { fontFamily: fontMono, fontSize: 11, color: textFaint },
+        itemWidth: 10,
+        itemHeight: 10,
+        icon: "roundRect",
+        data: series.map((s, i) => ({ name: s.name, itemStyle: { color: PALETTE[i] } })),
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "cross",
+          snap: true,
+          lineStyle: { color: textFaintest, type: "dashed", width: 1 },
+          crossStyle: { color: textFaintest, type: "dashed" },
+          label: {
+            backgroundColor: surface,
+            borderColor: border,
+            borderWidth: 1,
+            color: text,
+            fontFamily: fontMono,
+            fontSize: 11,
+            padding: [4, 6],
+          },
+        },
+        backgroundColor: surface,
+        borderColor: border,
+        borderWidth: 1,
+        padding: [10, 12],
+        textStyle: { color: text, fontFamily: fontMono, fontSize: 12 },
+        formatter: (params: any) => {
+          const points = Array.isArray(params) ? params : [params];
+          const date = points[0]?.axisValueLabel ?? points[0]?.value?.[0] ?? "";
+          const total = points.reduce((sum: number, p: any) => sum + (p.value?.[1] ?? 0), 0);
+          const rows = points
+            .map(
+              (p: any) => `<div style="display:flex;justify-content:space-between;gap:18px;line-height:1.6">
+                <span style="color:${textFaint}">
+                  <span style="display:inline-block;width:10px;height:2px;background:${p.color};margin-right:8px;vertical-align:middle"></span>${p.seriesName}
+                </span>
+                <span><strong style="color:${text}">${fmtNumber(p.value[1])}</strong></span>
+              </div>`
+            )
+            .join("");
+          return `<div style="font-family:${fontMono};font-size:12px">
+            <div style="color:${textFaint};margin-bottom:6px;letter-spacing:0.04em">${date}</div>
+            ${rows}
+            ${
+              points.length > 1
+                ? `<div style="display:flex;justify-content:space-between;gap:18px;margin-top:4px;padding-top:4px;border-top:1px solid ${border}">
+                     <span style="color:${textFaint}">Total</span>
+                     <span><strong style="color:${text}">${fmtNumber(total)}</strong></span>
+                   </div>`
+                : ""
+            }
+          </div>`;
+        },
+      },
+      xAxis: {
+        type: "time",
+        axisLine: { lineStyle: { color: border } },
+        axisTick: { show: false },
+        axisLabel: { color: textFaint, fontFamily: fontMono, fontSize: 11 },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: "value",
+        name: "lines of code",
+        nameLocation: "end",
+        nameGap: 12,
+        nameTextStyle: {
+          color: textFaint,
+          fontFamily: fontMono,
+          fontSize: 11,
+          fontStyle: "italic",
+          align: "left",
+        },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        // The y-axis is a continuous value axis over stacked series, so the
+        // cross pointer's y position is just an interpolation of the cursor's
+        // pixel height, not an actual data value — its label would contradict
+        // the tooltip. Keep the horizontal guide line but hide the label.
+        axisPointer: { label: { show: false } },
+        axisLabel: {
+          color: textFaint,
+          fontFamily: fontMono,
+          fontSize: 11,
+          formatter: (v: number) => fmtNumber(v),
+        },
+        splitLine: { lineStyle: { color: border, type: "dashed", opacity: 0.7 } },
+      },
+      animation: !reduceMotion,
+      animationDuration: 1200,
+      animationEasing: "cubicOut",
+      series: series.map((s, i) => ({
+        name: s.name,
+        type: "line",
+        stack: "total",
+        smooth: 0.2,
+        showSymbol: false,
+        z: 10 + i,
+        lineStyle: { color: PALETTE[i], width: 2 },
+        areaStyle: { color: PALETTE[i], opacity: 0.12 },
+        itemStyle: { color: PALETTE[i] },
+        data: s.data,
+        // Annotate on the base series only so the mark line spans full height.
+        markLine:
+          i === 0
+            ? {
+                silent: true,
+                symbol: "none",
+                lineStyle: { color: textFaintest, type: "dashed", width: 1 },
+                label: {
+                  color: textFaint,
+                  fontFamily: fontMono,
+                  fontSize: 10.5,
+                  position: "insideEndTop",
+                },
+                data: annotations.map((a) => ({
+                  xAxis: a.date,
+                  label: { formatter: a.label },
+                })),
+              }
+            : undefined,
+      })),
+    });
+
+    new ResizeObserver(() => chart.resize()).observe(el);
+  }
+
+  type LocSeriesData = { name: string; data: [string, number][] };
+
+  document
+    .querySelectorAll<HTMLElement>(".loc-chart__canvas")
+    .forEach(renderLocChart);
+</script>
+
+<style>
+  .loc-chart {
+    margin: 2rem 0;
+  }
+  .loc-chart__canvas {
+    width: 100%;
+  }
+  .loc-chart figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-text-dimmer);
+    text-align: center;
+  }
+</style>

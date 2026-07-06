@@ -1,0 +1,101 @@
+---
+title: 'Redis Cluster Support, Without Writing Code'
+description: How I experimented with building support for Redis Cluster into Redix (Elixir's Redis client) without writing code, solely relying on AI tooling.
+date: '2026-07-06'
+coverImage: ./cover-image.jpg
+tags:
+  - ai
+  - elixir
+---
+
+import codeFrequencyImg from "./code-frequency.png";
+import locHistoryData from "./redix-loc-history.json";
+
+import { Image } from "astro:assets";
+import Callout from "../../../components/Callout.astro";
+import LoCChart from "../../../components/LoCChart.astro";
+import PieChart from "../../../components/PieChart.astro";
+
+The world of software engineering has unequivocally changed in the past few months. I, like the rest of my team and pretty much everyone I know, am heavily assisted by AI tooling when producing code these days. However, I mostly resisted using these tools on my open-source libraries. Maybe it's the self-awareness, knowing there are more eyes on this class of code; maybe it's that I still don't trust the models enough.
+
+This changed recently. I've wanted to build [Redis Cluster](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/) into [Redix](https://github.com/whatyouhide/redix) for years. It's consistently been the most-requested feature for the driver. Busy busy, never had the chance to sit down and do it. I decided to take this as an opportunity to see what shipping a complex feature *only* via AI-produced code would look like. This post is a report on this experience.
+
+<Callout type="note">
+Anthropic provides the [Claude for Open Source program](https://claude.com/contact-sales/claude-for-oss), which I applied to successfully and which gave me access to a free Claude Max subscription for six months. OpenAI has a corresponding [Codex for Open Source](https://openai.com/form/codex-for-oss/), which I also have access to. I really appreciated this and hope the two companies will extend the programs in the future.
+</Callout>
+
+Setting the scene first: Redix's first commit is from August 2015—11 years ago when I'm writing this. I find this view of the history of code being added and removed from Redix fascinating:
+
+<Image
+  src={codeFrequencyImg}
+  alt="Screenshot of GitHub's code frequency graph, showing most additions at the beginning, then in 2018, and then in the past few months."
+/>
+
+Most of the work is right at the beginning, as you'd expect. A few years of maintenance follow. The spike you see between 2018 and 2019 consisted of adding support for Redis Sentinel (around [this commit](https://github.com/whatyouhide/redix/commit/2a8fbb9282b386841cc617bd424e4bc75b731665)), the only major feature I had worked on post initial release. After that, it's half a decade of *maintenance*. I'm pretty proud of that low-churn period of time; I think it speaks to Redix being generally solid and designed well enough to not require frequent refactors to fix reported bugs and whatnot.
+
+The right-most spike, in mid 2026, is what we're talking about here: Redis Cluster support. It's *a lot* of code, as you can tell—the number of additions to the codebase essentially **doubled**. This was expected, regardless of AI; cluster support requires essentially a form of connection pooling, coordination, and tons of tests. If you only look at lines of code in library code, we're sitting at a ~53% increase:
+
+<LoCChart
+  series={locHistoryData}
+  annotations={[{ date: "2026-02-25", label: "Cluster work begins" }, { date: "2018-10-28", label: "Redis Sentinel support" }]}
+  ariaLabel="Lines of code in Redix's lib/, from 2015 to today"
+>
+    Number of lines of code in `lib/` over the years.
+</LoCChart>
+
+All this to say: this was a **substantial addition** to Redix.
+
+## The Process
+
+I started from scratch by telling Claude Opus 4.7/4.8 (best at the time) to read the Redis Cluster spec, look at existing implementations across languages (like [ioredis](https://github.com/redis/ioredis) or [redis-py](https://redis.io/docs/latest/develop/clients/redis-py/)), and come up with a first rough implementation in Elixir. The model did a decent job with this one shot, all things considered. This was also *really* fast to put together; the whole thing was over in under one hour.
+
+Following that, however, was a pretty painstaking process of review, both human and agentic. I initially scanned all code put out by Claude for obvious issues and bugs and, more importantly, for design flaws. I wanted "us" to get the fundamental architecture right: a [Registry](https://elixir.hexdocs.pm/Registry.html)-based pool for fast routing and a coordinator process for cluster bookkeeping. The model did remarkably well on the architecture side, producing right away:
+
+- `Redix.Cluster.Manager`, the coordinator process.
+- `Redix.Cluster.CommandParser` for breaking down commands and correctly routing them to the right node/connection.
+- `Redix.Cluster.Hash` for the hashing algorithm logic.
+- `Redix.Cluster`—the public-facing API.
+
+So far so good. However, the code produced by Opus had quite a few bugs and even more instances of unhandled failures. I found some of those by hand when looking through the code, but most of the other ones were found by **adversarial review** from other Opus and Codex sessions. I was surprised by *how many rounds* of this kind of review I had to go through. I would have expected smart models (like Opus 4.8 or gpt-5.5 xhigh) to notice most issues right away given this is a fairly small codebase overall, but that wasn't the case. Opus and Codex found (new) bugs each of the first four or five rounds in which I asked them to review the cluster implementation. When Fable 5 came out, I fed it the repo a couple more times and it found newer corner cases, each time.
+
+Just to ground things a bit, an example of a bug found by these reviews is [issue #341](https://github.com/whatyouhide/redix/issues/341): too many cluster redirections in a command pipeline would fail the entire pipeline, silently hiding that some commands might have executed correctly. I think this a decent example of a bug that *I* would have been less likely to make; for me, "commands that made it to the server should never be thrown away" is an important invariant in Redix. It's the kind of pillar I have in mind without really thinking about it. The upside is that I could have probably prevented this bug from being introduced in the first place if I had encoded this invariant in an `AGENTS.md` or similar.
+
+Codex also found a couple of issues when I pointed it to [nebulex_redis_cluster](https://github.com/elixir-nebulex/nebulex_redis_adapter), an implementation of Redis-Cluster-on-top-of-Redix that I knew some folks use in production settings, and asked it to check for things we were missing in Redix.
+
+I also asked Claude to drive a new stateful property test case for the clustering implementation. This was maybe the best part of this whole experience for me, as writing stateful property tests is gnarly (personally). It only took one `/goal` to get the test up and passing.
+
+This whole process of review itself was time consuming but not as brain-intensive as it would have been without AI. I mostly asked models to review, and then told them to open GitHub issues for every problem they'd find—those issues were thrown at other models in other sessions for the implementation/fix phase.
+
+## Numbers
+
+Codex did *a lot* of the review—I wanted a completely different model to look at the code with what I can only imagine as a "fresh set of eyes": around 6.9M tokens spent here over 8 sessions, all on `gpt-5.5` on `xhigh` reasoning.
+
+I leaned on Claude for implementing fixes for the issues found by Codex. 41 sessions overall, 130 user prompts: that's me creating tightly-scoped sessions to fix one issue at a time. I used a total of ~1.6M tokens of input and ~2.5M tokens of output (not cached).
+
+I usually used the best-available model at the time:
+
+export const modelBreakdown = [
+    { name: "Opus 4.7", value: 300000 },
+    { name: "Opus 4.8", value: 2500000 },
+    { name: "Sonnet 5", value: 500000 },
+    { name: "Fable 5", value: 800000 },
+    { name: "gpt-5.5", value: 6900000 }
+];
+
+<PieChart data={modelBreakdown} unit="tokens" ariaLabel="Breakdown of token usage by model, represented as a pie chart.">
+    Approximate token breakdown by model.
+</PieChart>
+
+## What I Learned
+
+This was a *really* fascinating learning experience. My biggest takeaway is that engineering is still engineering, whoever does it. Directing agents to the right architecture, pushing them to write more tests, steering them to handle edge and failure cases—these are all things that I had to do. Things will likely improve in the future, but in mid 2026 there was still a significant amount of human effort involved here.
+
+Given how reliable I want my OSS work to be, I also read every single line of code put out by the agents. I think that inherently takes away some of the benefit of letting these models do the work for us; these things *shine* when given complete autonomy and when the code just needs to work and produce a working output. I've experienced this many times at this point, with agents producing several personal tools, little websites, Chrome extensions, Obsidian plugins, and whatnot: all those are for my own use and I couldn't care less what the code does. I dictate the boundaries and security implications, the model spits out a working thing.
+
+I think it would still have taken me longer to produce this whole implementation by hand. I suspect there would've been **fewer bugs** on the first pass, simply because of the combination of my experience working in this particular niche and my experience with Elixir. However, I'm sure there would've still been bugs and that those would've taken much longer to find (usually by someone stumbling upon an issue, usually in production). Not that the code that's out there is provably free of bugs, but still. After all the reviewing and back-and-forth, however, I think we're at a good spot quality wise.
+
+The most stressful part of all this is that I'm now responsible for code that I did not author. That's common in the workplace, but not so much in OSS and *especially* in my personal experience, as I maintain quite the big bunch of libraries where I'm the sole author. I can read the code again and again, but there must be some different process happening in the brain compared to reading code that *you yourself* have written. Only time will tell how things will go in this regard.
+
+I will keep using these tools for discovering bugs, security issues, and performance inefficiencies—they'll only get better at all that. Having models implement contained fixes will also likely happen more and more for me. Big new features? I'm not quite sure yet.
+
+P.S.: all these changes are [out in version 1.6.0](https://hex.pm/packages/redix/1.6.0).
