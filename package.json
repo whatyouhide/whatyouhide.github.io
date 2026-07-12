@@ -14,14 +14,14 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/mdx": "^5.0.0",
+    "@astrojs/mdx": "^7.0.2",
     "@astrojs/rss": "^4.0.0",
     "@fontsource/cinzel": "^5.2.8",
     "@fontsource/eb-garamond": "^5.2.7",
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@fontsource/playfair-display": "^5.2.8",
-    "astro": "^6.4.7",
+    "astro": "^7.0.7",
     "echarts": "^6.1.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
