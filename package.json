@@ -22,7 +22,7 @@
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@fontsource/playfair-display": "^5.2.8",
     "astro": "^6.4.7",
-    "echarts": "^6.0.0",
+    "echarts": "^6.1.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
   },
