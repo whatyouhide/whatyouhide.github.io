@@ -7,7 +7,7 @@ import postcssCustomMedia from "postcss-custom-media";
 
 export default defineConfig({
   site: "https://andrealeopardi.com",
-  trailingSlash: "always",
+  trailingSlash: "ignore",
   build: {
     format: "directory",
   },
