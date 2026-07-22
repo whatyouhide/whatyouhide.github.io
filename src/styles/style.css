@@ -13,3 +13,7 @@
 @import "./one_offs.css";
 @import "./holidays.css";
 @import "./genstage_viz.css";
+
+#main.container > article.post {
+  max-width: 880px;
+}
