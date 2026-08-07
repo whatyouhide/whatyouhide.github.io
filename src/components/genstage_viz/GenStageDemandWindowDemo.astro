@@ -1,0 +1,290 @@
+---
+type Props = {
+    maxDemand: number;
+    minDemand: number;
+};
+
+const { maxDemand, minDemand } = Astro.props;
+const durationMs = 8000;
+const eventMs = 700;
+const fetchDurationMs = 1400;
+const refill = maxDemand - minDemand;
+const lateFetchStart = maxDemand * eventMs;
+const earlyFetchStart = refill * eventMs;
+const lateSecondBatchStart = lateFetchStart + fetchDurationMs;
+const earlySecondBatchStart = earlyFetchStart + fetchDurationMs;
+const batchLengthAfter = (start: number) =>
+    Math.max(0, Math.floor((durationMs - start) / eventMs));
+const firstBatch = Array.from({ length: maxDemand }, (_, index) => ({
+    start: index * eventMs,
+    label: index + 1,
+}));
+const lateSecondBatch = Array.from(
+    { length: batchLengthAfter(lateSecondBatchStart) },
+    (_, index) => ({
+        start: lateSecondBatchStart + index * eventMs,
+        label: index + maxDemand + 1,
+    }),
+);
+const earlySecondBatch = Array.from(
+    { length: batchLengthAfter(earlySecondBatchStart) },
+    (_, index) => ({
+        start: earlySecondBatchStart + index * eventMs,
+        label: index + maxDemand + 1,
+    }),
+);
+
+const pct = (value) => `${(value / durationMs) * 100}%`;
+const scenarios = [
+    {
+        key: "late",
+        index: "A",
+        title: "Wait until empty",
+        minDemand: 0,
+        fetchStart: lateFetchStart,
+        fetchAmount: maxDemand,
+        demandLabel: "Demand sent when 0 units remain",
+        blocks: [
+            ...firstBatch,
+            {
+                start: lateFetchStart,
+                duration: fetchDurationMs,
+                label: "idle",
+                idle: true,
+            },
+            ...lateSecondBatch,
+        ],
+        result: `${fetchDurationMs / 1000} sec idle`,
+        resultCopy: `Fetching starts after event ${maxDemand} finishes.`,
+    },
+    {
+        key: "early",
+        index: "B",
+        title: "Refill before empty",
+        minDemand,
+        fetchStart: earlyFetchStart,
+        fetchAmount: refill,
+        demandLabel: `Demand sent when ${minDemand} units remain`,
+        blocks: [...firstBatch, ...earlySecondBatch],
+        result: "0 sec idle",
+        resultCopy: `The producer fetches while events ${refill + 1}–${maxDemand} are handled.`,
+    },
+];
+---
+
+<genstage-demand-window-demo data-duration-ms={durationMs}>
+    <section
+        class="gsx-card gsx-card--timeline"
+        aria-label="Minimum and maximum demand timeline"
+    >
+        <div class="gsx-timelines" data-timelines>
+            {
+                scenarios.map((scenario) => (
+                    <section
+                        class:list={[
+                            "gsx-timeline-scenario",
+                            {
+                                "gsx-timeline-scenario--early":
+                                    scenario.key === "early",
+                            },
+                        ]}
+                        aria-label={scenario.title}
+                    >
+                        <header>
+                            <div>
+                                <span class="gsx-scenario-index">
+                                    {scenario.index}
+                                </span>
+                                <h4>{scenario.title}</h4>
+                            </div>
+                            <code>min_demand: {scenario.minDemand}</code>
+                        </header>
+
+                        <div class="gsx-timeline-grid">
+                            <span class="gsx-lane-label">producer</span>
+                            <div class="gsx-lane gsx-lane--producer" data-track>
+                                <span
+                                    class="gsx-fetch-block"
+                                    data-block
+                                    data-start-ms={scenario.fetchStart}
+                                    data-duration-ms={fetchDurationMs}
+                                    style={`--start:${pct(scenario.fetchStart)};--duration:${pct(fetchDurationMs)}`}
+                                >
+                                    fetch +{scenario.fetchAmount}
+                                </span>
+                                <i
+                                    class="gsx-demand-mark"
+                                    data-block
+                                    data-start-ms={scenario.fetchStart}
+                                    data-duration-ms="180"
+                                    style={`--start:${pct(scenario.fetchStart)}`}
+                                    aria-label={scenario.demandLabel}
+                                />
+                            </div>
+
+                            <span class="gsx-lane-label">consumer</span>
+                            <div class="gsx-lane gsx-lane--consumer" data-track>
+                                {scenario.blocks.map((block) => {
+                                    const duration = block.duration ?? eventMs;
+                                    return (
+                                        <span
+                                            class={
+                                                block.idle
+                                                    ? "gsx-idle-block"
+                                                    : "gsx-consume-block"
+                                            }
+                                            data-block
+                                            data-start-ms={block.start}
+                                            data-duration-ms={duration}
+                                            style={`--start:${pct(block.start)};--duration:${pct(duration)}`}
+                                        >
+                                            {block.label}
+                                        </span>
+                                    );
+                                })}
+                                <i
+                                    class="gsx-playhead"
+                                    data-playhead
+                                    aria-hidden="true"
+                                />
+                            </div>
+                        </div>
+
+                        <p class="gsx-scenario-result">
+                            <strong>{scenario.result}</strong>
+                            <span>{scenario.resultCopy}</span>
+                        </p>
+                    </section>
+                ))
+            }
+        </div>
+
+        <div class="gsx-timeline-controls">
+            <button
+                type="button"
+                class="gsx-button gsx-button--primary"
+                data-action="toggle"
+            >
+                Pause
+            </button>
+            <button type="button" class="gsx-button" data-action="replay"
+                >Replay</button
+            >
+            <span>elapsed <b data-elapsed>0.0</b>s</span>
+        </div>
+
+        <p class="gsx-hint">
+            Same consumer. Same fetch time. Only the refill point changes.
+        </p>
+    </section>
+</genstage-demand-window-demo>
+
+<script>
+    import {
+        defineGenStageDemo,
+        GenStageDemoElement,
+    } from "../../scripts/genstage-demo.js";
+
+    class GenStageDemandWindowDemo extends GenStageDemoElement {
+        completed = false;
+        elapsed = 0;
+        trackWidth = 0;
+
+        connectedCallback() {
+            this.durationMs = this.numberAttribute("durationMs", 8000);
+            this.blocks = [...this.querySelectorAll("[data-block]")];
+            this.playheads = [...this.querySelectorAll("[data-playhead]")];
+            this.toggleButton = this.querySelector('[data-action="toggle"]');
+
+            this.connectDemo({
+                measure: this.measureTrack,
+                resizeTarget: "[data-timelines]",
+                threshold: 0.2,
+            });
+            this.measureTrack();
+            this.replay();
+        }
+
+        disconnectedCallback() {
+            this.disconnectDemo();
+        }
+
+        onButtonClick = (event) => {
+            const action = event.currentTarget.dataset.action;
+            if (action === "toggle") {
+                if (this.completed) {
+                    this.replay();
+                } else {
+                    this.running ? this.pause() : this.start();
+                }
+            }
+            if (action === "replay") this.replay();
+        };
+
+        measureTrack = () => {
+            this.trackWidth =
+                this.querySelector("[data-track]")?.clientWidth ?? 0;
+            this.updateView();
+        };
+
+        start() {
+            if (this.completed) this.elapsed = 0;
+            this.completed = false;
+            super.start();
+        }
+
+        replay() {
+            cancelAnimationFrame(this.frame);
+            this.elapsed = 0;
+            this.running = false;
+            this.completed = false;
+            this.updateView();
+            if (this.reduceMotion) {
+                this.elapsed = this.durationMs;
+                this.completed = true;
+                this.toggleButton.textContent = "Replay";
+                this.updateView();
+            } else {
+                this.start();
+            }
+        }
+
+        advance(elapsedMs) {
+            this.elapsed = Math.min(
+                this.durationMs,
+                this.elapsed + elapsedMs,
+            );
+            if (this.elapsed >= this.durationMs) {
+                this.running = false;
+                this.completed = true;
+                this.toggleButton.textContent = "Replay";
+            }
+        }
+
+        updateView() {
+            const progress = Math.min(1, this.elapsed / this.durationMs);
+            const travel = progress * this.trackWidth;
+            this.playheads?.forEach((playhead) => {
+                playhead.style.transform = `translate3d(${travel}px, 0, 0)`;
+            });
+
+            this.blocks?.forEach((block) => {
+                const start = Number(block.dataset.startMs ?? 0);
+                const duration = Number(block.dataset.durationMs ?? 0);
+                block.classList.toggle(
+                    "is-active",
+                    this.elapsed >= start && this.elapsed < start + duration,
+                );
+                block.classList.toggle(
+                    "is-past",
+                    this.elapsed >= start + duration,
+                );
+            });
+
+            this.setText("[data-elapsed]", (this.elapsed / 1000).toFixed(1));
+            this.toggleAttribute("data-running", this.running);
+        }
+    }
+
+    defineGenStageDemo("genstage-demand-window-demo", GenStageDemandWindowDemo);
+</script>

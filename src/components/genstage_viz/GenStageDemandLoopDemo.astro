@@ -1,0 +1,421 @@
+---
+import GenStageStats from "./GenStageStats.astro";
+
+type Props = {
+    maxDemand: number;
+    minDemand: number;
+    consumerRate: number;
+};
+
+const { maxDemand, minDemand, consumerRate } = Astro.props;
+const refill = maxDemand - minDemand;
+const eventTokens = Array.from({ length: 18 });
+const queueSlots = Array.from({ length: refill });
+const demandSlots = Array.from({ length: maxDemand });
+const stats = [
+    { label: "demand sent", stat: "demand", value: maxDemand },
+    { label: "events sent", stat: "sent" },
+    {
+        label: `handled @ ${consumerRate} event${consumerRate === 1 ? "" : "s"}/sec`,
+        stat: "handled",
+    },
+    { label: "in flow", stat: "flow" },
+];
+---
+
+<genstage-demand-loop-demo
+    data-max-demand={maxDemand}
+    data-min-demand={minDemand}
+    data-consumer-rate={consumerRate}
+>
+    <section class="gsx-card gsx-card--loop" aria-label="Automatic demand loop">
+        <div class="gsx-loop-stage" data-stage>
+            <div class="gsx-loop-demand-wire" aria-hidden="true"></div>
+            <div class="gsx-loop-event-wire" aria-hidden="true"></div>
+
+            <section
+                class="gsx-loop-node gsx-loop-node--producer"
+                aria-label="Producer"
+            >
+                <div class="gsx-node__topline">
+                    <span>producer</span>
+                    <i class="gsx-status-light" data-producer-light></i>
+                </div>
+                <strong>Event source</strong>
+                <small>
+                    credit:
+                    <b data-producer-credit>0</b>
+                </small>
+            </section>
+
+            <div class="gsx-loop-event-path" data-event-path aria-hidden="true">
+                {
+                    eventTokens.map((_, index) => (
+                        <span
+                            class="gsx-event-token"
+                            data-event-token={index}
+                        />
+                    ))
+                }
+            </div>
+
+            <div
+                class="gsx-loop-demand-path"
+                data-demand-path
+                aria-hidden="true"
+            >
+                <span
+                    class="gsx-demand-token gsx-demand-token--loop"
+                    data-demand-token
+                >
+                    +{maxDemand} demand
+                </span>
+            </div>
+
+            <section
+                class="gsx-loop-node gsx-loop-node--consumer"
+                aria-label={`Consumer handling ${consumerRate} events per second`}
+            >
+                <div class="gsx-node__topline">
+                    <span>consumer</span>
+                    <i class="gsx-status-light" data-consumer-light></i>
+                </div>
+                <strong>Worker</strong>
+                <small>
+                    fixed at
+                    <b
+                        >{consumerRate} event{consumerRate === 1
+                            ? ""
+                            : "s"}/sec</b
+                    >
+                </small>
+                <div class="gsx-loop-consume-meter" aria-hidden="true">
+                    <span data-consume-meter></span>
+                </div>
+                <div
+                    class="gsx-loop-work"
+                    aria-label={`Events waiting for a consumer that handles ${consumerRate} events per second`}
+                    style={`--queue-columns:${refill}`}
+                >
+                    {
+                        queueSlots.map((_, index) => (
+                            <span data-queue-slot={index} />
+                        ))
+                    }
+                </div>
+            </section>
+
+            <span class="gsx-loop-label gsx-loop-label--demand">
+                ← demand
+            </span>
+            <span class="gsx-loop-label gsx-loop-label--events">
+                events →
+            </span>
+
+            <section class="gsx-demand-window" aria-label="Demand window">
+                <header>
+                    <span>automatic demand window</span>
+                    <strong>
+                        <b data-window-remaining>{maxDemand}</b>
+                        / max {maxDemand}
+                    </strong>
+                </header>
+
+                <div
+                    class="gsx-demand-window__slots"
+                    aria-hidden="true"
+                    style={`--demand-slots:${maxDemand};--minimum-demand-ratio:${(minDemand / maxDemand) * 100}%`}
+                >
+                    {
+                        demandSlots.map((_, index) => (
+                            <span data-window-slot={index} />
+                        ))
+                    }
+                    <i class="gsx-demand-window__threshold"></i>
+                </div>
+
+                <div class="gsx-demand-window__labels">
+                    <span>min_demand: {minDemand}</span>
+                    <span>max_demand: {maxDemand}</span>
+                </div>
+
+                <p>
+                    refill:
+                    <b>{maxDemand} - {minDemand} = {refill}</b>
+                </p>
+            </section>
+        </div>
+
+        <div class="gsx-loop-controls">
+            <div class="gsx-button-row">
+                <button
+                    type="button"
+                    class="gsx-button gsx-button--primary"
+                    data-action="toggle"
+                >
+                    Pause
+                </button>
+                <button type="button" class="gsx-button" data-action="restart">
+                    Restart
+                </button>
+            </div>
+            <p>
+                active request:
+                <strong data-active-request>+{maxDemand}</strong>
+            </p>
+        </div>
+
+        <GenStageStats items={stats} />
+
+        <p class="gsx-hint">
+            Consumer throughput stays fixed at {consumerRate} event{consumerRate ===
+            1
+                ? ""
+                : "s"}/sec. Demand keeps the work ahead of it bounded.
+        </p>
+    </section>
+</genstage-demand-loop-demo>
+
+<script>
+    import {
+        defineGenStageDemo,
+        GenStageDemoElement,
+    } from "../../scripts/genstage-demo.js";
+
+    const LOOP_DEMAND_TRAVEL_MS = 1000;
+    const LOOP_EVENT_TRAVEL_MS = 1100;
+    const LOOP_EMIT_EVERY_MS = 1000;
+
+    class GenStageDemandLoopDemo extends GenStageDemoElement {
+        nextEmitAt = Infinity;
+        nextConsumeAt = Infinity;
+        producerCredit = 0;
+        windowRemaining = 0;
+        demandSent = 0;
+        sent = 0;
+        handled = 0;
+        queue = 0;
+        flights = [];
+        demandFlight = null;
+        eventPathWidth = 0;
+        demandPathWidth = 0;
+
+        connectedCallback() {
+            this.maxDemand = this.numberAttribute("maxDemand", 6);
+            this.minDemand = this.numberAttribute("minDemand", 2);
+            this.refill = this.maxDemand - this.minDemand;
+            const consumerRate = this.numberAttribute("consumerRate", 1);
+            this.consumeEveryMs = 1000 / consumerRate;
+            this.eventTokens = [...this.querySelectorAll("[data-event-token]")];
+            this.queueSlots = [...this.querySelectorAll("[data-queue-slot]")];
+            this.windowSlots = [...this.querySelectorAll("[data-window-slot]")];
+            this.toggleButton = this.querySelector('[data-action="toggle"]');
+
+            this.connectDemo({ measure: this.measurePaths });
+            this.measurePaths();
+            this.restart();
+        }
+
+        disconnectedCallback() {
+            this.disconnectDemo();
+        }
+
+        onButtonClick = (event) => {
+            const action = event.currentTarget.dataset.action;
+            if (action === "toggle") {
+                this.running ? this.pause() : this.start();
+            }
+            if (action === "restart") this.restart();
+        };
+
+        measurePaths = () => {
+            this.eventPathWidth =
+                this.querySelector("[data-event-path]")?.clientWidth ?? 0;
+            this.demandPathWidth =
+                this.querySelector("[data-demand-path]")?.clientWidth ?? 0;
+            this.updateView();
+        };
+
+        restart() {
+            cancelAnimationFrame(this.frame);
+            this.now = 0;
+            this.nextEmitAt = Infinity;
+            this.nextConsumeAt = Infinity;
+            this.producerCredit = 0;
+            this.windowRemaining = this.maxDemand;
+            this.demandSent = this.maxDemand;
+            this.sent = 0;
+            this.handled = 0;
+            this.queue = 0;
+            this.flights = [];
+            this.demandFlight = {
+                amount: this.maxDemand,
+                startedAt: 0,
+                initial: true,
+            };
+            this.running = false;
+            this.updateView();
+            if (this.reduceMotion) {
+                this.now = LOOP_DEMAND_TRAVEL_MS;
+                this.step();
+                this.updateView();
+            } else {
+                this.start();
+            }
+        }
+
+        advance(elapsedMs) {
+            this.now += elapsedMs;
+            this.step();
+        }
+
+        step() {
+            if (
+                this.demandFlight &&
+                this.now - this.demandFlight.startedAt >= LOOP_DEMAND_TRAVEL_MS
+            ) {
+                this.producerCredit += this.demandFlight.amount;
+                this.demandFlight = null;
+                if (
+                    this.nextEmitAt === Infinity ||
+                    this.nextEmitAt < this.now
+                ) {
+                    this.nextEmitAt = this.now + 300;
+                }
+            }
+
+            while (this.producerCredit > 0 && this.now >= this.nextEmitAt) {
+                this.sent += 1;
+                this.producerCredit -= 1;
+                this.flights.push({ id: this.sent, startedAt: this.now });
+                this.nextEmitAt += LOOP_EMIT_EVERY_MS;
+            }
+
+            const [arrived, moving] = this.takeArrivals(
+                this.flights,
+                LOOP_EVENT_TRAVEL_MS,
+            );
+            this.flights = moving;
+
+            arrived.forEach(() => {
+                this.queue += 1;
+
+                if (this.nextConsumeAt === Infinity) {
+                    this.nextConsumeAt = this.now + this.consumeEveryMs;
+                }
+            });
+
+            while (this.queue > 0 && this.now >= this.nextConsumeAt) {
+                this.queue -= 1;
+                this.handled += 1;
+                this.windowRemaining -= 1;
+
+                if (
+                    this.windowRemaining <= this.minDemand &&
+                    !this.demandFlight
+                ) {
+                    this.windowRemaining += this.refill;
+                    this.demandSent += this.refill;
+                    this.demandFlight = {
+                        amount: this.refill,
+                        startedAt: this.now,
+                        initial: false,
+                    };
+                }
+
+                if (this.queue > 0) {
+                    this.nextConsumeAt += this.consumeEveryMs;
+                } else {
+                    this.nextConsumeAt = Infinity;
+                }
+            }
+        }
+
+        updateView() {
+            const refillPending =
+                Boolean(this.demandFlight) && !this.demandFlight?.initial;
+            this.toggleAttribute("data-running", this.running);
+            this.toggleAttribute(
+                "data-producing",
+                this.producerCredit > 0 || this.flights.length > 0,
+            );
+            this.toggleAttribute("data-consuming", this.queue > 0);
+            this.toggleAttribute("data-refilling", Boolean(this.demandFlight));
+
+            this.setTexts({
+                "[data-producer-credit]": this.producerCredit,
+                "[data-window-remaining]": refillPending
+                    ? `${this.minDemand} + ${this.refill}`
+                    : this.windowRemaining,
+                '[data-stat="demand"]': this.demandSent,
+                '[data-stat="sent"]': this.sent,
+                '[data-stat="handled"]': this.handled,
+                '[data-stat="flow"]': this.flights.length + this.queue,
+                "[data-active-request]": this.demandFlight
+                    ? `+${this.demandFlight.amount}`
+                    : "none",
+            });
+
+            this.windowSlots.forEach((slot, index) => {
+                slot.classList.toggle(
+                    "is-filled",
+                    index <
+                        (refillPending
+                            ? this.minDemand
+                            : this.windowRemaining),
+                );
+                slot.classList.toggle("is-minimum", index < this.minDemand);
+                slot.classList.toggle(
+                    "is-pending",
+                    refillPending && index >= this.minDemand,
+                );
+            });
+            this.setSlots(this.queueSlots, this.queue);
+
+            const consumeMeter = this.querySelector("[data-consume-meter]");
+            if (consumeMeter) {
+                const consumeProgress =
+                    this.queue > 0 && this.nextConsumeAt !== Infinity
+                        ? Math.max(
+                              0,
+                              Math.min(
+                                  1,
+                                  1 -
+                                      (this.nextConsumeAt - this.now) /
+                                          this.consumeEveryMs,
+                              ),
+                          )
+                        : 0;
+                consumeMeter.style.transform = `scaleX(${consumeProgress})`;
+            }
+
+            this.renderFlights(
+                this.eventTokens,
+                this.flights,
+                LOOP_EVENT_TRAVEL_MS,
+                this.eventPathWidth,
+            );
+
+            const demandToken = this.querySelector("[data-demand-token]");
+            if (demandToken) {
+                const demandProgress = this.demandFlight
+                    ? Math.min(
+                          1,
+                          (this.now - this.demandFlight.startedAt) /
+                              LOOP_DEMAND_TRAVEL_MS,
+                      )
+                    : 0;
+                const travel = this.reduceMotion
+                    ? this.demandPathWidth
+                    : demandProgress * this.demandPathWidth;
+                demandToken.textContent = this.demandFlight
+                    ? `+${this.demandFlight.amount} demand`
+                    : "";
+                demandToken.style.opacity = this.demandFlight ? "1" : "0";
+                demandToken.style.transform = `translate3d(${-travel}px, 0, 0)`;
+            }
+        }
+    }
+
+    defineGenStageDemo("genstage-demand-loop-demo", GenStageDemandLoopDemo);
+</script>

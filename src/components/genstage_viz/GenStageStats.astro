@@ -1,0 +1,12 @@
+---
+const { items } = Astro.props;
+---
+
+<dl class:list={["gsx-stats", { "gsx-stats--three": items.length === 3 }]}>
+  {items.map(({ label, stat, value = 0 }) => (
+    <div>
+      <dt>{label}</dt>
+      <dd data-stat={stat}>{value}</dd>
+    </div>
+  ))}
+</dl>

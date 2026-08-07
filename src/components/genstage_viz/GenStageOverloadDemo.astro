@@ -1,0 +1,340 @@
+---
+import GenStageStats from "./GenStageStats.astro";
+
+type Props = {
+    mailboxSize: number;
+    consumerRate: number;
+    producerRateMin: number;
+    producerRateMax: number;
+};
+
+const stats = [
+    { label: "sent", stat: "sent" },
+    { label: "handled", stat: "handled" },
+    { label: "waiting", stat: "queue" },
+    { label: "lost", stat: "spilled" },
+];
+
+const { mailboxSize, consumerRate, producerRateMin, producerRateMax } =
+    Astro.props;
+---
+
+<genstage-overload-demo
+    data-mailbox-size={mailboxSize}
+    data-consumer-rate={consumerRate}
+    data-producer-rate-min={producerRateMin}
+>
+    <section class="gsx-card" aria-label="Producer overload simulation">
+        <div class="gsx-flow" data-stage>
+            <div class="gsx-flow__wire gsx-flow__wire--in" aria-hidden="true">
+            </div>
+            <div class="gsx-flow__wire gsx-flow__wire--out" aria-hidden="true">
+            </div>
+
+            <section class="gsx-node gsx-node--producer" aria-label="Producer">
+                <div class="gsx-node__topline">
+                    <span>producer</span>
+                    <i class="gsx-status-light"></i>
+                </div>
+                <strong>Event source</strong>
+                <small
+                    >sending <b data-producer-rate>{producerRateMin}</b>/sec</small
+                >
+            </section>
+
+            <div class="gsx-event-path" data-event-path aria-hidden="true">
+                {
+                    Array.from({ length: 24 }, (_, index) => (
+                        <span
+                            class="gsx-event-token"
+                            data-event-token={index}
+                        />
+                    ))
+                }
+            </div>
+
+            <section class="gsx-queue" aria-label="Consumer mailbox">
+                <div class="gsx-queue__heading">
+                    <span>consumer mailbox</span>
+                    <strong
+                        ><span data-queue-count>0</span>/{mailboxSize}</strong
+                    >
+                </div>
+                <div class="gsx-queue__slots" aria-hidden="true">
+                    {
+                        Array.from({ length: mailboxSize }, (_, index) => (
+                            <span
+                                class="gsx-queue__slot"
+                                data-queue-slot={index}
+                            />
+                        ))
+                    }
+                </div>
+                <span class="gsx-queue__state" data-queue-state>empty</span>
+            </section>
+
+            <section class="gsx-node gsx-node--consumer" aria-label="Consumer">
+                <div class="gsx-node__topline">
+                    <span>consumer</span>
+                    <i class="gsx-status-light"></i>
+                </div>
+                <strong>Worker</strong>
+                <small>fixed at {consumerRate}/sec</small>
+                <div class="gsx-work-meter" aria-hidden="true">
+                    <span data-work-meter></span>
+                </div>
+            </section>
+
+            <div class="gsx-spill" aria-hidden="true">
+                {
+                    Array.from({ length: 8 }, (_, index) => (
+                        <span class="gsx-spill__event" data-spill-token={index}>
+                            ×
+                        </span>
+                    ))
+                }
+            </div>
+
+            <span class="gsx-flow__label gsx-flow__label--events">events →</span
+            >
+        </div>
+
+        <div class="gsx-controls">
+            <label class="gsx-rate-control">
+                <span>
+                    Producer speed
+                    <output data-rate-output
+                        >{producerRateMin} event{producerRateMin === 1
+                            ? ""
+                            : "s"}/sec</output
+                    >
+                </span>
+                <input
+                    data-rate
+                    type="range"
+                    min={producerRateMin}
+                    max={producerRateMax}
+                    step="1"
+                    value={producerRateMin}
+                />
+                <span class="gsx-rate-control__scale" aria-hidden="true">
+                    <i>{producerRateMin}</i><i
+                        >consumer limit: {consumerRate}/sec</i
+                    ><i>{producerRateMax}</i>
+                </span>
+            </label>
+
+            <div class="gsx-button-row">
+                <button
+                    type="button"
+                    class="gsx-button gsx-button--primary"
+                    data-action="toggle"
+                >
+                    Pause
+                </button>
+                <button type="button" class="gsx-button" data-action="reset"
+                    >Reset</button
+                >
+            </div>
+        </div>
+
+        <GenStageStats items={stats} />
+
+        <p class="gsx-hint">
+            Move the producer through <strong>{consumerRate} events/sec</strong> and
+            keep going.
+        </p>
+    </section>
+</genstage-overload-demo>
+
+<script>
+    import {
+        defineGenStageDemo,
+        GenStageDemoElement,
+    } from "../../scripts/genstage-demo.js";
+
+    const OVERLOAD_TRAVEL_MS = 1200;
+    class GenStageOverloadDemo extends GenStageDemoElement {
+        pauseLabel = "Start";
+        producerBudget = 0;
+        consumerBudget = 0;
+        sent = 0;
+        handled = 0;
+        spilled = 0;
+        queue = 0;
+        flights = [];
+        spillPulseStartedAt = [];
+        lastHandledAt = -Infinity;
+        eventPathWidth = 0;
+
+        connectedCallback() {
+            this.queueCapacity = this.numberAttribute("mailboxSize", 12);
+            this.consumerRate = this.numberAttribute("consumerRate", 4);
+            this.producerRateMin = this.numberAttribute("producerRateMin", 1);
+            this.eventTokens = [...this.querySelectorAll("[data-event-token]")];
+            this.queueSlots = [...this.querySelectorAll("[data-queue-slot]")];
+            this.spillTokens = [...this.querySelectorAll("[data-spill-token]")];
+            this.rateInput = this.querySelector("[data-rate]");
+            this.toggleButton = this.querySelector('[data-action="toggle"]');
+
+            this.rateInput?.addEventListener("input", this.updateView);
+            this.connectDemo({ measure: this.measurePath });
+            this.measurePath();
+            this.reset(false);
+            this.start();
+        }
+
+        disconnectedCallback() {
+            this.rateInput?.removeEventListener("input", this.updateView);
+            this.disconnectDemo();
+        }
+
+        onButtonClick = (event) => {
+            const action = event.currentTarget.dataset.action;
+            if (action === "toggle") {
+                this.running ? this.pause() : this.start();
+            } else if (action === "reset") {
+                this.reset(this.running);
+            }
+        };
+
+        measurePath = () => {
+            this.eventPathWidth =
+                this.querySelector("[data-event-path]")?.clientWidth ?? 0;
+        };
+
+        reset(keepRunning) {
+            cancelAnimationFrame(this.frame);
+            this.now = 0;
+            this.producerBudget = this.producerRateMin;
+            this.consumerBudget = 0;
+            this.sent = 0;
+            this.handled = 0;
+            this.spilled = 0;
+            this.queue = 0;
+            this.flights = [];
+            this.spillPulseStartedAt = [];
+            this.lastHandledAt = -Infinity;
+            this.lastFrame = performance.now();
+            this.updateView();
+
+            if (keepRunning || this.running) {
+                this.running = false;
+                this.start();
+            } else {
+                this.pause();
+            }
+        }
+
+        advance(elapsedMs) {
+            this.step(elapsedMs);
+        }
+
+        step(elapsedMs) {
+            const elapsed = elapsedMs / 1000;
+            const producerRate = Number(this.rateInput?.value ?? 1);
+            this.now += elapsedMs;
+            this.producerBudget += producerRate * elapsed;
+            this.consumerBudget += this.consumerRate * elapsed;
+
+            while (this.consumerBudget >= 1 && this.queue > 0) {
+                this.consumerBudget -= 1;
+                this.queue -= 1;
+                this.handled += 1;
+                this.lastHandledAt = this.now;
+            }
+            this.consumerBudget = Math.min(this.consumerBudget, 1);
+
+            while (
+                this.producerBudget >= 1 &&
+                this.flights.length < this.eventTokens.length
+            ) {
+                this.producerBudget -= 1;
+                this.sent += 1;
+                this.flights.push({ id: this.sent, startedAt: this.now });
+            }
+            this.producerBudget = Math.min(this.producerBudget, 1);
+
+            const [arrived, moving] = this.takeArrivals(
+                this.flights,
+                OVERLOAD_TRAVEL_MS,
+            );
+            this.flights = moving;
+
+            for (const _flight of arrived) {
+                if (this.queue < this.queueCapacity) {
+                    this.queue += 1;
+                } else {
+                    this.spilled += 1;
+                    this.spillPulseStartedAt.push(this.now);
+                    this.spillPulseStartedAt = this.spillPulseStartedAt.slice(
+                        -this.spillTokens.length,
+                    );
+                }
+            }
+        }
+
+        updateView = () => {
+            const producerRate = Number(this.rateInput?.value ?? 1);
+            const queueRatio = this.queue / this.queueCapacity;
+
+            this.toggleAttribute("data-running", this.running);
+            this.toggleAttribute("data-overloaded", this.spilled > 0);
+            this.setTexts({
+                "[data-producer-rate]": producerRate,
+                "[data-rate-output]": `${producerRate} event${producerRate === 1 ? "" : "s"}/sec`,
+                "[data-queue-count]": this.queue,
+                '[data-stat="sent"]': this.sent,
+                '[data-stat="handled"]': this.handled,
+                '[data-stat="queue"]': this.queue,
+                '[data-stat="spilled"]': this.spilled,
+            });
+
+            const queueState =
+                this.queue === 0
+                    ? "empty"
+                    : queueRatio > 0.8
+                      ? "full soon"
+                      : queueRatio > 0.5
+                        ? "filling"
+                        : "work waiting";
+            this.setText("[data-queue-state]", queueState);
+
+            this.queueSlots.forEach((slot, index) => {
+                slot.classList.toggle("is-filled", index < this.queue);
+                slot.classList.toggle(
+                    "is-warning",
+                    index < this.queue && queueRatio > 0.65,
+                );
+            });
+
+            this.renderFlights(
+                this.eventTokens,
+                this.flights,
+                OVERLOAD_TRAVEL_MS,
+                this.eventPathWidth,
+            );
+
+            this.spillTokens.forEach((token, index) => {
+                const startedAt =
+                    this.spillPulseStartedAt[
+                        this.spillPulseStartedAt.length - 1 - index
+                    ];
+                const progress =
+                    startedAt === undefined
+                        ? 1
+                        : Math.min(1, (this.now - startedAt) / 1000);
+                token.style.opacity = String(progress < 1 ? 1 - progress : 0);
+                token.style.transform = `translate3d(${index * 7}px, ${progress * 52}px, 0) rotate(${progress * 80}deg)`;
+            });
+
+            const workMeter = this.querySelector("[data-work-meter]");
+            if (workMeter) {
+                const handling = this.now - this.lastHandledAt < 320;
+                workMeter.style.transform = `scaleX(${handling ? 1 : 0})`;
+            }
+        };
+    }
+
+    defineGenStageDemo("genstage-overload-demo", GenStageOverloadDemo);
+</script>

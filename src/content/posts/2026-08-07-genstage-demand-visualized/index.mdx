@@ -1,0 +1,213 @@
+---
+title: "Elixir's GenStage Demand (a Visual Explainer)"
+description: Concurrency gives us more workers; demand tells us when to stop sending them work. This is what I want to point people to when we talk about "demand".
+date: '2026-08-07'
+coverImage: ./cover-image.jpg
+tags:
+  - elixir
+  - erlang
+---
+
+import GenStageOverloadDemo from "../../../components/genstage_viz/GenStageOverloadDemo.astro";
+import GenStageDemandGateDemo from "../../../components/genstage_viz/GenStageDemandGateDemo.astro";
+import GenStageDemandWindowDemo from "../../../components/genstage_viz/GenStageDemandWindowDemo.astro";
+import GenStageDemandLoopDemo from "../../../components/genstage_viz/GenStageDemandLoopDemo.astro";
+import GenStageMultipleConsumersDemo from "../../../components/genstage_viz/GenStageMultipleConsumersDemo.astro";
+import GenStageKeyPassage from "../../../components/genstage_viz/GenStageKeyPassage.astro";
+
+I've wanted to write this post for a long time, so here it goes. [GenStage](https://github.com/elixir-lang/gen_stage) is probably my favorite Elixir abstraction. Its core idea—a pipeline of **stages** doing data processing—is neither particularly complicated nor novel, but the concept of demand is what makes me love it so much.
+
+GenStage also embodies the beautiful and the ugly that Elixir systems can be. GenStage (and Elixir at large) is great for [embarrassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel) problems, but it's the codification of the main pitfall of these concurrent systems: you can't get away with *unbounded*.
+
+So, come with me through this lil' journey of discovering how GenStage works, *why* it works like it does, and how elegantly it solves that nasty unboundedness deal.
+
+{/* more */}
+
+## The Problem
+
+Let's start with the core of the problem we're looking at here: you have a bunch of data to shove through a process pipeline. To anchor this in reality, let's take a real-world, common example: you want to consume messages from a queue (be it AWS SQS, or Apache Kafka, or whatever floats your boat).
+
+Here is a small system with two parts:
+
+  * A **producer** which can send between 1 and 12 events/second downstream (to the rest of the pipeline). This would be an Elixir process reading off of SQS/Kafka in our example.
+  * A **consumer** process which can handle 4 events/second.
+
+The "queue" between them can hold *12 events*. That would be the [**message queue**](https://www.erlang.org/doc/system/ref_man_processes.html) of the Elixir consumer process—12 events is a completely arbitrary limit for the sake of this example scenario, as in a real system the limit would be system memory.
+
+Play around with events flowing from the producer to the consumer.
+
+<GenStageOverloadDemo
+  consumerRate={4}
+  mailboxSize={12}
+  producerRateMin={1}
+  producerRateMax={12}
+/>
+
+As you hopefully got a chance to see, at say a producer rate of 9 events/s, 5 events/s are **left over**. A queue with 12 free slots fills in a couple seconds. An unbounded queue lasts longer, but only because memory becomes the limit; at some point, the system poops out.
+
+There's a basic rule here: if work enters a system faster than it leaves for long enough, something inside the system must keep growing, reject work, or slow the input.
+
+What this needs is a way for the consumer to *limit what the producer sends*.
+
+## Demand
+
+Here's where the concept of **demand** comes into play. Let's add one rule: the producer may send only what the consumer asks for.
+
+We'll represent this "consumer wish" with the concept of *demand*. Demand is just a number; it expresses how many events the consumer wants. Demand of six means the consumer wants six events. The producer is only allowed to send up to "demand" events.
+
+Send one request and watch all six permissions get used:
+
+<GenStageDemandGateDemo eventsToAsk={6} consumerRate={2} />
+
+The key thing here to keep in mind: **demand is a count**. It doesn't control "speed" in any way.
+
+The consumer does not say "send `n` events per second". It says "you may send
+`n` more events".
+
+The playground component above has a deliberate flaw: it waits until all dispatched events are done before asking again. That keeps the queue bounded, but both processes spend time waiting because production is not instant:
+
+  * The producer waits while the consumer handles events.
+  * The consumer waits while the producer **fetches the next batch**.
+
+This is the BEAM. The hell are we doing. The producer and consumer are *separate processes*. The producer could fetch the next batch of events while the consumer handles the events it already has!
+
+## Parallelization Station
+
+The consumer should ask again when it is "*almost* ready", not only when it has no work left.
+
+Here are two runs with the same consumer and the same fetch time. Both start with six events. The only change is when the next request is sent:
+
+<GenStageDemandWindowDemo maxDemand={6} minDemand={2} />
+
+In the first run, the consumer waits until it has processed all events before asking for more. Fetching begins "late", so the consumer sits idle for a couple of seconds (that is, the time it takes for the producer to fetch `n` more events).
+
+In the second run, the consumer asks for four more events (`demand = 4`) when two "units of demand" remain (that is, four events were consumed). The producer still spends a couple of seconds fetching, but in that time the consumer is handling those last two events in parallel. The new events arrive when the consumer needs them.
+
+<GenStageKeyPassage>
+
+We've just empirically found out about "max" and "min" demand (`:max_demand` and `:min_demand` GenStage options). This is, by far, the thing that trips people up the most in my opinion.
+
+In our scenario above, we had:
+
+```elixir
+[max_demand: 6, min_demand: 2]
+```
+
+  * `:max_demand` is the maximum amount of events **in flow** for the subscription. It is also the size of the first request.
+
+  * `:min_demand` is the remaining-demand threshold that causes another request. When the count reaches `2`, the consumer asks for `4`.
+
+<p><span class="gsx-key-passage__takeaway">Make sure to let this sink in. This is what GenStage is about. This is what everything is about. If there's a little part of this post to re-read, it's this one.</span></p>
+
+</GenStageKeyPassage>
+
+The producer (or GenStage at large) **does not** inspect whether the consumer is "almost ready" or anything like that. It *just* uses this demand number. A low `min_demand` can leave the consumer idle while the producer fetches. A high value starts more work early and keeps more events in flow. The useful values depend on the cost of fetching and consuming.
+
+## GenStage, Finally
+
+GenStage is a "message protocol" and a set of process behaviours for building this kind of flow on the BEAM.
+
+Its names match the jobs in the demos above:
+
+  * A **producer** receives demand and sends events.
+  * A **consumer** sends demand and receives events.
+  * A **producer-consumer** does both, usually as a step in the middle of a pipeline. Producer-consumers are fairly rare, and somewhat "simpler" as they mostly forward demand upstream (from consumers to producers).
+
+Consumers subscribe to producers. Then, demand moves upstream and events move downstream. Generally, you start producers first, but they don't produce until consumers start and ask them for demand.
+
+GenStage tracks demand for each subscription and makes sure a consumer does not receive more events from that producer than it asked for.
+
+Here's a tiny producer, producing just lil' numbers as its events:
+
+```elixir
+defmodule Counter do
+  use GenStage
+
+  def start_link(initial) do
+    GenStage.start_link(__MODULE__, initial, name: __MODULE__)
+  end
+
+  @impl true
+  def init(counter), do: {:producer, counter}
+
+  @impl true
+  def handle_demand(demand, counter) when demand > 0 do
+    events = Enum.to_list(counter..(counter + demand - 1))
+    next_counter = counter + demand
+    {:noreply, events, next_counter}
+  end
+end
+```
+
+`handle_demand/2` makes the rule plain. GenStage passes in a positive integer. The producer returns events. In this case it returns exactly the amount asked for.
+
+A consumer subscribes and sets the size of its demand window:
+
+```elixir
+defmodule Printer do
+  use GenStage
+
+  @impl true
+  def init(:ok) do
+    opts = [subscribe_to: [{Counter, max_demand: 6, min_demand: 2}]]
+    {:consumer, :ok, opts}
+  end
+
+  @impl true
+  def handle_events(events, _from, state) do
+    Enum.each(events, &IO.inspect/1)
+    {:noreply, [], state}
+  end
+end
+```
+
+## Demand and Concurrency Are Different Knobs
+
+GenStage supports many-to-many relationships. For example, here we could start `n` consumers to parallelize work execution.
+
+Here's something important. Pay attention. Really, pay attention. Each consumer sends *its own* demand upstream. The producer tracks demand *per consumer*. Woah. This is a big deal in how GenStage works and why it works so well.
+
+Starting `n` consumers can raise the total consumption rate of the pipeline. But, demand still matters because `n` consumers each also have a *finite consumption rate*. Each subscription gets its own demand, and the producer's dispatcher decides which consumer receives each event.
+
+This is another big deal, if you think about it: a slow consumer sends less demand upstream and naturally gets less work. Like, what!? This makes me shed tears of joy.
+
+### Demand's Limitations
+
+Demand is cool and all, but it's limited to "within" a GenStage pipeline. It does not make an outside source slow down. If a producer reads from a queue, socket, or service that keeps delivering data, the producer must decide where that data waits. That's why demand is powerful though: it tells producers *when* to fetch from external systems, so that the unconsumed data sits in a hopefully-more-long-term-storage system (again, like SQS or Kafka) until the pipeline is ready to consume it.
+
+Demand also does not mean that GenStage never buffers. A producer may return more events than current demand, and GenStage can keep the extra events in its own buffer. A producer that wants a firm memory bound must still choose its buffer size and overflow policy with care. This is more advanced stuff, so go read the docs if you're a real nerd about all this (like me!).
+
+
+## Put the Whole Loop Together
+
+Let's do one last interactive little thing because man I'm having fun with these. The consumer starts with `max_demand: 6`. When two units of demand remain, `min_demand: 2` starts a request for four more. The consumer stays fixed at one event per second.
+
+<GenStageDemandLoopDemo maxDemand={6} minDemand={2} consumerRate={1} />
+
+This is a beauty to look at, isn't it? Watch the rate and the two demand numbers in the model. The producer's credit tells it how many events it may still send. The subscription window tells the consumer when to ask again.
+
+The request moves upstream while events and work keep moving downstream.
+Neither stage has to wait for the other stage to finish a whole batch.
+
+Now, let's turn the coolness up. Let's subscribe **three** consumers to the same producer. Sparing nothing. We're going all in. All those consumers use the same `max_demand: 4` and `min_demand: 1`. Only their processing rates differ (a big deal actually).
+
+The default
+[`DemandDispatcher`](https://hexdocs.pm/gen_stage/GenStage.DemandDispatcher.html) sends events to the subscription with the most demand—that's what I explained a little earlier, but now you have a name for it (but again, read docs for more):
+
+<GenStageMultipleConsumersDemo
+  maxDemand={4}
+  minDemand={1}
+  consumerRates={[1.4, 1.0, 0.7]}
+/>
+
+This is not round-robin work sharing. Consumer `A` finishes events sooner, so it reaches `min_demand`, asks for three more events, and becomes ready for more work sooner. Consumer `C` asks less often because each event takes it longer.
+
+The producer does not measure their speed. It only sees three demand counts. The different rates show up through how often each consumer asks again.
+
+## Conclusion
+
+This is all so cool. The GenStage documentation (which I often contributed, so I feel ok bashing it a bit) is more thorough but drier; still, if you're using these tools it's probably worth a full read.
+
+By the way, you might not have used GenStage directly. But, chances are higher you've used [Broadway](https://elixir-broadway.org/). Well, Broadway is "declarative GenStage": an abstraction on top of GenStage that nicely packages things up and gives you connectors to consume from the queues of this world. Maybe in the future a dedicated Broadway post—still with pretty animated playgrounds—might help; I'll think about it.
+
+In the meantime, I hope this has been the tribute to GenStage I wanted it to be.

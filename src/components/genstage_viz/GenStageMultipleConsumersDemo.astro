@@ -1,0 +1,582 @@
+---
+import GenStageStats from "./GenStageStats.astro";
+
+type Props = {
+    maxDemand: number;
+    minDemand: number;
+    consumerRates: [number, number, number];
+};
+
+const { maxDemand, minDemand, consumerRates } = Astro.props;
+const consumerConfigs = consumerRates.map((rate, index) => {
+    const label = String.fromCharCode(65 + index);
+    return {
+        key: label.toLowerCase(),
+        label,
+        rateLabel: `${rate.toFixed(1)}/sec`,
+    };
+});
+const eventTokens = Array.from({ length: 24 });
+const demandSlots = Array.from({ length: maxDemand });
+const queueSlots = Array.from({ length: maxDemand });
+const stats = [
+    { label: "producer sent", stat: "sent" },
+    ...consumerConfigs.map((consumer, index) => ({
+        label: `consumer ${consumer.label}`,
+        stat: `consumer-${index}`,
+    })),
+];
+---
+
+<genstage-multiple-consumers-demo
+    data-max-demand={maxDemand}
+    data-min-demand={minDemand}
+    data-consumer-rates={JSON.stringify(consumerRates)}
+    style={`--multi-demand-slots:${maxDemand};--multi-min-demand-ratio:${(minDemand / maxDemand) * 100}%`}
+>
+    <section
+        class="gsx-card gsx-card--multi"
+        aria-label="Multiple consumer demand simulation"
+    >
+        <div class="gsx-multi-stage" data-stage>
+            <svg
+                class="gsx-multi-wires"
+                data-wires
+                aria-hidden="true"
+                preserveAspectRatio="none"
+            >
+                {
+                    consumerConfigs.map((consumer, index) => (
+                        <path
+                            data-wire={index}
+                            data-consumer-key={consumer.key}
+                        />
+                    ))
+                }
+            </svg>
+
+            <section
+                class="gsx-multi-producer"
+                data-producer
+                aria-label="Producer"
+            >
+                <div class="gsx-node__topline">
+                    <span>producer</span>
+                    <i class="gsx-status-light" data-producer-light></i>
+                </div>
+                <strong>Event source</strong>
+                <small>
+                    demand available:
+                    <b data-total-credit>0</b>
+                </small>
+                <small>
+                    sent:
+                    <b data-produced>0</b>
+                </small>
+            </section>
+
+            <section class="gsx-dispatcher" aria-label="Demand dispatcher">
+                <span>dispatcher</span>
+                <strong>highest demand first</strong>
+            </section>
+
+            <div class="gsx-multi-event-layer" aria-hidden="true">
+                {
+                    eventTokens.map((_, index) => (
+                        <span
+                            class="gsx-event-token"
+                            data-event-token={index}
+                        />
+                    ))
+                }
+            </div>
+
+            <div class="gsx-multi-demand-layer" aria-hidden="true">
+                {
+                    consumerConfigs.map((consumer, index) => (
+                        <span
+                            class="gsx-demand-token gsx-multi-demand-token"
+                            data-demand-token={index}
+                        >
+                            {consumer.label} +{maxDemand}
+                        </span>
+                    ))
+                }
+            </div>
+
+            <span class="gsx-multi-flow-label gsx-multi-flow-label--events">
+                events →
+            </span>
+            <span class="gsx-multi-flow-label gsx-multi-flow-label--demand">
+                ← demand
+            </span>
+
+            <div class="gsx-multi-consumers">
+                {
+                    consumerConfigs.map((consumer, consumerIndex) => (
+                        <section
+                            class="gsx-multi-consumer"
+                            data-consumer={consumerIndex}
+                            aria-label={`Consumer ${consumer.label}, ${consumer.rateLabel}`}
+                        >
+                            <header>
+                                <span class="gsx-multi-consumer__id">
+                                    {consumer.label}
+                                </span>
+                                <div>
+                                    <small>consumer {consumer.label}</small>
+                                    <strong>{consumer.rateLabel}</strong>
+                                </div>
+                                <i
+                                    class="gsx-status-light"
+                                    data-consumer-light
+                                />
+                            </header>
+
+                            <div class="gsx-multi-meter" aria-hidden="true">
+                                <span data-consume-meter />
+                            </div>
+
+                            <div class="gsx-multi-consumer__counts">
+                                <span>
+                                    handled <b data-handled>0</b>
+                                </span>
+                                <span>
+                                    waiting <b data-waiting>0</b>
+                                </span>
+                            </div>
+
+                            <div class="gsx-multi-demand-row">
+                                <span>
+                                    demand <b data-window>{maxDemand}</b>/{maxDemand}
+                                </span>
+                                <div
+                                    class="gsx-multi-demand-slots"
+                                    aria-hidden="true"
+                                >
+                                    {demandSlots.map((_, index) => (
+                                        <i data-window-slot={index} />
+                                    ))}
+                                    <em />
+                                </div>
+                            </div>
+
+                            <div class="gsx-multi-queue" aria-hidden="true">
+                                {queueSlots.map((_, index) => (
+                                    <span data-queue-slot={index} />
+                                ))}
+                            </div>
+                        </section>
+                    ))
+                }
+            </div>
+        </div>
+
+        <div class="gsx-loop-controls">
+            <div class="gsx-button-row">
+                <button
+                    type="button"
+                    class="gsx-button gsx-button--primary"
+                    data-action="toggle"
+                >
+                    Pause
+                </button>
+                <button type="button" class="gsx-button" data-action="restart">
+                    Restart
+                </button>
+            </div>
+            <p>
+                routing:
+                <strong data-routing>waiting for demand</strong>
+            </p>
+        </div>
+
+        <GenStageStats items={stats} />
+
+        <p class="gsx-hint">
+            Equal demand windows. Different processing rates. Faster consumers
+            ask again sooner.
+        </p>
+    </section>
+</genstage-multiple-consumers-demo>
+
+<script>
+    import {
+        defineGenStageDemo,
+        GenStageDemoElement,
+    } from "../../scripts/genstage-demo.js";
+
+    const MULTI_DEMAND_TRAVEL_MS = 900;
+    const MULTI_EVENT_TRAVEL_MS = 900;
+    const MULTI_EMIT_EVERY_MS = 450;
+
+    class GenStageMultipleConsumersDemo extends GenStageDemoElement {
+        nextEmitAt = Infinity;
+        sent = 0;
+        flights = [];
+        demandFlights = [];
+        lastTarget = -1;
+        anchors = [];
+
+        connectedCallback() {
+            this.maxDemand = this.numberAttribute("maxDemand", 4);
+            this.minDemand = this.numberAttribute("minDemand", 1);
+            this.refill = this.maxDemand - this.minDemand;
+            const consumerRates = this.jsonAttribute(
+                "consumerRates",
+                [1.4, 1, 0.7],
+            );
+            this.consumerConfigs = consumerRates.map((rate, index) => ({
+                key: String.fromCharCode(65 + index),
+                consumeEveryMs: 1000 / rate,
+            }));
+            this.stage = this.querySelector("[data-stage]");
+            this.producer = this.querySelector("[data-producer]");
+            this.consumerElements = [
+                ...this.querySelectorAll("[data-consumer]"),
+            ];
+            this.eventTokens = [...this.querySelectorAll("[data-event-token]")];
+            this.demandTokens = [
+                ...this.querySelectorAll("[data-demand-token]"),
+            ];
+            this.wires = [...this.querySelectorAll("[data-wire]")];
+            this.toggleButton = this.querySelector('[data-action="toggle"]');
+
+            this.connectDemo({ measure: this.measureAnchors, threshold: 0.06 });
+            this.restart();
+        }
+
+        disconnectedCallback() {
+            this.disconnectDemo();
+        }
+
+        onButtonClick = (event) => {
+            const action = event.currentTarget.dataset.action;
+            if (action === "toggle") {
+                this.running ? this.pause() : this.start();
+            }
+            if (action === "restart") this.restart();
+        };
+
+        measureAnchors = () => {
+            const stageRect = this.stage.getBoundingClientRect();
+            const producerRect = this.producer.getBoundingClientRect();
+            const source = {
+                x: producerRect.right - stageRect.left,
+                y: producerRect.top - stageRect.top + producerRect.height / 2,
+            };
+
+            this.anchors = this.consumerElements.map((consumer, index) => {
+                const consumerRect = consumer.getBoundingClientRect();
+                const target = {
+                    x: consumerRect.left - stageRect.left,
+                    y:
+                        consumerRect.top -
+                        stageRect.top +
+                        consumerRect.height / 2,
+                };
+                const controlA = {
+                    x: source.x + (target.x - source.x) * 0.38,
+                    y: source.y,
+                };
+                const controlB = {
+                    x: source.x + (target.x - source.x) * 0.62,
+                    y: target.y,
+                };
+
+                const wire = this.wires[index];
+                wire?.setAttribute(
+                    "d",
+                    `M ${source.x} ${source.y} C ${controlA.x} ${controlA.y}, ${controlB.x} ${controlB.y}, ${target.x} ${target.y}`,
+                );
+
+                return { source, target, controlA, controlB };
+            });
+
+            const wiresSvg = this.querySelector("[data-wires]");
+            wiresSvg?.setAttribute(
+                "viewBox",
+                `0 0 ${stageRect.width} ${stageRect.height}`,
+            );
+            this.updateView();
+        };
+
+        restart() {
+            cancelAnimationFrame(this.frame);
+            this.now = 0;
+            this.nextEmitAt = Infinity;
+            this.sent = 0;
+            this.flights = [];
+            this.lastTarget = -1;
+            this.consumers = this.consumerConfigs.map((config) => ({
+                ...config,
+                credit: 0,
+                windowRemaining: this.maxDemand,
+                queue: 0,
+                handled: 0,
+                nextConsumeAt: Infinity,
+                refillPending: true,
+            }));
+            this.demandFlights = this.consumers.map((consumer, index) => ({
+                consumerIndex: index,
+                amount: this.maxDemand,
+                startedAt: 0,
+                initial: true,
+            }));
+            this.running = false;
+            this.measureAnchors();
+            this.updateView();
+            this.start();
+        }
+
+        advance(elapsedMs) {
+            this.now += elapsedMs;
+            this.step();
+        }
+
+        step() {
+            const [arrivedDemand, movingDemand] = this.takeArrivals(
+                this.demandFlights,
+                MULTI_DEMAND_TRAVEL_MS,
+            );
+            this.demandFlights = movingDemand;
+
+            arrivedDemand.forEach((flight) => {
+                const consumer = this.consumers[flight.consumerIndex];
+                consumer.credit += flight.amount;
+                consumer.refillPending = false;
+            });
+
+            if (
+                arrivedDemand.length > 0 &&
+                (this.nextEmitAt === Infinity || this.nextEmitAt < this.now)
+            ) {
+                this.nextEmitAt = this.now + 300;
+            }
+
+            while (
+                this.now >= this.nextEmitAt &&
+                this.consumers.some((consumer) => consumer.credit > 0)
+            ) {
+                const targetIndex = this.pickTarget();
+                const target = this.consumers[targetIndex];
+                this.sent += 1;
+                target.credit -= 1;
+                this.lastTarget = targetIndex;
+                this.flights.push({
+                    id: this.sent,
+                    consumerIndex: targetIndex,
+                    startedAt: this.now,
+                });
+                this.nextEmitAt += MULTI_EMIT_EVERY_MS;
+            }
+
+            const [arrivedEvents, movingEvents] = this.takeArrivals(
+                this.flights,
+                MULTI_EVENT_TRAVEL_MS,
+            );
+            this.flights = movingEvents;
+
+            arrivedEvents.forEach((flight) => {
+                const consumer = this.consumers[flight.consumerIndex];
+                consumer.queue += 1;
+                if (consumer.nextConsumeAt === Infinity) {
+                    consumer.nextConsumeAt = this.now + consumer.consumeEveryMs;
+                }
+            });
+
+            this.consumers.forEach((consumer, consumerIndex) => {
+                while (
+                    consumer.queue > 0 &&
+                    this.now >= consumer.nextConsumeAt
+                ) {
+                    consumer.queue -= 1;
+                    consumer.handled += 1;
+                    consumer.windowRemaining -= 1;
+
+                    if (
+                        consumer.windowRemaining <= this.minDemand &&
+                        !consumer.refillPending
+                    ) {
+                        consumer.windowRemaining += this.refill;
+                        consumer.refillPending = true;
+                        this.demandFlights.push({
+                            consumerIndex,
+                            amount: this.refill,
+                            startedAt: this.now,
+                            initial: false,
+                        });
+                    }
+
+                    if (consumer.queue > 0) {
+                        consumer.nextConsumeAt += consumer.consumeEveryMs;
+                    } else {
+                        consumer.nextConsumeAt = Infinity;
+                    }
+                }
+            });
+        }
+
+        pickTarget() {
+            const highestDemand = Math.max(
+                ...this.consumers.map((consumer) => consumer.credit),
+            );
+            for (let offset = 1; offset <= this.consumers.length; offset += 1) {
+                const index =
+                    (this.lastTarget + offset) % this.consumers.length;
+                if (this.consumers[index].credit === highestDemand) {
+                    return index;
+                }
+            }
+            return 0;
+        }
+
+        updateView() {
+            if (!this.consumers) return;
+            this.toggleAttribute("data-running", this.running);
+            this.toggleAttribute(
+                "data-producing",
+                this.flights.length > 0 ||
+                    this.consumers.some((consumer) => consumer.credit > 0),
+            );
+
+            const totalCredit = this.consumers.reduce(
+                (sum, consumer) => sum + consumer.credit,
+                0,
+            );
+            this.setTexts({
+                "[data-total-credit]": totalCredit,
+                "[data-produced]": this.sent,
+                '[data-stat="sent"]': this.sent,
+                "[data-routing]":
+                    this.lastTarget >= 0
+                        ? `last event → ${this.consumers[this.lastTarget].key}`
+                        : "waiting for demand",
+            });
+
+            this.consumerElements.forEach((element, index) => {
+                const consumer = this.consumers[index];
+                const refillPending =
+                    consumer.refillPending && consumer.handled > 0;
+                element.toggleAttribute("data-active", consumer.queue > 0);
+                element.toggleAttribute("data-refilling", refillPending);
+                this.setTextIn(element, "[data-handled]", consumer.handled);
+                this.setTextIn(element, "[data-waiting]", consumer.queue);
+                this.setTextIn(
+                    element,
+                    "[data-window]",
+                    refillPending
+                        ? `${this.minDemand}+${this.refill}`
+                        : consumer.windowRemaining,
+                );
+                this.setText(
+                    `[data-stat="consumer-${index}"]`,
+                    consumer.handled,
+                );
+
+                const meter = element.querySelector("[data-consume-meter]");
+                if (meter) {
+                    const progress =
+                        consumer.queue > 0 &&
+                        consumer.nextConsumeAt !== Infinity
+                            ? Math.max(
+                                  0,
+                                  Math.min(
+                                      1,
+                                      1 -
+                                          (consumer.nextConsumeAt - this.now) /
+                                              consumer.consumeEveryMs,
+                                  ),
+                              )
+                            : 0;
+                    meter.style.transform = `scaleX(${progress})`;
+                }
+
+                element
+                    .querySelectorAll("[data-window-slot]")
+                    .forEach((slot, slotIndex) => {
+                        slot.classList.toggle(
+                            "is-filled",
+                            slotIndex <
+                                (refillPending
+                                    ? this.minDemand
+                                    : consumer.windowRemaining),
+                        );
+                        slot.classList.toggle(
+                            "is-pending",
+                            refillPending && slotIndex >= this.minDemand,
+                        );
+                    });
+                element
+                    .querySelectorAll("[data-queue-slot]")
+                    .forEach((slot, slotIndex) => {
+                        slot.classList.toggle(
+                            "is-filled",
+                            slotIndex < consumer.queue,
+                        );
+                    });
+            });
+
+            this.eventTokens.forEach((token) => {
+                token.style.opacity = "0";
+            });
+            this.flights.forEach((flight) => {
+                const token =
+                    this.eventTokens[(flight.id - 1) % this.eventTokens.length];
+                const progress = this.reduceMotion
+                    ? 1
+                    : Math.min(
+                          1,
+                          (this.now - flight.startedAt) / MULTI_EVENT_TRAVEL_MS,
+                      );
+                const point = this.pointOnRoute(flight.consumerIndex, progress);
+                token.style.opacity = "1";
+                token.style.transform = `translate3d(${point.x - 6}px, ${point.y - 6}px, 0)`;
+            });
+
+            this.demandTokens.forEach((token, index) => {
+                const flight = this.demandFlights.find(
+                    (candidate) => candidate.consumerIndex === index,
+                );
+                if (!flight) {
+                    token.style.opacity = "0";
+                    return;
+                }
+                const progress = this.reduceMotion
+                    ? 1
+                    : Math.min(
+                          1,
+                          (this.now - flight.startedAt) /
+                              MULTI_DEMAND_TRAVEL_MS,
+                      );
+                const point = this.pointOnRoute(index, 1 - progress);
+                token.textContent = `${this.consumers[index].key} +${flight.amount}`;
+                token.style.opacity = "1";
+                token.style.transform = `translate3d(${point.x - 24}px, ${point.y - 12}px, 0)`;
+            });
+        }
+
+        pointOnRoute(index, progress) {
+            const route = this.anchors[index];
+            if (!route) return { x: 0, y: 0 };
+            const inverse = 1 - progress;
+            return {
+                x:
+                    inverse ** 3 * route.source.x +
+                    3 * inverse ** 2 * progress * route.controlA.x +
+                    3 * inverse * progress ** 2 * route.controlB.x +
+                    progress ** 3 * route.target.x,
+                y:
+                    inverse ** 3 * route.source.y +
+                    3 * inverse ** 2 * progress * route.controlA.y +
+                    3 * inverse * progress ** 2 * route.controlB.y +
+                    progress ** 3 * route.target.y,
+            };
+        }
+    }
+
+    defineGenStageDemo(
+        "genstage-multiple-consumers-demo",
+        GenStageMultipleConsumersDemo,
+    );
+</script>

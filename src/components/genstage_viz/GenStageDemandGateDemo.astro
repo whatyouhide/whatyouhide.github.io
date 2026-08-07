@@ -1,0 +1,334 @@
+---
+import GenStageStats from "./GenStageStats.astro";
+
+type Props = {
+    eventsToAsk: number;
+    consumerRate: number;
+};
+
+const stats = [
+    { label: "requested", stat: "requested" },
+    { label: "sent", stat: "sent" },
+    { label: "handled", stat: "handled" },
+];
+
+const { eventsToAsk, consumerRate } = Astro.props;
+---
+
+<genstage-demand-gate-demo
+    data-events-to-ask={eventsToAsk}
+    data-consumer-rate={consumerRate}
+>
+    <section class="gsx-card" aria-label="Demand gate simulation">
+        <div class="gsx-flow gsx-flow--demand" data-stage>
+            <div class="gsx-flow__wire gsx-flow__wire--in" aria-hidden="true">
+            </div>
+            <div class="gsx-flow__wire gsx-flow__wire--out" aria-hidden="true">
+            </div>
+            <div class="gsx-demand-wire" aria-hidden="true"></div>
+
+            <section class="gsx-node gsx-node--producer" aria-label="Producer">
+                <div class="gsx-node__topline">
+                    <span>producer</span>
+                    <i class="gsx-status-light" data-producer-light></i>
+                </div>
+                <strong>Event source</strong>
+                <small data-producer-state>waiting for demand</small>
+            </section>
+
+            <div class="gsx-event-path" data-event-path aria-hidden="true">
+                {
+                    Array.from({ length: 12 }, (_, index) => (
+                        <span
+                            class="gsx-event-token"
+                            data-event-token={index}
+                        />
+                    ))
+                }
+            </div>
+
+            <div class="gsx-demand-path" data-demand-path aria-hidden="true">
+                <span class="gsx-demand-token" data-demand-token
+                    >ask +{eventsToAsk}</span
+                >
+            </div>
+
+            <section
+                class="gsx-queue gsx-queue--small"
+                aria-label="Events waiting"
+            >
+                <div class="gsx-queue__heading">
+                    <span>events received</span>
+                    <strong
+                        ><span data-queue-count>0</span>/{eventsToAsk}</strong
+                    >
+                </div>
+                <div
+                    class="gsx-queue__slots gsx-queue__slots--six"
+                    aria-hidden="true"
+                >
+                    {
+                        Array.from({ length: eventsToAsk }, (_, index) => (
+                            <span
+                                class="gsx-queue__slot"
+                                data-queue-slot={index}
+                            />
+                        ))
+                    }
+                </div>
+                <span class="gsx-queue__state" data-queue-state>empty</span>
+            </section>
+
+            <section class="gsx-node gsx-node--consumer" aria-label="Consumer">
+                <div class="gsx-node__topline">
+                    <span>consumer</span>
+                    <i class="gsx-status-light"></i>
+                </div>
+                <strong>Worker</strong>
+                <small>handles {consumerRate}/sec</small>
+                <div class="gsx-work-meter" aria-hidden="true">
+                    <span data-work-meter></span>
+                </div>
+            </section>
+
+            <span class="gsx-flow__label gsx-flow__label--events">events →</span
+            >
+            <span class="gsx-flow__label gsx-flow__label--demand">← demand</span
+            >
+        </div>
+
+        <div class="gsx-demand-controls">
+            <button
+                type="button"
+                class="gsx-button gsx-button--ask"
+                data-action="ask"
+            >
+                Ask for {eventsToAsk} events
+            </button>
+            <button type="button" class="gsx-button" data-action="reset"
+                >Reset</button
+            >
+            <p>
+                Demand left:
+                <strong data-demand-left>0</strong>
+            </p>
+        </div>
+
+        <GenStageStats items={stats} />
+
+        <p class="gsx-hint">
+            The request must reach the producer before any event can move.
+        </p>
+    </section>
+</genstage-demand-gate-demo>
+
+<script>
+    import {
+        defineGenStageDemo,
+        GenStageDemoElement,
+    } from "../../scripts/genstage-demo.js";
+
+    const GATE_DEMAND_TRAVEL_MS = 1400;
+    const GATE_EVENT_TRAVEL_MS = 1200;
+    const GATE_EMIT_EVERY_MS = 320;
+    class GenStageDemandGateDemo extends GenStageDemoElement {
+        phase = "idle";
+        demandStartedAt = -Infinity;
+        nextEmitAt = Infinity;
+        nextConsumeAt = Infinity;
+        credits = 0;
+        requested = 0;
+        sent = 0;
+        handled = 0;
+        queue = 0;
+        flights = [];
+        lastHandledAt = -Infinity;
+        eventPathWidth = 0;
+        demandPathWidth = 0;
+
+        connectedCallback() {
+            this.eventsToAsk = this.numberAttribute("eventsToAsk", 6);
+            const consumerRate = this.numberAttribute("consumerRate", 2);
+            this.consumeEveryMs = 1000 / consumerRate;
+            this.eventTokens = [...this.querySelectorAll("[data-event-token]")];
+            this.queueSlots = [...this.querySelectorAll("[data-queue-slot]")];
+            this.askButton = this.querySelector('[data-action="ask"]');
+
+            this.connectDemo({ measure: this.measurePaths });
+            this.measurePaths();
+            this.reset();
+        }
+
+        disconnectedCallback() {
+            this.disconnectDemo();
+        }
+
+        onButtonClick = (event) => {
+            const action = event.currentTarget.dataset.action;
+            if (action === "ask") this.ask();
+            if (action === "reset") this.reset();
+        };
+
+        measurePaths = () => {
+            this.eventPathWidth =
+                this.querySelector("[data-event-path]")?.clientWidth ?? 0;
+            this.demandPathWidth =
+                this.querySelector("[data-demand-path]")?.clientWidth ?? 0;
+        };
+
+        ask() {
+            if (this.phase !== "idle" && this.phase !== "complete") return;
+            this.phase = "asking";
+            this.demandStartedAt = this.now;
+            this.requested = this.eventsToAsk;
+            this.sent = 0;
+            this.handled = 0;
+            this.queue = 0;
+            this.credits = 0;
+            this.flights = [];
+            this.nextConsumeAt = Infinity;
+            this.updateView();
+        }
+
+        reset() {
+            this.phase = "idle";
+            this.now = 0;
+            this.demandStartedAt = -Infinity;
+            this.nextEmitAt = Infinity;
+            this.nextConsumeAt = Infinity;
+            this.credits = 0;
+            this.requested = 0;
+            this.sent = 0;
+            this.handled = 0;
+            this.queue = 0;
+            this.flights = [];
+            this.lastHandledAt = -Infinity;
+            this.updateView();
+            cancelAnimationFrame(this.frame);
+            this.scheduleFrame();
+        }
+
+        advance(elapsedMs) {
+            this.now += elapsedMs;
+            this.step();
+        }
+
+        step() {
+            if (
+                this.phase === "asking" &&
+                this.now - this.demandStartedAt >= GATE_DEMAND_TRAVEL_MS
+            ) {
+                this.phase = "producing";
+                this.credits = this.eventsToAsk;
+                this.nextEmitAt = this.now + 220;
+            }
+
+            while (
+                this.phase === "producing" &&
+                this.credits > 0 &&
+                this.now >= this.nextEmitAt
+            ) {
+                this.sent += 1;
+                this.credits -= 1;
+                this.flights.push({ id: this.sent, startedAt: this.now });
+                this.nextEmitAt += GATE_EMIT_EVERY_MS;
+            }
+
+            const [arrived, moving] = this.takeArrivals(
+                this.flights,
+                GATE_EVENT_TRAVEL_MS,
+            );
+            this.flights = moving;
+            if (arrived.length > 0) {
+                this.queue += arrived.length;
+                if (this.nextConsumeAt === Infinity) {
+                    this.nextConsumeAt = this.now + this.consumeEveryMs;
+                }
+            }
+
+            while (this.queue > 0 && this.now >= this.nextConsumeAt) {
+                this.queue -= 1;
+                this.handled += 1;
+                this.lastHandledAt = this.now;
+                this.nextConsumeAt += this.consumeEveryMs;
+            }
+
+            if (
+                this.requested > 0 &&
+                this.credits === 0 &&
+                this.flights.length === 0 &&
+                this.queue === 0 &&
+                this.handled === this.requested
+            ) {
+                this.phase = "complete";
+            }
+        }
+
+        updateView() {
+            this.toggleAttribute("data-active", this.phase !== "idle");
+            this.toggleAttribute(
+                "data-producer-active",
+                this.phase === "producing" && this.credits > 0,
+            );
+            this.askButton.disabled =
+                this.phase !== "idle" && this.phase !== "complete";
+            this.askButton.textContent =
+                this.phase === "complete"
+                    ? `Ask for ${this.eventsToAsk} again`
+                    : `Ask for ${this.eventsToAsk} events`;
+
+            this.setTexts({
+                "[data-demand-left]": this.credits,
+                "[data-queue-count]": this.queue,
+                '[data-stat="requested"]': this.requested,
+                '[data-stat="sent"]': this.sent,
+                '[data-stat="handled"]': this.handled,
+            });
+
+            const producerState = {
+                idle: "waiting for demand",
+                asking: "waiting for request",
+                producing:
+                    this.credits > 0
+                        ? `${this.credits} sends allowed`
+                        : "demand exhausted",
+                complete: "waiting for demand",
+            }[this.phase];
+            this.setText("[data-producer-state]", producerState);
+            this.setText(
+                "[data-queue-state]",
+                this.queue === 0 ? "empty" : "being consumed",
+            );
+
+            this.setSlots(this.queueSlots, this.queue);
+            this.renderFlights(
+                this.eventTokens,
+                this.flights,
+                GATE_EVENT_TRAVEL_MS,
+                this.eventPathWidth,
+            );
+
+            const demandToken = this.querySelector("[data-demand-token]");
+            const demandProgress = Math.min(
+                1,
+                (this.now - this.demandStartedAt) / GATE_DEMAND_TRAVEL_MS,
+            );
+            const demandVisible = this.phase === "asking";
+            if (demandToken) {
+                const travel = this.reduceMotion
+                    ? this.demandPathWidth
+                    : demandProgress * this.demandPathWidth;
+                demandToken.style.opacity = demandVisible ? "1" : "0";
+                demandToken.style.transform = `translate3d(${-travel}px, 0, 0)`;
+            }
+
+            const workMeter = this.querySelector("[data-work-meter]");
+            if (workMeter) {
+                const handling = this.now - this.lastHandledAt < 360;
+                workMeter.style.transform = `scaleX(${handling ? 1 : 0})`;
+            }
+        }
+    }
+
+    defineGenStageDemo("genstage-demand-gate-demo", GenStageDemandGateDemo);
+</script>
