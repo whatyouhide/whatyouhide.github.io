@@ -135,6 +135,9 @@ countries:
   ROU:
     name: "Romania"
     visited: true
+  SVN:
+    name: "Slovenia"
+    visited: true
   SMR:
     name: "San Marino"
     visited: true
