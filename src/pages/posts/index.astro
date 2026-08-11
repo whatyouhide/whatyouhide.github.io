@@ -4,35 +4,39 @@ import { getSortedPosts, postUrl } from "../../lib/posts";
 
 const posts = await getSortedPosts();
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
+function truncate(text: string, max: number): string {
+  const stripped = text.replace(/<[^>]*>/g, "");
+  return stripped.length > max ? stripped.slice(0, max).trimEnd() + "…" : stripped;
+}
+
+function ym(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
 ---
 
 <BaseLayout title="Posts" description="Writings by Andrea Leopardi on Elixir, systems, and software.">
-  <main id="main" role="main" class="container">
-    <div class="posts posts-index">
+  <main id="main" role="main" class="container posts-page">
+    <section class="posts-index-dense" aria-labelledby="posts-heading">
+      <div class="shell-section-header">
+        <h1 id="posts-heading" class="shell-section-label posts-index-label">posts</h1>
+        <span class="shell-section-rule"></span>
+        <span class="posts-index-count">{posts.length} entries</span>
+      </div>
+
       {posts.map((post) => (
-        <article class="post">
-          <header class="post-heading">
-            <div class="post-heading-topline">
-              <span class="post-heading-sigil" aria-hidden="true">$</span>
-              <time class="post-date" datetime={post.data.date.toISOString()}>
-                {dateFormatter.format(post.data.date)}
-              </time>
-            </div>
-            <h1>
-              <a href={postUrl(post)}>{post.data.title}</a>
-            </h1>
-          </header>
-          <div class="entry">
-            <p>{post.data.description}</p>
-            <a href={postUrl(post)} class="read-more">Read post</a>
-          </div>
-        </article>
+        <a href={postUrl(post)} class="shell-post">
+          <span class="shell-post-prompt" aria-hidden="true">&gt;</span>
+          <span class="shell-post-body">
+            <strong>{post.data.title}</strong>
+            {post.data.description && (
+              <span class="shell-post-desc">{truncate(post.data.description, 90)}</span>
+            )}
+          </span>
+          <time class="shell-post-date" datetime={post.data.date.toISOString()}>
+            {ym(post.data.date)}
+          </time>
+        </a>
       ))}
-    </div>
+    </section>
   </main>
 </BaseLayout>
