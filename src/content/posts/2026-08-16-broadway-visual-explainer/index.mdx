@@ -1,0 +1,105 @@
+---
+title: "Broadway Visual Explainer"
+description: "After my last post about GenStage, this one's a visual explainer of how Elixir's Broadway works and all the knobs you can use to tune pipelines."
+date: "2026-09-07"
+tags:
+  - elixir
+---
+
+import BroadwayScrollExplainer from "../../../components/broadway_viz/BroadwayScrollExplainer.astro";
+import BroadwayExplainerStep from "../../../components/broadway_viz/BroadwayExplainerStep.astro";
+import BroadwayHeroLink from "../../../components/broadway_viz/BroadwayHeroLink.astro";
+import BroadwayRoutingExplainer from "../../../components/broadway_viz/BroadwayRoutingExplainer.astro";
+import FaviconLink from "../../../components/FaviconLink.astro";
+
+I put up a [GenStage visual explainer](/posts/genstage-demand-visualized/) recently and I loved how it was received. The natural next step here is another iteration of this, a (majestic?) visual journey through:
+
+<BroadwayHeroLink />
+
+<aside class="broadway-reading-note">
+
+For the full scroll experience, use a wide screen with JavaScript enabled. On smaller screens, or with **Read without scroll effects**, each section has its own diagram. The text and static diagrams also work without JavaScript.
+
+</aside>
+
+<BroadwayScrollExplainer>
+
+<BroadwayExplainerStep slot="source" title="Data Source" chapter={0}>
+Generally, Broadway pipelines consume from a **source**, like
+
+* <FaviconLink bold="true" href="https://www.rabbitmq.com/" favicon="https://www.rabbitmq.com/img/rabbitmq-logo.svg">RabbitMQ</FaviconLink>
+* <FaviconLink bold="true" href="https://kafka.apache.org/" favicon="https://kafka.apache.org/images/apache.png">Apache Kafka</FaviconLink>
+* <FaviconLink bold="true" href="https://aws.amazon.com/sqs/">AWS SQS</FaviconLink>
+* <FaviconLink bold="true" href="https://cloud.google.com/pubsub">GCP Pub/Sub</FaviconLink>
+
+...and more. That's where the data you want to consume *resides* full time.
+
+Broadway can connect to all these sources via **producers**. A Broadway producer is a plug-and-play component that knows how to talk to a source.
+
+Broadway ships with official producers for all the major message queues, but you can find a plethora of additional connectors under the convention of `off_broadway_`-prefixed packages [on Hex](https://hex.pm/packages?sort=name&search=off_broadway_).
+</BroadwayExplainerStep>
+
+<BroadwayExplainerStep slot="producers" title="Producers" chapter={1}>
+A Broadway producer is "just" an Elixir process (a `GenStage.Producer` if you're nasty). Broadway itself is a big old GenStage pipeline: producer processes wait for event **demand** from downstream in the pipeline.
+
+More process means fetching more data in parallel from the original source. Is that *always* good? Depends. You need to know your **ordering** semantics. For example, if multiple producers fetch in parallel from a single Kafka topic/partition, you'll lose the ordering of events within that topic/partition. If you don't need ordering, multiple producers can increase the throughput of events you suck out of your data source.
+
+Most producers are "passive" in some way: they have to ask the data source for more data (an HTTP `GET` for SQS, a `Fetch` request in Kafka, and so on). Downstream demand is what drives *when* producers ask for more events.
+</BroadwayExplainerStep>
+
+<BroadwayExplainerStep slot="processors" title="Processors" chapter={2}>
+Once producers have events to dispatch, they hand them out to **processors**. These are, you guessed it, Elixir processes.
+
+Processors are the first stage in a pipeline that runs *your* code (instead of library code): you implement a `handle_message/3` callback and away you go.
+
+A processor is where you do work on a **single event at a time**. Data validation is a great thing to do here, for example—you get to reject the message early on in the pipeline. Anything CPU intensive is good too, as you can have *many* processors running concurrently.
+
+Each processor subscribes to **every producer**, even when there are fewer processors than producers. Set the processor count to one to see all producer connections meet there.
+
+With `:partition_by`, messages with the same key go to the same processor. [Try the routing example below](#broadway-routing) to compare this with demand-based dispatch.
+</BroadwayExplainerStep>
+
+<BroadwayExplainerStep slot="batchers" title="Batchers" chapter={3}>
+Batchers are processes Broadway uses to **collect** batches of message for processing. You get one batcher per configured **batcher key**.
+
+The batcher collects processed messages and, once a batch forms, hands the batch off to a **batch processor** (coming up next). Batches form based on a configurable pair of *batch timeout* and *batch size*; either the batch fills up to `batch_size` or `batch_timeout` elapses, whichever comes first.
+</BroadwayExplainerStep>
+
+<BroadwayExplainerStep slot="batch-processors" title="Batch Processors" chapter={4}>
+When a batcher emits a batch, it sends that batch to a **batch processor**. This is where *you* get the chance to run your code again: your `handle_batch/4` callback runs here, doing work on a batch of messages.
+
+The `:concurrency` option under each batcher controls the number of batch processors for that batcher.
+</BroadwayExplainerStep>
+</BroadwayScrollExplainer>
+
+<BroadwayRoutingExplainer>
+<div slot="intro">
+
+## Routing
+
+By default, a Broadway pipeline doesn't are about *message order* and processes all messages (and batches) concurrently. Sometimes, you will have to impose ordering yourself though, because you need strict ordering. You can do that via the `:partition_by` option: all messages with a given partition key are processed by the same processor/batch processor.
+
+Luckily, producers for sources where strict ordering is a prerequisite (like Apache Kafka) set `:partition_by` correctly for you.
+
+Now, in this example, look at how setting `:partition_by` to
+
+```elixir
+fn message -> message.data.user_id end
+```
+
+changes message routing. Change "Route by" below too to go back to the default routing.
+</div>
+
+<div slot="fallback">
+Enable JavaScript to run this example. For two processors, user 42 goes to processor 0 because `42 % 2 = 0`. This applies to messages from all three producers.
+</div>
+
+<details>
+
+<summary>What this example models</summary>
+
+Twelve fixed messages. User 42 takes 2.4 seconds; other users take 1 second. Available-demand routing chooses the "least busy" eligible processor here.
+
+</details>
+
+</BroadwayRoutingExplainer>

@@ -1,0 +1,22 @@
+---
+import BroadwayInlineDiagram from "./BroadwayInlineDiagram.astro";
+
+interface Props {
+    title: string;
+    chapter: number;
+}
+
+const { title, chapter } = Astro.props;
+---
+
+<div class="broadway-explainer-step">
+    <h2>{title}</h2>
+    <BroadwayInlineDiagram chapter={chapter} title={title} />
+    <slot />
+</div>
+
+<style>
+    .broadway-explainer-step > :global(p + p) {
+        margin-top: 1rem;
+    }
+</style>

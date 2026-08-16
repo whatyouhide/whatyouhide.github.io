@@ -1,0 +1,60 @@
+---
+import { createInlinePipeline, edgePath, inlineLayout, inlineState } from "./broadwayInlineScene";
+import { BATCH_SIZE, BATCH_TIMEOUT } from "./broadwayPipelineModel";
+interface Props { chapter: number; title: string }
+const { chapter, title } = Astro.props;
+const options = { chapter, producers: 2, processors: 4, batchers: 2, workers: 2 };
+const layout = inlineLayout(options);
+const state = inlineState(createInlinePipeline(options));
+---
+
+<broadway-inline-diagram data-chapter={chapter} data-title={title}>
+    <figure aria-label={`${title} message flow`}>
+        <svg viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label={`${title}. ${state.caption}`}>
+            <g aria-hidden="true">
+                {layout.headings.map(heading => heading.lines.map((line, i) => <text class="inline-column" x={heading.x} y={14 + i * 15}>{line}</text>))}
+                {layout.edges.map(edge => <path class="inline-edge" d={edgePath(edge)} />)}
+                {layout.nodes.map(node => <g class="inline-node" transform={`translate(${node.x} ${node.y})`}>
+                    <rect width={node.width} height="42" rx="4" />
+                    <text class="inline-name" x="9" y="17">{node.label}</text>
+                    <text class="inline-state" x="9" y="33">{state.nodes[node.id].status}</text>
+                </g>)}
+            </g>
+        </svg>
+        {chapter >= 3 && <div class="inline-settings">Batch size {BATCH_SIZE} · timeout {BATCH_TIMEOUT / 1000} s</div>}
+        <figcaption data-inline-caption>{state.caption}</figcaption>
+        <div class="inline-playback" aria-label={`${title} playback`}>
+            <button type="button" data-inline-play>Pause</button>
+            <button type="button" data-inline-next>Next event</button>
+            <button type="button" data-inline-replay>Replay</button>
+        </div>
+        <p class="inline-announcement" role="status" data-inline-announcement></p>
+    </figure>
+</broadway-inline-diagram>
+
+
+
+<style>
+    broadway-inline-diagram { display: none; }
+    @media (prefers-reduced-motion: reduce) { [data-inline-play] { display: none; } }
+    :global(broadway-scroll-explainer:is(:not([data-ready]), [data-static="true"])) broadway-inline-diagram { display: block; width: 100%; max-width: 32rem; margin: 0.5rem auto 1.5rem; }
+        figure { margin: 0; padding: 1rem 0; border-block: 1px solid var(--color-box-borders); }
+        svg { display: block; width: 100%; overflow: visible; }
+        svg :global(text) { font-family: var(--font-mono); fill: var(--color-text); }
+        svg :global(.inline-column) { font-size: 12px; fill: var(--color-text-dimmer); }
+        svg :global(.inline-name) { font-size: 12px; }
+        svg :global(.inline-state) { font-size: 11px; fill: var(--color-text-dimmer); font-variant-numeric: tabular-nums; }
+        svg :global(.inline-edge) { fill: none; stroke: color-mix(in srgb, var(--color-text) 28%, var(--color-site-background)); stroke-width: 1; }
+        svg :global(.inline-node rect) { fill: var(--color-site-background); stroke: var(--color-box-borders); }
+        svg :global(.inline-node[data-active="true"] rect) { stroke: var(--color-links); fill: color-mix(in srgb, var(--color-links) 5%, var(--color-site-background)); }
+        svg :global(.inline-packet) { fill: var(--color-links); }
+        .inline-settings { margin-top: 0.75rem; color: var(--color-text-dimmer); font: 0.7rem/1.5 var(--font-mono); }
+        figcaption { min-height: 3.2em; margin-top: 0.75rem; color: var(--color-text-dimmer); font: 0.75rem/1.6 var(--font-mono); }
+        .inline-playback { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        button { min-height: 44px; padding: 0.4rem 0.7rem; font: 0.75rem var(--font-mono); color: var(--color-text); background: var(--color-site-background); border: 1px solid var(--color-box-borders); border-radius: 4px; cursor: pointer; }
+        button:hover { border-color: var(--color-links); }
+        button:focus-visible { outline: 2px solid var(--color-links); outline-offset: 3px; }
+        button:disabled { opacity: 0.5; cursor: default; }
+        broadway-inline-diagram:not([data-ready]) .inline-playback { display: none; }
+        .inline-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+</style>

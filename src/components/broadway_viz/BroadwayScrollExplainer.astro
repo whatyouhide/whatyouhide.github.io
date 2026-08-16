@@ -1,0 +1,1873 @@
+---
+const producers = Array.from({ length: 4 });
+const processors = Array.from({ length: 8 });
+const batchers = [
+    { key: ":default", code: "D" },
+    { key: ":priority", code: "P" },
+];
+const batchProcessors = Array.from({ length: 4 });
+---
+
+<broadway-scroll-explainer
+    data-producer-count="2"
+    data-processor-count="4"
+    data-batcher-key-count="2"
+    data-batch-processor-count="2"
+>
+    <button class="bvx-reading-toggle" type="button" data-reading-toggle aria-pressed="false">Read without scroll effects</button>
+    <div class="bvx-scroll">
+        <div class="bvx-story" aria-label="Broadway pipeline walkthrough">
+            <section
+                id="broadway-start"
+                class="bvx-step is-active"
+                data-step="0"
+            >
+                <div class="bvx-copy-positioner">
+                    <div class="bvx-copy">
+                        <slot name="source" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="bvx-step" data-step="1">
+                <div class="bvx-copy-positioner">
+                    <div class="bvx-copy">
+                        <slot name="producers" />
+                        <label class="bvx-control">
+                            <span>
+                                Producer processes
+                                <output data-producer-output>2</output>
+                            </span>
+                            <input
+                                type="range"
+                                min="1"
+                                max="4"
+                                value="2"
+                                step="1"
+                                data-producer-input
+                                aria-label="Number of producer processes"
+                            />
+                            <span class="bvx-range-labels" aria-hidden="true"
+                                ><i>1</i><i>4</i></span
+                            >
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bvx-step" data-step="2">
+                <div class="bvx-copy-positioner">
+                    <div class="bvx-copy">
+                        <slot name="processors" />
+                        <label class="bvx-control">
+                            <span>
+                                Processor processes
+                                <output data-processor-output>4</output>
+                            </span>
+                            <input
+                                type="range"
+                                min="1"
+                                max="8"
+                                value="4"
+                                step="1"
+                                data-processor-input
+                                aria-label="Number of processor processes"
+                            />
+                            <span class="bvx-range-labels" aria-hidden="true"
+                                ><i>1</i><i>8</i></span
+                            >
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bvx-step" data-step="3">
+                <div class="bvx-copy-positioner">
+                    <div class="bvx-copy">
+                        <slot name="batchers" />
+                        <label class="bvx-control">
+                            <span>
+                                Configured batcher keys
+                                <output data-batcher-key-output>2</output>
+                            </span>
+                            <input
+                                type="range"
+                                min="1"
+                                max="2"
+                                value="2"
+                                step="1"
+                                data-batcher-key-input
+                                aria-label="Number of configured batcher keys"
+                            />
+                            <span class="bvx-range-labels" aria-hidden="true"
+                                ><i>1</i><i>2</i></span
+                            >
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bvx-step" data-step="4">
+                <div class="bvx-copy-positioner">
+                    <div class="bvx-copy">
+                        <slot name="batch-processors" />
+                        <label class="bvx-control">
+                            <span>
+                                Batch processor concurrency
+                                <output data-batch-processor-output>2</output>
+                            </span>
+                            <input
+                                type="range"
+                                min="1"
+                                max="4"
+                                value="2"
+                                step="1"
+                                data-batch-processor-input
+                                aria-label="Batch processor concurrency per batcher"
+                            />
+                            <span class="bvx-range-labels" aria-hidden="true"
+                                ><i>1</i><i>4</i></span
+                            >
+                        </label>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="bvx-stage-shell">
+            <div class="bvx-stage" data-stage>
+                <div
+                    class="bvx-stage-grid"
+                    role="img"
+                    aria-label="Messages move from a source through Broadway producers, processors, batchers, and batch processors"
+                >
+                    <svg class="bvx-wires" data-wires aria-hidden="true">
+                        <g data-source-wires>
+                            {
+                                producers.map((_, index) => (
+                                    <g
+                                        class="bvx-wire"
+                                        data-source-wire={index}
+                                    >
+                                        <path class="bvx-wire-base" />
+                                    </g>
+                                ))
+                            }
+                        </g>
+                        <g data-processor-wires>
+                            {
+                                producers.flatMap((_, producerIndex) => processors.map((_, index) => (
+                                    <g class="bvx-wire" data-processor-wire={index} data-producer-index={producerIndex}>
+                                        <path class="bvx-wire-base" />
+                                    </g>
+                                )))
+                            }
+                        </g>
+                        <g data-batcher-wires>
+                            {
+                                processors.flatMap((_, index) => batchers.map((_, batcherIndex) => (
+                                    <g class="bvx-wire" data-batcher-wire={index} data-batcher-index={batcherIndex}>
+                                        <path class="bvx-wire-base" />
+                                    </g>
+                                )))
+                            }
+                        </g>
+                        <g data-batch-processor-wires>
+                            {
+                                batchers.flatMap((batcher, batcherIndex) =>
+                                    batchProcessors.map((_, index) => (
+                                        <g
+                                            class="bvx-wire"
+                                            data-batch-processor-wire
+                                            data-batcher-index={batcherIndex}
+                                            data-worker-index={index}
+                                        >
+                                            <path class="bvx-wire-base" />
+                                        </g>
+                                    )),
+                                )
+                            }
+                        </g>
+                    </svg>
+
+                    <section
+                        class="bvx-layer bvx-layer--source"
+                        aria-label="Message source"
+                    >
+                        <div class="bvx-source">
+
+                            <div class="bvx-source-queue" data-source-node>
+                                <strong>Source</strong>
+                                <svg
+                                    class="bvx-queue-cylinder"
+                                    viewBox="0 0 260 112"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        class="bvx-cylinder-body"
+                                        d="M30 14H226V98H30Z"
+                                    />
+                                    <ellipse
+                                        class="bvx-cylinder-rear"
+                                        cx="30"
+                                        cy="56"
+                                        rx="20"
+                                        ry="42"
+                                    />
+                                    <ellipse
+                                        class="bvx-cylinder-front"
+                                        cx="226"
+                                        cy="56"
+                                        rx="20"
+                                        ry="42"
+                                    />
+                                    <path
+                                        class="bvx-cylinder-edge"
+                                        d="M30 14H226M30 98H226"
+                                    />
+                                    <ellipse
+                                        class="bvx-cylinder-rim"
+                                        cx="30"
+                                        cy="56"
+                                        rx="14"
+                                        ry="34"
+                                    />
+                                    <ellipse
+                                        class="bvx-cylinder-rim"
+                                        cx="226"
+                                        cy="56"
+                                        rx="14"
+                                        ry="34"
+                                    />
+                                    <path
+                                        class="bvx-cylinder-rail"
+                                        d="M56 25H200M56 87H200"
+                                    />
+                                    <path
+                                        class="bvx-cylinder-outlet"
+                                        d="M246 49H254V63H246"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        class="bvx-layer bvx-layer--producers"
+                        aria-label="Broadway producers"
+                    >
+                        <span class="bvx-layer-label">Producers</span>
+                        <div class="bvx-node-stack" data-producer-stack>
+                            {
+                                producers.map((_, index) => (
+                                    <div
+                                        class="bvx-worker"
+                                        data-producer={index}
+                                        aria-hidden={
+                                            index >= 2 ? "true" : "false"
+                                        }
+                                    >
+                                        <span class="bvx-worker-index">
+                                            P
+                                            {String(index + 1).padStart(2, "0")}
+                                        </span>
+                                        <span>
+                                            <small>producer</small>
+                                            <strong>receive</strong>
+                                        </span>
+                                        <i
+                                            class="bvx-worker-status"
+                                            aria-hidden="true"
+                                        />
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        <span class="bvx-layer-note">pull messages in</span>
+                    </section>
+
+                    <section
+                        class="bvx-layer bvx-layer--processors"
+                        aria-label="Broadway processors"
+                    >
+                        <span class="bvx-layer-label">Processors</span>
+                        <div class="bvx-node-stack" data-processor-stack>
+                            {
+                                processors.map((_, index) => (
+                                    <div
+                                        class="bvx-worker bvx-worker--processor"
+                                        data-processor={index}
+                                        aria-hidden={
+                                            index >= 4 ? "true" : "false"
+                                        }
+                                    >
+                                        <span class="bvx-worker-index">
+                                            W
+                                            {String(index + 1).padStart(2, "0")}
+                                        </span>
+                                        <span>
+                                            <small>processor</small>
+                                            <strong>handle_message/3</strong>
+                                        </span>
+                                        <i
+                                            class="bvx-worker-status"
+                                            aria-hidden="true"
+                                        />
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        <span class="bvx-layer-note"
+                            >run work at the same time</span
+                        >
+                    </section>
+
+                    <section
+                        class="bvx-layer bvx-layer--batchers"
+                        aria-label="Broadway batchers"
+                    >
+                        <span class="bvx-layer-label">Batchers</span>
+                        <div class="bvx-node-stack" data-batcher-stack>
+                            {
+                                batchers.map((batcher, index) => (
+                                    <div
+                                        class="bvx-worker bvx-worker--batcher"
+                                        data-batcher={index}
+                                        aria-hidden={
+                                            index >= 2 ? "true" : "false"
+                                        }
+                                    >
+                                        <span class="bvx-worker-index">B</span>
+                                        <span>
+                                            <small>batcher</small>
+                                            <strong>{batcher.key}</strong>
+                                        </span>
+                                        <i
+                                            class="bvx-worker-status"
+                                            aria-hidden="true"
+                                        />
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        <span class="bvx-layer-note"
+                            >form batches by message batch key</span
+                        >
+                    </section>
+
+                    <section
+                        class="bvx-layer bvx-layer--batch-processors"
+                        aria-label="Broadway batch processors"
+                    >
+                        <span class="bvx-layer-label">Batch processors</span>
+                        <div class="bvx-batch-processor-groups">
+                            {
+                                batchers.map((batcher, batcherIndex) => (
+                                    <div
+                                        class="bvx-batch-processor-group"
+                                        data-batch-processor-group={batcherIndex}
+                                    >
+                                        <span class="bvx-batch-group-label">
+                                            {batcher.key}
+                                        </span>
+                                        <div class="bvx-node-stack">
+                                            {batchProcessors.map((_, index) => (
+                                                <div
+                                                    class="bvx-worker bvx-worker--batch-processor"
+                                                    data-batch-processor
+                                                    data-batcher-index={
+                                                        batcherIndex
+                                                    }
+                                                    data-worker-index={index}
+                                                    aria-hidden={
+                                                        index >= 2
+                                                            ? "true"
+                                                            : "false"
+                                                    }
+                                                >
+                                                    <span class="bvx-worker-index">
+                                                        {batcher.code}
+                                                        {String(
+                                                            index + 1,
+                                                        ).padStart(2, "0")}
+                                                    </span>
+                                                    <span>
+                                                        <small>
+                                                            batch processor
+                                                        </small>
+                                                        <strong>
+                                                            handle_batch/4
+                                                        </strong>
+                                                    </span>
+                                                    <i
+                                                        class="bvx-worker-status"
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        <span class="bvx-layer-note"
+                            >run handle_batch/4 concurrently</span
+                        >
+                    </section>
+                </div>
+
+                <div class="bvx-flow-controls" aria-label="Pipeline animation controls">
+                    <p data-flow-action>Messages arrive at the source.</p>
+                    <div class="bvx-flow-buttons">
+                        <button type="button" data-flow-play>Pause flow</button>
+                        <button type="button" data-flow-next aria-label="Next pipeline event">Next event</button>
+                        <button type="button" data-flow-replay>Replay flow</button>
+                    </div>
+                    <span class="bvx-flow-context"><span data-layer-status>source</span> · example with 10 messages<span class="bvx-flow-batch-settings"> · batch size 3 · timeout 4.2 s</span></span>
+                    <span class="bvx-sr-only" data-flow-announcement role="status" aria-live="polite"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</broadway-scroll-explainer>
+
+<script>
+    import { BroadwayPipelineFlow } from "./broadwayPipelineFlow";
+    class BroadwayScrollExplainer extends HTMLElement {
+        pipelineFlow?: BroadwayPipelineFlow;
+        flowChapter = 0;
+        producerCount = 2;
+        processorCount = 4;
+        batcherKeyCount = 2;
+        batchProcessorCount = 2;
+        frame = 0;
+        scrollFrame = 0;
+        resizeObserver?: ResizeObserver;
+        reduceMotion = false;
+        readingView = false;
+        inlineLoaded = false;
+        readingToggle?: HTMLButtonElement | null;
+        motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+        compactPreference = window.matchMedia("(max-width: 1200px), (max-height: 800px)");
+        stage?: HTMLElement | null;
+        stageGrid?: HTMLElement | null;
+        scrollContainer?: HTMLElement | null;
+        sourceNode?: HTMLElement | null;
+        producerNodes!: HTMLElement[];
+        processorNodes!: HTMLElement[];
+        batcherNodes!: HTMLElement[];
+        batchProcessorNodes!: HTMLElement[];
+        sourceWires!: SVGGElement[];
+        processorWires!: SVGGElement[];
+        batcherWires!: SVGGElement[];
+        batchProcessorWires!: SVGGElement[];
+        steps!: HTMLElement[];
+        copyPositioners!: HTMLElement[];
+        producerInput?: HTMLInputElement | null;
+        processorInput?: HTMLInputElement | null;
+        batcherKeyInput?: HTMLInputElement | null;
+        batchProcessorInput?: HTMLInputElement | null;
+        status?: HTMLElement | null;
+        producerLayer?: HTMLElement | null;
+        processorLayer?: HTMLElement | null;
+        batcherLayer?: HTMLElement | null;
+        batchProcessorLayer?: HTMLElement | null;
+
+        connectedCallback() {
+            this.producerCount = Number(this.dataset.producerCount) || 2;
+            this.processorCount = Number(this.dataset.processorCount) || 4;
+            this.batcherKeyCount = Number(this.dataset.batcherKeyCount) || 2;
+            this.batchProcessorCount =
+                Number(this.dataset.batchProcessorCount) || 2;
+            this.stage = this.querySelector<HTMLElement>("[data-stage]");
+            this.stageGrid =
+                this.querySelector<HTMLElement>(".bvx-stage-grid");
+            this.scrollContainer =
+                this.querySelector<HTMLElement>(".bvx-scroll");
+            this.sourceNode =
+                this.querySelector<HTMLElement>("[data-source-node]");
+            this.producerNodes = [
+                ...this.querySelectorAll<HTMLElement>("[data-producer]"),
+            ];
+            this.processorNodes = [
+                ...this.querySelectorAll<HTMLElement>("[data-processor]"),
+            ];
+            this.batcherNodes = [
+                ...this.querySelectorAll<HTMLElement>("[data-batcher]"),
+            ];
+            this.batchProcessorNodes = [
+                ...this.querySelectorAll<HTMLElement>(
+                    "[data-batch-processor]",
+                ),
+            ];
+            this.sourceWires = [
+                ...this.querySelectorAll<SVGGElement>("[data-source-wire]"),
+            ];
+            this.processorWires = [
+                ...this.querySelectorAll<SVGGElement>("[data-processor-wire]"),
+            ];
+            this.batcherWires = [
+                ...this.querySelectorAll<SVGGElement>("[data-batcher-wire]"),
+            ];
+            this.batchProcessorWires = [
+                ...this.querySelectorAll<SVGGElement>(
+                    "[data-batch-processor-wire]",
+                ),
+            ];
+            this.steps = [...this.querySelectorAll<HTMLElement>("[data-step]")];
+            this.copyPositioners = [
+                ...this.querySelectorAll<HTMLElement>(
+                    ".bvx-copy-positioner",
+                ),
+            ];
+            this.producerInput = this.querySelector<HTMLInputElement>(
+                "[data-producer-input]",
+            );
+            this.processorInput = this.querySelector<HTMLInputElement>(
+                "[data-processor-input]",
+            );
+            this.batcherKeyInput = this.querySelector<HTMLInputElement>(
+                "[data-batcher-key-input]",
+            );
+            this.batchProcessorInput = this.querySelector<HTMLInputElement>(
+                "[data-batch-processor-input]",
+            );
+            this.status = this.querySelector<HTMLElement>(
+                "[data-layer-status]",
+            );
+            this.producerLayer = this.querySelector<HTMLElement>(
+                ".bvx-layer--producers",
+            );
+            this.processorLayer = this.querySelector<HTMLElement>(
+                ".bvx-layer--processors",
+            );
+            this.batcherLayer = this.querySelector<HTMLElement>(
+                ".bvx-layer--batchers",
+            );
+            this.batchProcessorLayer = this.querySelector<HTMLElement>(
+                ".bvx-layer--batch-processors",
+            );
+            this.reduceMotion = this.motionPreference.matches;
+            this.motionPreference.addEventListener("change", this.onPreferenceChange);
+            this.compactPreference.addEventListener("change", this.onPreferenceChange);
+            this.dataset.ready = "true";
+            this.readingToggle = this.querySelector("[data-reading-toggle]");
+            this.readingToggle?.addEventListener("click", this.toggleReadingView);
+
+            this.producerInput?.addEventListener("input", this.onProducerInput);
+            this.processorInput?.addEventListener(
+                "input",
+                this.onProcessorInput,
+            );
+            this.batcherKeyInput?.addEventListener(
+                "input",
+                this.onBatcherKeyInput,
+            );
+            this.batchProcessorInput?.addEventListener(
+                "input",
+                this.onBatchProcessorInput,
+            );
+            window.addEventListener("scroll", this.onScroll, { passive: true });
+            window.addEventListener("resize", this.onResize, { passive: true });
+
+            this.resizeObserver = new ResizeObserver(this.queueMeasure);
+            if (this.stage) this.resizeObserver.observe(this.stage);
+
+            this.pipelineFlow = new BroadwayPipelineFlow(this, this.flowOptions());
+            this.updateWorkers();
+            this.queueMeasure();
+            document.fonts.ready.then(() => { if (this.isConnected) this.queueMeasure(); });
+            this.onScroll();
+        }
+
+        disconnectedCallback() {
+            this.pipelineFlow?.destroy();
+            cancelAnimationFrame(this.frame);
+            cancelAnimationFrame(this.scrollFrame);
+            this.resizeObserver?.disconnect();
+            this.producerInput?.removeEventListener(
+                "input",
+                this.onProducerInput,
+            );
+            this.processorInput?.removeEventListener(
+                "input",
+                this.onProcessorInput,
+            );
+            this.batcherKeyInput?.removeEventListener(
+                "input",
+                this.onBatcherKeyInput,
+            );
+            this.batchProcessorInput?.removeEventListener(
+                "input",
+                this.onBatchProcessorInput,
+            );
+            this.readingToggle?.removeEventListener("click", this.toggleReadingView);
+            this.motionPreference.removeEventListener("change", this.onPreferenceChange);
+            this.compactPreference.removeEventListener("change", this.onPreferenceChange);
+            window.removeEventListener("scroll", this.onScroll);
+            window.removeEventListener("resize", this.onResize);
+        }
+
+        onProducerInput = (event: Event) => {
+            this.producerCount = Number(
+                (event.currentTarget as HTMLInputElement).value,
+            );
+            this.dataset.producerCount = String(this.producerCount);
+            const output = this.querySelector<HTMLOutputElement>(
+                "[data-producer-output]",
+            );
+            if (output) output.value = String(this.producerCount);
+            this.updateWorkers();
+        };
+
+        onProcessorInput = (event: Event) => {
+            this.processorCount = Number(
+                (event.currentTarget as HTMLInputElement).value,
+            );
+            this.dataset.processorCount = String(this.processorCount);
+            const output = this.querySelector<HTMLOutputElement>(
+                "[data-processor-output]",
+            );
+            if (output) output.value = String(this.processorCount);
+            this.updateWorkers();
+        };
+
+        onBatcherKeyInput = (event: Event) => {
+            this.batcherKeyCount = Number(
+                (event.currentTarget as HTMLInputElement).value,
+            );
+            this.dataset.batcherKeyCount = String(this.batcherKeyCount);
+            const output = this.querySelector<HTMLOutputElement>(
+                "[data-batcher-key-output]",
+            );
+            if (output) output.value = String(this.batcherKeyCount);
+            this.updateWorkers();
+        };
+
+        onBatchProcessorInput = (event: Event) => {
+            this.batchProcessorCount = Number(
+                (event.currentTarget as HTMLInputElement).value,
+            );
+            this.dataset.batchProcessorCount = String(
+                this.batchProcessorCount,
+            );
+            const output = this.querySelector<HTMLOutputElement>(
+                "[data-batch-processor-output]",
+            );
+            if (output) output.value = String(this.batchProcessorCount);
+            this.updateWorkers();
+        };
+
+        updateWorkers() {
+            this.pipelineFlow?.configure(this.flowOptions());
+            this.producerNodes?.forEach((node, index) => {
+                const active = index < this.producerCount;
+                node.classList.toggle("is-active", active);
+                node.setAttribute("aria-hidden", String(!active));
+            });
+            this.processorNodes?.forEach((node, index) => {
+                const active = index < this.processorCount;
+                node.classList.toggle("is-active", active);
+                node.setAttribute("aria-hidden", String(!active));
+            });
+            this.batcherNodes?.forEach((node, index) => {
+                const active = index < this.batcherKeyCount;
+                node.classList.toggle("is-active", active);
+                node.setAttribute("aria-hidden", String(!active));
+            });
+            this.batchProcessorNodes?.forEach((node) => {
+                const batcherIndex = Number(node.dataset.batcherIndex);
+                const workerIndex = Number(node.dataset.workerIndex);
+                const active =
+                    batcherIndex < this.batcherKeyCount &&
+                    workerIndex < this.batchProcessorCount;
+                node.classList.toggle("is-active", active);
+                node.setAttribute("aria-hidden", String(!active));
+            });
+            this.querySelectorAll<HTMLElement>(
+                "[data-batch-processor-group]",
+            ).forEach((group) => {
+                const active =
+                    Number(group.dataset.batchProcessorGroup) <
+                    this.batcherKeyCount;
+                group.classList.toggle("is-active", active);
+                group.setAttribute("aria-hidden", String(!active));
+            });
+            this.queueMeasure();
+        }
+
+        flowOptions() {
+            return {chapter: this.flowChapter, producers: this.producerCount, processors: this.processorCount, batchers: this.batcherKeyCount, workers: this.batchProcessorCount};
+        }
+
+        setFlowChapter(chapter: number) {
+            this.flowChapter = chapter;
+            if (this.dataset.flowChapter !== String(chapter)) this.dataset.flowChapter = String(chapter);
+            this.pipelineFlow?.configure(this.flowOptions());
+        }
+
+        toggleReadingView = () => {
+            this.readingView = !this.readingView;
+            this.readingToggle?.setAttribute("aria-pressed", String(this.readingView));
+            this.queueMeasure();
+        };
+
+        onPreferenceChange = () => {
+            this.reduceMotion = this.motionPreference.matches;
+            this.queueMeasure();
+        };
+
+        onResize = () => this.queueMeasure();
+
+        queueMeasure = () => {
+            cancelAnimationFrame(this.frame);
+            this.frame = requestAnimationFrame(() => {
+                this.renderScroll();
+                this.measureWires();
+                this.pipelineFlow?.measure();
+            });
+        };
+
+        onScroll = () => {
+            cancelAnimationFrame(this.scrollFrame);
+            this.scrollFrame = requestAnimationFrame(() => this.renderScroll());
+        };
+
+        renderScroll() {
+            // Small screens and reduced motion use normal document flow.
+            const staticLayout = this.readingView || this.reduceMotion || this.compactPreference.matches;
+            if (this.dataset.static !== String(staticLayout)) {
+                this.dataset.static = String(staticLayout);
+                this.dispatchEvent(new Event("broadway-layout"));
+                this.pipelineFlow?.sync();
+            }
+            if (staticLayout && !this.inlineLoaded) {
+                this.inlineLoaded = true;
+                import("./broadwayInlineDiagram");
+            }
+            if (staticLayout) {
+                this.steps.forEach(step => {
+                    step.classList.remove("is-scrubbed");
+                    step.classList.add("is-active", "is-interactive");
+                    const copy = step.querySelector<HTMLElement>(".bvx-copy");
+                    copy?.removeAttribute("style");
+                    copy?.removeAttribute("inert");
+                    copy?.removeAttribute("aria-hidden");
+                });
+                this.copyPositioners.forEach(node => node.classList.remove("is-pinned"));
+                this.stageGrid?.style.removeProperty("transform");
+                return;
+            }
+            const viewportCenter = window.innerHeight / 2;
+            const stepRects = this.steps.map((step) =>
+                step.getBoundingClientRect(),
+            );
+            const scrollRect = this.scrollContainer?.getBoundingClientRect();
+            const stepCenters = stepRects.map(
+                (rect) => rect.top + rect.height / 2,
+            );
+            const activeStep = stepCenters.reduce(
+                (closest, center, index) =>
+                    Math.abs(center - viewportCenter) <
+                    Math.abs(stepCenters[closest] - viewportCenter)
+                        ? index
+                        : closest,
+                0,
+            );
+            const segmentProgress = (fromIndex: number, toIndex: number) => {
+                const from = stepCenters[fromIndex] ?? viewportCenter;
+                const to = stepCenters[toIndex] ?? viewportCenter;
+                return this.clamp(
+                    (viewportCenter - from) / Math.max(1, to - from),
+                );
+            };
+            const phase = (value: number, start: number, end: number) =>
+                this.clamp((value - start) / (end - start));
+            const quadratic = (
+                start: number,
+                control: number,
+                end: number,
+                progress: number,
+            ) => {
+                const inverse = 1 - progress;
+                return (
+                    inverse * inverse * start +
+                    2 * inverse * progress * control +
+                    progress * progress * end
+                );
+            };
+            const reveal = (index: number) => {
+                if (this.reduceMotion) return Number(activeStep >= index);
+                const center = stepCenters[index] ?? window.innerHeight * 2;
+                return this.clamp(
+                    (window.innerHeight * 1.15 - center) /
+                        (window.innerHeight * 0.65),
+                );
+            };
+            const producerProgress = reveal(1);
+            const processorProgress = reveal(2);
+            const batcherTransition = this.reduceMotion
+                ? Number(activeStep >= 3)
+                : segmentProgress(2, 3);
+            const batchProcessorTransition = this.reduceMotion
+                ? Number(activeStep >= 4)
+                : segmentProgress(3, 4);
+            const batcherProgress = phase(batcherTransition, 0.24, 0.5);
+            const batchProcessorProgress = phase(
+                batchProcessorTransition,
+                0.55,
+                0.85,
+            );
+            this.setFlowChapter(batchProcessorProgress >= 0.95 ? 4 : batcherProgress >= 0.95 ? 3 : processorProgress >= 0.95 ? 2 : producerProgress >= 0.95 ? 1 : 0);
+            const stageStartX = Math.min(
+                544,
+                Math.max(488, window.innerWidth * 0.36),
+            );
+            const stageEndY = Math.min(
+                145,
+                Math.max(96, window.innerHeight * 0.145),
+            );
+            const compactLayout = window.innerWidth <= 900;
+            const graphDrop = phase(batcherTransition, 0.08, 0.24);
+            const graphExpand = phase(batcherTransition, 0.18, 0.5);
+            const stageX = compactLayout
+                ? 0
+                : stageStartX * (1 - graphExpand);
+            const stageY = compactLayout ? 0 : stageEndY * graphDrop;
+            const lateSequenceStarted = batcherTransition > 0;
+            const exitProgress = scrollRect
+                ? phase(
+                      window.innerHeight - scrollRect.bottom,
+                      0,
+                      window.innerHeight * 0.25,
+                  )
+                : 0;
+            const pinLateCards =
+                !compactLayout &&
+                lateSequenceStarted &&
+                exitProgress < 1;
+            const processorCopy =
+                this.steps[2]?.querySelector<HTMLElement>(".bvx-copy");
+            const batcherCopy =
+                this.steps[3]?.querySelector<HTMLElement>(".bvx-copy");
+            const batchProcessorCopy =
+                this.steps[4]?.querySelector<HTMLElement>(".bvx-copy");
+            const cardHandoff = phase(
+                batchProcessorTransition,
+                0.1,
+                0.9,
+            );
+            const useCardPaths = !compactLayout && !this.reduceMotion;
+
+            if (this.stageGrid) {
+                this.stageGrid.style.transform =
+                    `translate3d(${stageX}px, ${stageY}px, 0)`;
+            }
+            this.copyPositioners.forEach((positioner, index) =>
+                positioner.classList.toggle(
+                    "is-pinned",
+                    pinLateCards && index >= 3,
+                ),
+            );
+            let processorOpacity = 0;
+            let batcherOpacity = 0;
+            let batchProcessorOpacity = 0;
+
+            if (lateSequenceStarted) {
+                this.steps.slice(2, 5).forEach((step) =>
+                    step.classList.add("is-scrubbed"),
+                );
+                const processorExit = phase(
+                    batcherTransition,
+                    0.2,
+                    0.42,
+                );
+                processorOpacity = 1 - processorExit;
+                const batcherEntrance = phase(
+                    batcherTransition,
+                    0.22,
+                    0.38,
+                );
+                const batcherExit = useCardPaths
+                    ? phase(cardHandoff, 0.92, 1)
+                    : phase(batchProcessorTransition, 0.35, 0.48);
+                const batchProcessorEntrance = useCardPaths
+                    ? phase(cardHandoff, 0.02, 0.08)
+                    : phase(batchProcessorTransition, 0.52, 0.65);
+                batcherOpacity = batcherEntrance * (1 - batcherExit);
+                batchProcessorOpacity =
+                    batchProcessorEntrance *
+                    (1 - exitProgress);
+                const batcherX = useCardPaths
+                    ? quadratic(
+                          48 * (1 - batcherEntrance),
+                          -window.innerWidth * 0.24,
+                          -window.innerWidth * 0.9,
+                          cardHandoff,
+                      )
+                    : 0;
+                const batcherY = useCardPaths
+                    ? 24 * (1 - batcherEntrance)
+                    : -12 * batcherExit;
+                const batchProcessorX = useCardPaths
+                    ? quadratic(
+                          window.innerWidth * 0.9,
+                          window.innerWidth * 0.3,
+                          0,
+                          cardHandoff,
+                      )
+                    : 0;
+                const batchProcessorY = useCardPaths
+                    ? 0
+                    : 12 * (1 - batchProcessorOpacity);
+
+                if (processorCopy) {
+                    processorCopy.style.opacity = String(processorOpacity);
+                    processorCopy.style.transform =
+                        `translate3d(${-window.innerWidth * 0.42 * processorExit}px, ${-24 * processorExit}px, 0) scale(1)`;
+                }
+                if (batcherCopy) {
+                    batcherCopy.style.opacity = String(batcherOpacity);
+                    batcherCopy.style.transform =
+                        `translate3d(${batcherX}px, ${batcherY}px, 0)`;
+                }
+                if (batchProcessorCopy) {
+                    batchProcessorCopy.style.opacity = String(
+                        batchProcessorOpacity,
+                    );
+                    batchProcessorCopy.style.transform =
+                        `translate3d(${batchProcessorX}px, ${batchProcessorY}px, 0)`;
+                }
+            } else {
+                this.steps.slice(2, 5).forEach((step) =>
+                    step.classList.remove("is-scrubbed"),
+                );
+                [processorCopy, batcherCopy, batchProcessorCopy].forEach(
+                    (copy) => {
+                        copy?.style.removeProperty("opacity");
+                        copy?.style.removeProperty("transform");
+                    },
+                );
+            }
+
+            if (this.producerLayer)
+                this.producerLayer.style.opacity = String(
+                    this.clamp(producerProgress * 1.7),
+                );
+            if (this.processorLayer)
+                this.processorLayer.style.opacity = String(
+                    this.clamp(processorProgress * 1.7),
+                );
+            if (this.batcherLayer)
+                this.batcherLayer.style.opacity = String(batcherProgress);
+            if (this.batchProcessorLayer)
+                this.batchProcessorLayer.style.opacity = String(
+                    batchProcessorProgress,
+                );
+
+            this.sourceWires?.forEach((wire, index) => {
+                this.renderWire(
+                    wire,
+                    index < this.producerCount,
+                    producerProgress,
+                );
+            });
+            this.processorWires?.forEach((wire) => {
+                this.renderWire(
+                    wire,
+                    Number(wire.dataset.processorWire) < this.processorCount && Number(wire.dataset.producerIndex) < this.producerCount,
+                    processorProgress,
+                );
+            });
+            this.batcherWires?.forEach((wire) => {
+                this.renderWire(
+                    wire,
+                    Number(wire.dataset.batcherWire) < this.processorCount && Number(wire.dataset.batcherIndex) < this.batcherKeyCount,
+                    batcherProgress,
+                );
+            });
+            this.batchProcessorWires?.forEach((wire) => {
+                const batcherIndex = Number(wire.dataset.batcherIndex);
+                const workerIndex = Number(wire.dataset.workerIndex);
+                this.renderWire(
+                    wire,
+                    batcherIndex < this.batcherKeyCount &&
+                        workerIndex < this.batchProcessorCount,
+                    batchProcessorProgress,
+                );
+            });
+
+            const targetOpacities = this.steps.map((_, index) => {
+                if (!lateSequenceStarted) return Number(index === activeStep);
+                return [
+                    0,
+                    0,
+                    processorOpacity,
+                    batcherOpacity,
+                    batchProcessorOpacity,
+                ][index];
+            });
+            this.steps?.forEach((step, index) => {
+                const opacity = targetOpacities[index] ?? 0;
+                const interactive = opacity >= 0.99;
+                const copy = step.querySelector<HTMLElement>(".bvx-copy");
+                step.classList.toggle("is-active", index === activeStep);
+                step.classList.toggle("is-interactive", interactive);
+                copy?.setAttribute(
+                    "aria-hidden",
+                    String(opacity < 0.01),
+                );
+                copy?.toggleAttribute("inert", !interactive);
+            });
+
+            if (this.status) {
+                if (batchProcessorTransition >= 0.55)
+                    this.status.textContent = "batch processors";
+                else if (batcherTransition >= 0.55)
+                    this.status.textContent = "batchers";
+                else
+                    this.status.textContent = [
+                        "source",
+                        "producers",
+                        "processors",
+                    ][Math.min(activeStep, 2)];
+            }
+        }
+
+        renderWire(wire: SVGGElement, active: boolean, progress: number) {
+            wire.style.opacity = String(active ? this.clamp(progress) : 0);
+        }
+
+        measureWires() {
+            const svg = this.querySelector<SVGSVGElement>("[data-wires]");
+            if (!svg || !this.sourceNode) return;
+            const svgRect = svg.getBoundingClientRect();
+            if (!svgRect.width || !svgRect.height) return;
+            svg.setAttribute(
+                "viewBox",
+                `0 0 ${svgRect.width} ${svgRect.height}`,
+            );
+
+            const source = this.anchor(this.sourceNode, "right", svgRect);
+            this.sourceWires.forEach((wire, index) => {
+                const target = this.producerNodes[index];
+                if (!target || index >= this.producerCount) return;
+                this.setWirePath(
+                    wire,
+                    this.curve(source, this.anchor(target, "left", svgRect)),
+                );
+            });
+
+            this.processorWires.forEach((wire) => {
+                const index = Number(wire.dataset.processorWire);
+                const producerIndex = Number(wire.dataset.producerIndex);
+                const target = this.processorNodes[index];
+                const origin = this.producerNodes[producerIndex];
+                if (!target || !origin || index >= this.processorCount || producerIndex >= this.producerCount) return;
+                this.setWirePath(
+                    wire,
+                    this.curve(
+                        this.anchor(origin, "right", svgRect),
+                        this.anchor(target, "left", svgRect),
+                    ),
+                );
+            });
+
+            this.batcherWires.forEach((wire) => {
+                const index = Number(wire.dataset.batcherWire);
+                const origin = this.processorNodes[index];
+                const target =
+                    this.batcherNodes[Number(wire.dataset.batcherIndex)];
+                if (!origin || !target || index >= this.processorCount) return;
+                this.setWirePath(
+                    wire,
+                    this.curve(
+                        this.anchor(origin, "right", svgRect),
+                        this.anchor(target, "left", svgRect),
+                    ),
+                );
+            });
+
+            this.batchProcessorWires.forEach((wire) => {
+                const batcherIndex = Number(wire.dataset.batcherIndex);
+                const workerIndex = Number(wire.dataset.workerIndex);
+                const origin = this.batcherNodes[batcherIndex];
+                const target = this.batchProcessorNodes.find(
+                    (node) =>
+                        Number(node.dataset.batcherIndex) === batcherIndex &&
+                        Number(node.dataset.workerIndex) === workerIndex,
+                );
+                if (
+                    !origin ||
+                    !target ||
+                    batcherIndex >= this.batcherKeyCount ||
+                    workerIndex >= this.batchProcessorCount
+                )
+                    return;
+                this.setWirePath(
+                    wire,
+                    this.curve(
+                        this.anchor(origin, "right", svgRect),
+                        this.anchor(target, "left", svgRect),
+                    ),
+                );
+            });
+        }
+
+        anchor(element: HTMLElement, side: "left" | "right", frame: DOMRect) {
+            const rect = element.getBoundingClientRect();
+            if (this.dataset.static === "true") return {
+                x: rect.left + rect.width / 2 - frame.left,
+                y: (side === "left" ? rect.top : rect.bottom) - frame.top,
+            };
+            return {
+                x: (side === "left" ? rect.left : rect.right) - frame.left,
+                y: rect.top + rect.height / 2 - frame.top,
+            };
+        }
+
+        curve(start: { x: number; y: number }, end: { x: number; y: number }) {
+            if (this.dataset.static === "true") {
+                const bend = Math.max(16, (end.y - start.y) * 0.48);
+                return `M ${start.x} ${start.y} C ${start.x} ${start.y + bend}, ${end.x} ${end.y - bend}, ${end.x} ${end.y}`;
+            }
+            const bend = Math.max(32, (end.x - start.x) * 0.48);
+            return `M ${start.x} ${start.y} C ${start.x + bend} ${start.y}, ${end.x - bend} ${end.y}, ${end.x} ${end.y}`;
+        }
+
+        setWirePath(wire: SVGGElement, path: string) {
+            const base = wire.querySelector<SVGPathElement>(".bvx-wire-base");
+            base?.setAttribute("d", path);
+        }
+
+        clamp(value: number) {
+            return Math.max(0, Math.min(1, value));
+        }
+    }
+
+    if (!customElements.get("broadway-scroll-explainer")) {
+        customElements.define(
+            "broadway-scroll-explainer",
+            BroadwayScrollExplainer,
+        );
+    }
+</script>
+
+<style>
+    :global(
+        #main.container.post-page
+            article.post
+            .entry:has(broadway-scroll-explainer)
+    ) {
+        overflow: visible !important;
+    }
+
+    broadway-scroll-explainer {
+        --bvx-green: var(--color-links);
+        --bvx-ink: var(--color-text);
+        --bvx-muted: var(--color-text-dimmer);
+        --bvx-line: color-mix(
+            in srgb,
+            var(--color-links) 34%,
+            var(--color-box-borders)
+        );
+        --bvx-panel: color-mix(
+            in srgb,
+            var(--color-site-background) 98%,
+            transparent
+        );
+        --bvx-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        display: block;
+        width: 100vw;
+        margin: clamp(3rem, 8vw, 7rem) calc(50% - 50vw);
+        color: var(--bvx-ink);
+    }
+
+    .bvx-scroll {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        min-height: 500vh;
+        margin: 0 auto;
+    }
+
+    .bvx-story {
+        grid-row: 1;
+        grid-column: 1;
+        position: relative;
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .bvx-step {
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 12vh clamp(1.25rem, 4vw, 5rem);
+    }
+
+    .bvx-copy-positioner {
+        width: min(100%, 30rem);
+        pointer-events: none;
+    }
+
+    @media (min-width: 901px) {
+        .bvx-step[data-step="3"] .bvx-copy-positioner,
+        .bvx-step[data-step="4"] .bvx-copy-positioner {
+            width: min(100%, 64rem);
+        }
+
+        .bvx-step[data-step="3"] .bvx-copy-positioner.is-pinned,
+        .bvx-step[data-step="4"] .bvx-copy-positioner.is-pinned {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            z-index: 3;
+            width: min(calc(100vw - 4rem), 64rem);
+            transform: translateX(-50%);
+        }
+
+        .bvx-copy-positioner.is-pinned .bvx-copy {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(18rem, 0.9fr);
+            column-gap: clamp(1.5rem, 3vw, 3rem);
+        }
+
+        .bvx-copy-positioner.is-pinned .bvx-copy :global(h2),
+        .bvx-copy-positioner.is-pinned .bvx-copy :global(p) {
+            grid-column: 1;
+        }
+
+        .bvx-copy-positioner.is-pinned .bvx-control {
+            grid-row: 1 / span 8;
+            grid-column: 2;
+            align-self: center;
+            margin-top: 0;
+            padding-top: 0;
+            padding-left: clamp(1.5rem, 3vw, 3rem);
+            border-top: 0;
+            border-left: 1px solid var(--color-box-borders);
+        }
+    }
+
+    .bvx-copy {
+        width: 100%;
+        padding: clamp(1.25rem, 2.5vw, 2rem);
+        border: 1px solid
+            color-mix(in srgb, var(--color-box-borders) 78%, transparent);
+        background: var(--bvx-panel);
+        box-shadow: 0 1.5rem 5rem
+            color-mix(
+                in srgb,
+                var(--color-site-background-accented) 55%,
+                transparent
+            );
+        opacity: 0;
+        pointer-events: none;
+        transform: translate3d(0, 1rem, 0) scale(0.985);
+        transition:
+            opacity 200ms var(--bvx-ease-out),
+            transform 200ms var(--bvx-ease-out),
+            border-color 200ms ease;
+    }
+
+    .bvx-step.is-active .bvx-copy {
+        border-color: color-mix(
+            in srgb,
+            var(--bvx-green) 40%,
+            var(--color-box-borders)
+        );
+    }
+
+    .bvx-step.is-active:not(.is-scrubbed) .bvx-copy {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    .bvx-step.is-scrubbed .bvx-copy {
+        transition: none;
+    }
+
+    .bvx-step.is-interactive .bvx-copy {
+        pointer-events: auto;
+    }
+
+    .bvx-layer-label,
+    .bvx-layer-note,
+    .bvx-legend,
+    .bvx-control,
+    .bvx-worker {
+        font-family: var(--font-mono);
+    }
+
+    :global(#main.container.post-page > article.post .entry) .bvx-copy :global(h2) {
+        margin: 0 0 0.75rem;
+        color: var(--bvx-ink);
+        font-family: var(--font-heading);
+        font-size: clamp(1.8rem, 3vw, 3.3rem);
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        line-height: 0.98;
+        text-wrap: balance;
+    }
+
+    .bvx-copy :global(h2)::before {
+        content: none !important;
+    }
+
+    .bvx-copy :global(p) {
+        margin: 0;
+        color: var(--color-entry-text);
+        font-size: clamp(0.95rem, 1.1vw, 1rem);
+        line-height: 1.55;
+    }
+
+    .bvx-stage-shell {
+        grid-row: 1;
+        grid-column: 1;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        align-self: start;
+        height: 100vh;
+    }
+
+    .bvx-stage {
+        position: relative;
+        display: flex;
+        height: 100%;
+        min-height: 38rem;
+        align-items: center;
+        overflow: hidden;
+        padding-inline: clamp(1rem, 4vw, 4rem);
+    }
+
+    .bvx-stage::before {
+        position: absolute;
+        inset: 13% clamp(1rem, 4vw, 4rem);
+        border: 1px solid
+            color-mix(in srgb, var(--color-box-borders) 65%, transparent);
+        background-image: radial-gradient(
+            circle,
+            color-mix(in srgb, var(--bvx-green) 16%, transparent) 0.65px,
+            transparent 0.8px
+        );
+        background-size: 18px 18px;
+        content: "";
+        mask-image: linear-gradient(
+            to right,
+            transparent,
+            black 12%,
+            black 88%,
+            transparent
+        );
+    }
+
+    .bvx-stage-grid {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr 1.15fr 0.9fr 1.25fr;
+        gap: clamp(2.75rem, 4vw, 4.5rem);
+        width: min(100%, 100rem);
+        height: min(69vh, 42rem);
+        min-height: 32rem;
+        flex: 0 0 auto;
+        align-items: stretch;
+        padding: 2rem 1rem;
+        transform: translate3d(0, 0, 0);
+    }
+
+    .bvx-wires {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+    }
+
+    .bvx-wire {
+        opacity: 0;
+        transition: none;
+    }
+
+    .bvx-wire-base {
+        fill: none;
+        vector-effect: non-scaling-stroke;
+    }
+
+    .bvx-wire-base {
+        stroke: var(--bvx-line);
+        stroke-linecap: round;
+        stroke-width: 1.4;
+    }
+
+    .bvx-layer {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .bvx-layer-label,
+    .bvx-layer-note {
+        position: absolute;
+        left: 50%;
+        width: max-content;
+        max-width: 100%;
+        transform: translateX(-50%);
+        color: var(--color-text-faint);
+        font-size: 0.58rem;
+        letter-spacing: 0.13em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .bvx-layer-label {
+        top: 0;
+    }
+    .bvx-layer-note {
+        bottom: 0;
+    }
+    .bvx-layer--producers,
+    .bvx-layer--processors,
+    .bvx-layer--batchers,
+    .bvx-layer--batch-processors {
+        opacity: 0;
+    }
+
+    .bvx-source {
+        position: relative;
+        width: min(100%, 22rem);
+        margin: auto;
+    }
+
+    .bvx-source-feed {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% - 0.1rem);
+        left: 0;
+        height: 4.5rem;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .bvx-source-feed i {
+        position: absolute;
+        bottom: 0;
+        left: var(--bvx-event-left);
+        width: 0.42rem;
+        height: 0.42rem;
+        animation: bvx-event-in 2.7s linear infinite;
+        background: var(--bvx-green);
+        box-shadow: var(--color-status-glow);
+        opacity: 0;
+    }
+
+    .bvx-source-feed i:nth-child(1) {
+        --bvx-event-left: 7%;
+        --bvx-event-drift: -1.25rem;
+        animation-delay: -0.2s;
+    }
+
+    .bvx-source-feed i:nth-child(2) {
+        --bvx-event-left: 7%;
+        --bvx-event-drift: 0.85rem;
+        animation-delay: -1.15s;
+    }
+
+    .bvx-source-feed i:nth-child(3) {
+        --bvx-event-left: 7%;
+        --bvx-event-drift: -0.55rem;
+        animation-delay: -2.05s;
+    }
+
+    .bvx-source-queue {
+        position: relative;
+        display: grid;
+        width: 100%;
+        text-align: center;
+    }
+
+    .bvx-source-queue strong {
+        position: absolute;
+        z-index: 1;
+        top: 50%;
+        right: 13%;
+        left: 12%;
+        margin: 0;
+        font-family: var(--font-mono);
+        font-size: clamp(1.15rem, 2vw, 2rem);
+        letter-spacing: -0.06em;
+        line-height: 1;
+        transform: translateY(-50%);
+    }
+
+    .bvx-queue-cylinder {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
+    .bvx-cylinder-body,
+    .bvx-cylinder-rear,
+    .bvx-cylinder-front {
+        fill: color-mix(
+            in srgb,
+            var(--color-site-background) 86%,
+            var(--bvx-green)
+        );
+    }
+
+    .bvx-cylinder-edge,
+    .bvx-cylinder-rear,
+    .bvx-cylinder-front {
+        stroke: color-mix(
+            in srgb,
+            var(--bvx-green) 62%,
+            var(--color-box-borders)
+        );
+        stroke-width: 1.3;
+        vector-effect: non-scaling-stroke;
+    }
+
+    .bvx-cylinder-edge,
+    .bvx-cylinder-rim,
+    .bvx-cylinder-rail,
+    .bvx-cylinder-outlet {
+        fill: none;
+    }
+
+    .bvx-cylinder-rim,
+    .bvx-cylinder-rail {
+        stroke: color-mix(
+            in srgb,
+            var(--bvx-green) 30%,
+            var(--color-box-borders)
+        );
+        stroke-width: 1;
+        vector-effect: non-scaling-stroke;
+    }
+
+    .bvx-cylinder-rail {
+        stroke-linecap: round;
+    }
+
+    .bvx-cylinder-outlet {
+        stroke: color-mix(
+            in srgb,
+            var(--bvx-green) 55%,
+            var(--color-box-borders)
+        );
+        stroke-width: 1.2;
+        vector-effect: non-scaling-stroke;
+    }
+
+    .bvx-node-stack {
+        display: grid;
+        align-content: center;
+        gap: clamp(0.45rem, 1vh, 0.75rem);
+        min-width: 0;
+        height: 100%;
+    }
+
+    .bvx-batch-processor-groups {
+        display: grid;
+        gap: clamp(0.7rem, 1.5vh, 1rem);
+        align-content: center;
+        min-width: 0;
+        height: 100%;
+    }
+
+    .bvx-batch-processor-group {
+        display: none;
+        min-width: 0;
+        gap: 0.35rem;
+    }
+
+    .bvx-batch-processor-group.is-active {
+        display: grid;
+    }
+
+    .bvx-batch-processor-group .bvx-node-stack {
+        height: auto;
+    }
+
+    .bvx-batch-group-label {
+        color: var(--bvx-green);
+        font-family: var(--font-mono);
+        font-size: 0.58rem;
+        letter-spacing: 0.06em;
+    }
+
+    .bvx-worker {
+        display: none;
+        min-width: 0;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: clamp(0.45rem, 1vw, 0.8rem);
+        align-items: center;
+        padding: clamp(0.55rem, 1vw, 0.8rem);
+        border: 1px solid
+            color-mix(in srgb, var(--bvx-green) 28%, var(--color-box-borders));
+        background: color-mix(
+            in srgb,
+            var(--color-site-background) 94%,
+            transparent
+        );
+        opacity: 0;
+        transform: scale(0.94);
+    }
+
+    .bvx-worker.is-active {
+        display: grid;
+        animation: bvx-worker-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .bvx-worker-index {
+        color: var(--bvx-green);
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+    }
+
+    .bvx-worker > span:nth-child(2) {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+    }
+
+    .bvx-worker small {
+        color: var(--color-text-faint);
+        font-size: 0.52rem;
+        letter-spacing: 0.1em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+
+    .bvx-worker strong {
+        overflow: hidden;
+        color: var(--bvx-ink);
+        font-size: clamp(0.75rem, 0.85vw, 0.8rem);
+        font-weight: 500;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .bvx-worker-status {
+        width: 0.35rem;
+        height: 0.35rem;
+        border-radius: 50%;
+        background: var(--bvx-green);
+        box-shadow: var(--color-status-glow);
+    }
+
+    .bvx-control {
+        display: block;
+        margin-top: 1.5rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid var(--color-box-borders);
+    }
+
+    .bvx-control > span:first-child {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        color: var(--bvx-muted);
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+    }
+
+    .bvx-control output {
+        color: var(--bvx-green);
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+
+    .bvx-control input {
+        width: 100%;
+        min-height: 2.75rem;
+        margin: 0.25rem 0 0;
+        accent-color: var(--bvx-green);
+        cursor: ew-resize;
+    }
+
+    .bvx-range-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: -0.45rem;
+        color: var(--color-text-faint);
+        font-size: 0.58rem;
+    }
+
+    .bvx-range-labels i {
+        font-style: normal;
+    }
+
+    .bvx-legend {
+        position: absolute;
+        right: 1rem;
+        bottom: 2.2rem;
+        left: 1rem;
+        display: flex;
+        justify-content: space-between;
+        color: var(--color-text-faint);
+        font-size: 0.58rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .bvx-legend span:first-child {
+        display: inline-flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .bvx-legend i {
+        width: 1.6rem;
+        height: 1px;
+        background: var(--bvx-green);
+        box-shadow: var(--color-status-glow);
+    }
+
+    @keyframes bvx-worker-in {
+        from {
+            opacity: 0;
+            transform: scale(0.94) translateX(-0.7rem);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateX(0);
+        }
+    }
+
+    @keyframes bvx-event-in {
+        0% {
+            opacity: 0;
+            transform: translate3d(
+                    var(--bvx-event-drift),
+                    -3.8rem,
+                    0
+                )
+                scale(0.75);
+        }
+        18% {
+            opacity: 0.38;
+        }
+        76% {
+            opacity: 0.9;
+        }
+        100% {
+            opacity: 0;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        .bvx-copy,
+        .bvx-worker {
+            box-shadow: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .bvx-layer--producers,
+        .bvx-layer--processors,
+        .bvx-layer--batchers,
+        .bvx-layer--batch-processors,
+        .bvx-worker {
+            transition: opacity 180ms ease;
+            transform: none;
+        }
+
+        .bvx-copy,
+        .bvx-stage-grid {
+            transition: none;
+        }
+
+        .bvx-stage-grid {
+            will-change: auto;
+        }
+
+        .bvx-source-feed {
+            display: none;
+        }
+
+        .bvx-worker.is-active {
+            animation: none;
+            opacity: 1;
+        }
+    }
+
+    .bvx-reading-toggle {
+        display: block;
+        margin: 0 auto 1rem;
+        padding: 0.65rem 1rem;
+        min-height: 44px;
+        color: var(--color-text-dimmer);
+        background: var(--color-site-background);
+        border: 1px solid var(--color-box-borders);
+        font: 0.75rem var(--font-mono);
+        cursor: pointer;
+    }
+    .bvx-reading-toggle:focus-visible { outline: 2px solid var(--color-links); outline-offset: 3px; }
+    .bvx-reading-toggle[aria-pressed="true"] { border-color: var(--color-links); }
+    @media (max-width: 1200px), (max-height: 800px), (prefers-reduced-motion: reduce) { .bvx-reading-toggle { display: none; } }
+    broadway-scroll-explainer:not([data-ready]) .bvx-reading-toggle { display: none; }
+    .bvx-stage::before { content: none; }
+    .bvx-copy { box-shadow: none; }
+    .bvx-worker-status { display: none; }
+    .bvx-worker--processor, .bvx-worker--batch-processor { padding: 0.6rem; }
+    .bvx-worker--processor small, .bvx-worker--batch-processor small { display: none; }
+    .bvx-node-stack { gap: 0.4rem; }
+    .bvx-worker.is-active { animation: none; opacity: 1; transform: none; }
+    .bvx-worker small, .bvx-layer-label, .bvx-layer-note { font-size: 0.65rem; }
+    .bvx-layer-label, .bvx-layer-note { letter-spacing: 0.04em; }
+    .bvx-stage-grid { height: min(56vh, 34rem); min-height: 28rem; }
+    .bvx-wire-base { stroke-width: 1; stroke: color-mix(in srgb, var(--color-text) 25%, var(--color-site-background)); }
+    .bvx-wire[data-flow-active="true"] .bvx-wire-base { stroke: var(--color-links); stroke-width: 1.5; }
+    .bvx-worker[data-flow-active="true"] { border-color: var(--color-links); background: color-mix(in srgb, var(--color-links) 6%, var(--color-site-background)); }
+    .bvx-worker small { white-space: nowrap; }
+    .bvx-layer--batch-processors .bvx-layer-note { display: none; }
+    .bvx-worker { grid-template-columns: auto minmax(0, 1fr); transition: border-color 160ms ease-out, background-color 160ms ease-out; }
+    .bvx-flow-controls { position: absolute; bottom: 1rem; left: clamp(1rem, 4vw, 4rem); right: clamp(1rem, 4vw, 4rem); display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.35rem 1.5rem; font-family: var(--font-mono); }
+    .bvx-flow-controls p { margin: 0; color: var(--color-text); font: 0.8rem/1.5 var(--font-mono); min-height: 1.5em; }
+    broadway-scroll-explainer:is([data-flow-chapter="0"], [data-flow-chapter="1"], [data-flow-chapter="2"]) .bvx-flow-batch-settings { display: none; }
+    .bvx-flow-context { color: var(--color-text-dimmer); font-size: 0.65rem; }
+    .bvx-flow-buttons { display: flex; gap: 0.5rem; grid-column: 2; grid-row: 1 / span 2; }
+    .bvx-flow-buttons button { min-height: 44px; padding: 0.5rem 0.75rem; font: 0.75rem var(--font-mono); color: var(--color-text); background: var(--color-site-background); border: 1px solid var(--color-box-borders); border-radius: 4px; cursor: pointer; }
+    .bvx-flow-buttons button:hover { border-color: var(--color-links); }
+    .bvx-flow-buttons button:focus-visible { outline: 2px solid var(--color-links); outline-offset: 3px; }
+    .bvx-flow-buttons button:disabled { opacity: 0.5; cursor: default; }
+    .bvx-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    :global(.bvx-flow-packet) { fill: var(--color-links); pointer-events: none; }
+    :global(.bvx-flow-packet text) { font: 12px var(--font-mono); paint-order: stroke; stroke: var(--color-site-background); stroke-width: 4px; stroke-linejoin: round; }
+    :global(.bvx-flow-packet rect) { stroke: var(--color-site-background); stroke-width: 1px; }
+    @media (prefers-reduced-motion: reduce) { .bvx-worker { transition: none; } }
+    broadway-scroll-explainer:not([data-ready]) .bvx-flow-controls { display: none; }
+    broadway-scroll-explainer:not([data-ready]),
+    broadway-scroll-explainer[data-static="true"] {
+        width: min(100%, 42.5rem);
+        margin-inline: auto;
+        .bvx-scroll { display: block; min-height: 0; }
+        .bvx-story { pointer-events: auto; }
+        .bvx-step { min-height: 0; padding: 0; margin-block: 3rem; }
+        .bvx-copy-positioner { width: 100%; max-width: none; }
+        .bvx-copy { opacity: 1; transform: none; pointer-events: auto; padding: 0; border: 0; background: none; transition: none; }
+        .bvx-copy :global(p) { font-size: 1rem; line-height: 1.65; }
+        .bvx-stage-shell { display: none; }
+        .bvx-control { margin: 1rem 0 0; padding-top: 0; border-top: 0; max-width: none; }
+    }
+    broadway-scroll-explainer:not([data-ready]) .bvx-control { display: none; }
+    @media (max-width: 759px) {
+        :global(#main.container.post-page > article.post .entry) .bvx-copy :global(h2) { font-size: clamp(1.45rem, 7vw, 2.3rem); }
+    }
+    :global(.broadway-reading-note) { margin: 2rem auto; max-width: 42.5rem; padding: 0.75rem 1rem; border-left: 2px solid var(--color-links); background: color-mix(in srgb, var(--color-links) 4%, transparent); }
+    :global(.broadway-reading-note p) { margin: 0; font-size: 0.9rem; line-height: 1.6; }
+</style>

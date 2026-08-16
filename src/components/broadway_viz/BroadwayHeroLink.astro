@@ -1,0 +1,445 @@
+<section class="broadway-hero" aria-label="Broadway introduction">
+    <canvas class="broadway-hero__ribbon-field" aria-hidden="true"></canvas>
+    <span class="broadway-hero__wash" aria-hidden="true"></span>
+
+    <a
+        class="broadway-wordmark"
+        href="https://elixir-broadway.org/"
+        aria-label="Open the Broadway website"
+        target="_blank"
+    >
+        <span class="broadway-wordmark__label" aria-hidden="true">BROADWAY</span>
+    </a>
+
+    <a class="broadway-scroll-cue" href="#broadway-start">
+        <span>Scroll to start</span>
+        <span class="broadway-scroll-cue__track" aria-hidden="true">
+            <i></i>
+        </span>
+    </a>
+</section>
+
+<script>
+    import { createBroadwayRibbonFieldRenderer } from "./broadwayRibbonFieldRenderer";
+
+    type Rgb = readonly [number, number, number];
+
+    const parseHexColor = (value: string, fallback: Rgb): Rgb => {
+        const color = value.trim();
+        const shortHex = /^#([\da-f])([\da-f])([\da-f])$/i.exec(color);
+        const longHex = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(
+            color,
+        );
+
+        if (shortHex) {
+            return [
+                Number.parseInt(shortHex[1] + shortHex[1], 16),
+                Number.parseInt(shortHex[2] + shortHex[2], 16),
+                Number.parseInt(shortHex[3] + shortHex[3], 16),
+            ];
+        }
+
+        if (longHex) {
+            return [
+                Number.parseInt(longHex[1], 16),
+                Number.parseInt(longHex[2], 16),
+                Number.parseInt(longHex[3], 16),
+            ];
+        }
+
+        return fallback;
+    };
+
+    const broadwayHero = document.querySelector<HTMLElement>(".broadway-hero");
+    const ribbonCanvas = broadwayHero?.querySelector<HTMLCanvasElement>(
+        ".broadway-hero__ribbon-field",
+    );
+
+    if (broadwayHero && ribbonCanvas && !ribbonCanvas.dataset.ready) {
+        ribbonCanvas.dataset.ready = "true";
+
+        const lightMode = window.matchMedia("(prefers-color-scheme: light)");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        let frame = 0;
+        let visible = true;
+
+        const readOptions = () => {
+            const styles = getComputedStyle(broadwayHero);
+            const isLight = lightMode.matches;
+
+            return {
+                speed: 0.82,
+                pointerAmount: reducedMotion.matches ? 0 : 0.7,
+                smoothing: 0.035,
+                background: parseHexColor(
+                    styles.getPropertyValue("--color-site-background"),
+                    isLight ? [244, 241, 235] : [13, 17, 23],
+                ),
+                accent: parseHexColor(
+                    styles.getPropertyValue("--color-links"),
+                    isLight ? [74, 107, 86] : [63, 185, 80],
+                ),
+                highlight: parseHexColor(
+                    styles.getPropertyValue("--color-text"),
+                    isLight ? [28, 25, 23] : [230, 237, 243],
+                ),
+                lightMode: isLight,
+            };
+        };
+
+        let ribbonOptions = readOptions();
+        const renderer = createBroadwayRibbonFieldRenderer(
+            ribbonCanvas,
+            () => ribbonOptions,
+        );
+
+        if (renderer) {
+            const stop = () => {
+                broadwayHero.dataset.animating = "false";
+                if (frame) cancelAnimationFrame(frame);
+                frame = 0;
+            };
+
+            const tick = (now: number) => {
+                renderer.render(now);
+                frame = requestAnimationFrame(tick);
+            };
+
+            const start = () => {
+                if (reducedMotion.matches) {
+                    stop();
+                    renderer.render();
+                    return;
+                }
+
+                if (!frame && visible && !document.hidden) {
+                    broadwayHero.dataset.animating = "true";
+                    frame = requestAnimationFrame(tick);
+                }
+            };
+
+            const resize = () => {
+                const bounds = broadwayHero.getBoundingClientRect();
+                renderer.resize(bounds.width, bounds.height);
+                renderer.render();
+                start();
+            };
+
+            const handlePointerMove = (event: PointerEvent) => {
+                const bounds = broadwayHero.getBoundingClientRect();
+                renderer.setPointer(
+                    (event.clientX - bounds.left) / Math.max(bounds.width, 1),
+                    1 -
+                        (event.clientY - bounds.top) /
+                            Math.max(bounds.height, 1),
+                );
+            };
+
+            const handleDocumentVisibility = () => {
+                if (document.hidden) stop();
+                else start();
+            };
+
+            const handlePreferenceChange = () => {
+                stop();
+                ribbonOptions = readOptions();
+                renderer.render();
+                start();
+            };
+
+            const visibilityObserver = new IntersectionObserver(([entry]) => {
+                visible = entry?.isIntersecting ?? true;
+                if (visible) start();
+                else stop();
+            });
+            const resizeObserver = new ResizeObserver(resize);
+
+            const cleanup = () => {
+                stop();
+                resizeObserver.disconnect();
+                visibilityObserver.disconnect();
+                broadwayHero.removeEventListener("pointermove", handlePointerMove);
+                broadwayHero.removeEventListener(
+                    "pointerleave",
+                    renderer.resetPointer,
+                );
+                document.removeEventListener(
+                    "visibilitychange",
+                    handleDocumentVisibility,
+                );
+                lightMode.removeEventListener("change", handlePreferenceChange);
+                reducedMotion.removeEventListener(
+                    "change",
+                    handlePreferenceChange,
+                );
+                renderer.destroy();
+            };
+
+            resizeObserver.observe(broadwayHero);
+            visibilityObserver.observe(broadwayHero);
+            broadwayHero.addEventListener("pointermove", handlePointerMove, {
+                passive: true,
+            });
+            broadwayHero.addEventListener("pointerleave", renderer.resetPointer);
+            document.addEventListener(
+                "visibilitychange",
+                handleDocumentVisibility,
+            );
+            lightMode.addEventListener("change", handlePreferenceChange);
+            reducedMotion.addEventListener("change", handlePreferenceChange);
+            document.addEventListener("astro:before-swap", cleanup, { once: true });
+            resize();
+        }
+    }
+</script>
+
+<style>
+    :global(html:has(.broadway-hero)) {
+        scroll-behavior: smooth;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        :global(html:has(.broadway-hero)) { scroll-behavior: auto; }
+    }
+
+    .broadway-hero {
+        --broadway-hero-surface: color-mix(
+            in oklch,
+            var(--color-site-background) 88%,
+            var(--color-links)
+        );
+        position: relative;
+        display: grid;
+        width: 100vw;
+        min-height: max(32rem, calc(100dvh - 17.25rem));
+        place-items: center;
+        margin-left: calc(50% - 50vw);
+        overflow: hidden;
+        border-top: 1px solid
+            color-mix(in oklch, var(--color-links) 38%, var(--color-box-borders));
+        border-bottom: 1px solid
+            color-mix(in oklch, var(--color-links) 24%, var(--color-box-borders));
+        background:
+            radial-gradient(
+                ellipse at 72% 38%,
+                color-mix(in oklch, var(--color-links) 26%, transparent),
+                transparent 42%
+            ),
+            var(--broadway-hero-surface);
+        box-sizing: border-box;
+        isolation: isolate;
+    }
+
+    .broadway-hero__ribbon-field,
+    .broadway-hero__wash {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    .broadway-hero__ribbon-field {
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .broadway-hero__wash {
+        z-index: 1;
+        background:
+            radial-gradient(
+                ellipse at 50% 51%,
+                color-mix(
+                    in oklch,
+                    var(--color-site-background) 20%,
+                    transparent
+                ) 0%,
+                transparent 54%
+            ),
+            linear-gradient(
+                to bottom,
+                color-mix(
+                    in oklch,
+                    var(--color-site-background) 18%,
+                    transparent
+                ),
+                transparent 26%,
+                transparent 74%,
+                color-mix(
+                    in oklch,
+                    var(--color-site-background) 22%,
+                    transparent
+                )
+            );
+    }
+
+    .broadway-wordmark {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        width: min(98vw, 112rem);
+        place-items: center;
+        margin: 0 auto;
+        color: inherit;
+        text-decoration: none !important;
+        text-shadow: none !important;
+        transform: translate3d(0, -0.5rem, 0);
+        transition: filter 180ms ease;
+    }
+
+    .broadway-wordmark:hover,
+    .broadway-wordmark:focus-visible {
+        filter: saturate(1.1) contrast(1.04);
+        outline: none;
+    }
+
+    .broadway-wordmark:focus-visible {
+        outline: 2px dashed var(--color-links-hover);
+        outline-offset: 0.65rem;
+    }
+
+    .broadway-wordmark__label {
+        font-family: var(--font-display);
+        font-size: clamp(4.25rem, 16.5vw, 16rem);
+        font-weight: 800;
+        line-height: 0.8;
+        letter-spacing: -0.072em;
+        color: var(--color-text);
+        paint-order: stroke fill;
+        text-align: center;
+        text-shadow:
+            0.032em 0.04em 0 var(--broadway-hero-surface),
+            0 0 0.14em var(--broadway-hero-surface);
+        -webkit-text-stroke: 0.016em
+            color-mix(
+                in oklch,
+                var(--color-site-background) 76%,
+                transparent
+            );
+        white-space: nowrap;
+    }
+
+    .broadway-scroll-cue {
+        position: absolute;
+        z-index: 3;
+        bottom: clamp(1.5rem, 4vh, 3.5rem);
+        left: 50%;
+        display: grid;
+        width: max-content;
+        justify-items: center;
+        gap: 0.65rem;
+        margin: 0;
+        color: var(--color-text-dimmer);
+        font-family: var(--font-mono);
+        font-size: 0.64rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-decoration: none !important;
+        text-shadow: none !important;
+        text-transform: uppercase;
+        transform: translate3d(-50%, 0, 0);
+        transition:
+            color 180ms ease,
+            transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .broadway-scroll-cue:hover,
+    .broadway-scroll-cue:focus-visible {
+        color: var(--color-links-hover);
+        transform: translate3d(-50%, 0.2rem, 0);
+    }
+
+    .broadway-scroll-cue:focus-visible {
+        outline: 2px dashed var(--color-links-hover);
+        outline-offset: 0.5rem;
+    }
+
+    .broadway-scroll-cue__track {
+        position: relative;
+        width: 1px;
+        height: clamp(2.75rem, 7vh, 4.5rem);
+        background: color-mix(
+            in oklch,
+            var(--color-links) 38%,
+            var(--color-box-borders)
+        );
+    }
+
+    .broadway-scroll-cue__track::after {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0.48rem;
+        height: 0.48rem;
+        border-right: 1px solid currentColor;
+        border-bottom: 1px solid currentColor;
+        content: "";
+        transform: translate3d(-50%, -0.12rem, 0) rotate(45deg);
+    }
+
+    .broadway-scroll-cue__track i {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 0.3rem;
+        height: 0.3rem;
+        background: var(--color-links);
+        box-shadow: var(--color-status-glow);
+        animation: broadway-scroll-cue-drop 1.8s
+            cubic-bezier(0.22, 1, 0.36, 1) infinite;
+        transform: translate3d(-50%, 0, 0);
+    }
+
+    @keyframes broadway-scroll-cue-drop {
+        0% {
+            opacity: 0;
+            transform: translate3d(-50%, 0, 0);
+        }
+        20%,
+        75% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: translate3d(
+                -50%,
+                calc(clamp(2.75rem, 7vh, 4.5rem) - 0.65rem),
+                0
+            );
+        }
+    }
+
+    @media (max-width: 520px) {
+        .broadway-hero {
+            min-height: max(28rem, calc(100dvh - 24rem));
+        }
+
+        .broadway-wordmark {
+            width: 104vw;
+        }
+
+        .broadway-wordmark__label {
+            font-size: clamp(3.5rem, 17vw, 7.5rem);
+            letter-spacing: -0.078em;
+        }
+    }
+
+    .broadway-hero:not([data-animating="true"]) .broadway-scroll-cue__track i {
+        animation-play-state: paused;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .broadway-wordmark,
+        .broadway-scroll-cue__track i {
+            animation: none;
+            transition-duration: 0.01ms;
+        }
+
+        .broadway-scroll-cue__track i {
+            opacity: 1;
+            transform: translate3d(
+                -50%,
+                calc(clamp(2.75rem, 7vh, 4.5rem) - 0.65rem),
+                0
+            );
+        }
+    }
+</style>

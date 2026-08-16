@@ -7,7 +7,7 @@
     "generate-webp": "node scripts/generate-webp.mjs",
     "predev": "npm run generate-webp",
     "prebuild": "npm run generate-webp",
-    "dev": "astro dev",
+    "dev": "astro dev --host 0.0.0.0",
     "start": "astro dev",
     "build": "astro build",
     "test": "npm run build && node --test",

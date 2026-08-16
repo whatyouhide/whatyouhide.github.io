@@ -1,0 +1,84 @@
+---
+interface Props {
+    href: string;
+    favicon?: string;
+    title?: string;
+    bold?: boolean;
+}
+
+const {
+    href,
+    favicon,
+    title,
+    bold = false,
+} = Astro.props;
+
+const targetUrl = new URL(href, Astro.url);
+const faviconUrl = favicon ?? new URL("/favicon.ico", targetUrl.origin).toString();
+---
+
+<a
+    class:list={["favicon-link", { "favicon-link--bold": bold }]}
+    href={href}
+    title={title}
+    target="_blank"
+>
+    <img
+        class="favicon-link__icon"
+        src={faviconUrl}
+        width="16"
+        height="16"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        onerror="this.hidden = true"
+    />
+    <span class="favicon-link__label"><slot /></span>
+</a>
+
+<style>
+    .favicon-link {
+        display: inline-flex;
+        max-width: 100%;
+        align-items: center;
+        gap: 0.32em;
+        color: var(--color-links);
+        text-decoration: none !important;
+        vertical-align: -0.08em;
+    }
+
+    .favicon-link__icon {
+        width: 0.9em;
+        height: 0.9em;
+        flex: none;
+        border-radius: 2px;
+        background: var(--color-site-background-accented);
+        object-fit: contain;
+        outline: 1px solid oklch(0 0 0 / 0.1);
+        outline-offset: -1px;
+    }
+
+    .favicon-link__label {
+        text-decoration-line: underline;
+        text-decoration-color: currentColor;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 0.15em;
+    }
+
+    .favicon-link--bold {
+        font-weight: 700;
+    }
+
+    .favicon-link:focus-visible {
+        border-radius: 2px;
+        outline: 2px dashed var(--color-links-hover);
+        outline-offset: 3px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .favicon-link__icon {
+            outline-color: oklch(1 0 0 / 0.1);
+        }
+    }
+</style>

@@ -1,0 +1,268 @@
+---
+const slots = Array.from({ length: 4 }, (_, i) => i);
+---
+<section id="broadway-routing" class="routing-section" aria-labelledby="route-messages-by-user">
+    <div class="routing-intro">
+        <slot name="intro" />
+    </div>
+    <broadway-routing>
+        <div class="routing-controls" aria-label="Routing example settings">
+            <label>Producers <select data-option="producers" aria-label="Routing producer count">{slots.map(i => <option value={i + 1} selected={i === 2}>{i + 1}</option>)}</select></label>
+            <label>Processors <select data-option="processors" aria-label="Routing processor count">{slots.map(i => <option value={i + 1} selected={i === 1}>{i + 1}</option>)}</select></label>
+            <label>Route by <select data-option="mode" aria-label="Routing policy"><option value="partition">user_id</option><option value="demand">Available demand</option></select></label>
+            <div class="routing-playback">
+                <button type="button" data-play>Pause</button>
+                <button type="button" data-next>Next event</button>
+                <button type="button" data-replay>Replay</button>
+            </div>
+        </div>
+        <div class="routing-field">
+            <svg viewBox="0 0 960 410" role="img" aria-labelledby="routing-svg-title routing-svg-desc">
+                <title id="routing-svg-title">Messages from every producer can reach each processor</title>
+                <desc id="routing-svg-desc">Three producers connect to two processors. With partitioning, user 42 goes to processor 0. Each processor runs one callback at a time and queues later arrivals.</desc>
+                <text class="routing-column" data-producer-heading x="30" y="28">PRODUCERS</text>
+                <text class="routing-column" data-processor-heading x="620" y="28">PROCESSORS</text>
+                <g aria-hidden="true">
+                    {slots.flatMap(p => slots.map(w => <path class="routing-wire" data-edge={`${p}-${w}`} />))}
+                </g>
+                {slots.map(i => <g data-producer-node={i} aria-hidden="true"><rect width="210" height="66" rx="4"/><text class="routing-name" x="16" y="26">Producer {i + 1}</text><text data-producer-state x="16" y="48"/></g>)}
+                {slots.map(i => <g data-processor-node={i} aria-hidden="true"><rect width="300" height="76" rx="4"/><text class="routing-name" x="16" y="24">Processor {i}</text><text data-worker-state x="16" y="46"/><text data-worker-history x="16" y="64"/></g>)}
+                <g aria-hidden="true">{Array.from({length:12}, (_, i) => <g data-packet={i} visibility="hidden"><circle r="5"/><text text-anchor="middle" y="-14"/></g>)}</g>
+            </svg>
+        </div>
+        <div class="routing-caption">
+            <p data-action>Each processor has demand at every producer. Follow the first message.</p>
+            <span data-total>0 / 12 complete</span>
+        </div>
+        <p class="routing-screen-reader" role="status" aria-live="polite" data-announcement></p>
+        <noscript><slot name="fallback" /></noscript>
+    </broadway-routing>
+    <div class="routing-notes">
+        <slot />
+    </div>
+</section>
+
+<script>
+    import { createRoutingModel, advanceRouting, nextRoutingEvent, finished, STEP_MS, TRAVEL_MS } from "./broadwayRoutingModel";
+    class BroadwayRouting extends HTMLElement {
+        model = createRoutingModel({ producers: 3, processors: 2, partitioned: true });
+        running = true;
+        visible = false;
+        frame = 0;
+        lastTime = 0;
+        accumulator = 0;
+        revision = -1;
+        compact = false;
+        compactWidth = 360;
+        motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        observer?: IntersectionObserver;
+        resizeObserver?: ResizeObserver;
+        svg!: SVGSVGElement;
+        producers!: SVGGElement[];
+        workers!: SVGGElement[];
+        edges!: SVGPathElement[];
+        packets!: SVGGElement[];
+        producerLabels!: SVGTextElement[];
+        workerLabels!: SVGTextElement[];
+        histories!: SVGTextElement[];
+        packetLabels!: SVGTextElement[];
+        play!: HTMLButtonElement;
+        next!: HTMLButtonElement;
+        replay!: HTMLButtonElement;
+        action!: HTMLElement;
+        total!: HTMLElement;
+        announcement!: HTMLElement;
+        origins: {x:number;y:number}[] = [];
+        targets: {x:number;y:number}[] = [];
+        routes: {x:number;y:number}[][] = [];
+        description!: SVGDescElement;
+        connectedCallback() {
+            this.svg = this.querySelector("svg")!;
+            this.description = this.svg.querySelector("desc")!;
+            this.producers = [...this.querySelectorAll<SVGGElement>("[data-producer-node]")];
+            this.workers = [...this.querySelectorAll<SVGGElement>("[data-processor-node]")];
+            this.edges = [...this.querySelectorAll<SVGPathElement>("[data-edge]")];
+            this.packets = [...this.querySelectorAll<SVGGElement>("[data-packet]")];
+            this.producerLabels = [...this.querySelectorAll<SVGTextElement>("[data-producer-state]")];
+            this.workerLabels = [...this.querySelectorAll<SVGTextElement>("[data-worker-state]")];
+            this.histories = [...this.querySelectorAll<SVGTextElement>("[data-worker-history]")];
+            this.packetLabels = this.packets.map(node => node.querySelector("text")!);
+            this.play = this.querySelector("[data-play]")!;
+            this.next = this.querySelector("[data-next]")!;
+            this.replay = this.querySelector("[data-replay]")!;
+            this.action = this.querySelector("[data-action]")!;
+            this.total = this.querySelector("[data-total]")!;
+            this.announcement = this.querySelector("[data-announcement]")!;
+            this.running = !this.motion.matches;
+            this.dataset.ready = "true";
+            this.addEventListener("change", this.configure);
+            this.play.addEventListener("click", this.toggle);
+            this.next.addEventListener("click", this.step);
+            this.replay.addEventListener("click", this.reset);
+            this.motion.addEventListener("change", this.preference);
+            document.addEventListener("visibilitychange", this.sync);
+            this.observer = new IntersectionObserver(([entry]) => { this.visible = entry.isIntersecting; this.sync(); }, { threshold: 0.1 });
+            this.observer.observe(this);
+            this.resizeObserver = new ResizeObserver(([entry]) => { this.compact = entry.contentRect.width < 600; this.compactWidth = Math.max(300, Math.min(360, entry.contentRect.width)); this.layout(); });
+            this.resizeObserver.observe(this);
+            this.layout();
+        }
+        disconnectedCallback() {
+            this.stop();
+            this.observer?.disconnect();
+            this.resizeObserver?.disconnect();
+            this.removeEventListener("change", this.configure);
+            this.play.removeEventListener("click", this.toggle);
+            this.next.removeEventListener("click", this.step);
+            this.replay.removeEventListener("click", this.reset);
+            this.motion.removeEventListener("change", this.preference);
+            document.removeEventListener("visibilitychange", this.sync);
+        }
+        stop() { cancelAnimationFrame(this.frame); this.frame = 0; this.lastTime = 0; }
+        sync = () => {
+            this.stop();
+            if (this.running && this.visible && !document.hidden && !finished(this.model)) this.frame = requestAnimationFrame(this.tick);
+            this.play.textContent = this.running && !finished(this.model) ? "Pause" : "Play";
+            this.play.disabled = finished(this.model);
+            this.next.disabled = finished(this.model);
+        };
+        preference = () => { if (this.motion.matches) this.running = false; this.sync(); this.render(); };
+        toggle = () => { this.running = !this.running; this.sync(); this.announce(); };
+        step = () => { this.running = false; nextRoutingEvent(this.model); this.render(); this.sync(); this.announce(); };
+        reset = () => {
+            this.model = createRoutingModel(this.model.options);
+            this.accumulator = 0;
+            this.revision = -1;
+            this.running = !this.motion.matches;
+            this.layout(); this.sync(); this.announce();
+        };
+        configure = (event: Event) => {
+            const input = event.target as HTMLSelectElement;
+            if (!input.dataset.option) return;
+            const options = { ...this.model.options };
+            if (input.dataset.option === "mode") options.partitioned = input.value === "partition";
+            else if (input.dataset.option === "producers") options.producers = Number(input.value);
+            else if (input.dataset.option === "processors") options.processors = Number(input.value);
+            this.model = createRoutingModel(options);
+            this.accumulator = 0; this.revision = -1;
+            this.layout(); this.sync(); this.announce();
+        };
+        tick = (now: number) => {
+            this.accumulator += this.lastTime ? Math.min(80, now - this.lastTime) : 0;
+            this.lastTime = now;
+            while (this.accumulator >= STEP_MS && !finished(this.model)) { advanceRouting(this.model); this.accumulator -= STEP_MS; }
+            this.render();
+            if (finished(this.model)) { this.running = false; this.sync(); this.announce(); }
+            else this.frame = requestAnimationFrame(this.tick);
+        };
+        announce() { this.announcement.textContent = `${this.model.action} ${this.model.messages.filter(m => m.state === "done").length} of 12 complete.`; }
+        layout() {
+            const narrow = this.compact;
+            const width = narrow ? this.compactWidth : 960;
+            this.svg.setAttribute("viewBox", `0 0 ${width} 410`);
+            const px = narrow ? 8 : 30, pw = narrow ? 98 : 210;
+            const wx = narrow ? width - 144 : 620, ww = narrow ? 136 : 310;
+            this.querySelector("[data-producer-heading]")!.setAttribute("x", String(px));
+            this.querySelector("[data-processor-heading]")!.setAttribute("x", String(wx));
+            const place = (nodes: SVGGElement[], count: number, x: number, w: number, height: number) => nodes.map((node, i) => {
+                const y = 56 + (340 / count) * (i + 0.5);
+                node.style.display = i < count ? "" : "none";
+                node.setAttribute("transform", `translate(${x},${y - height / 2})`);
+                node.querySelector("rect")!.setAttribute("width", String(w));
+                node.querySelectorAll("text").forEach(text => text.setAttribute("x", narrow ? "8" : "16"));
+                return { x, y };
+            });
+            this.origins = place(this.producers, this.model.options.producers, px, pw, 66).map(point => ({x:point.x + pw,y:point.y}));
+            this.targets = place(this.workers, this.model.options.processors, wx, ww, 76);
+            this.edges.forEach((edge, i) => {
+                const p = Math.floor(i / 4), w = i % 4;
+                edge.style.display = p < this.model.options.producers && w < this.model.options.processors ? "" : "none";
+                const from = this.origins[p], to = this.targets[w], bend = (to.x - from.x) * 0.45;
+                edge.setAttribute("d", `M${from.x},${from.y} C${from.x + bend},${from.y} ${to.x - bend},${to.y} ${to.x},${to.y}`);
+                // Sample equal distances once, so packet speed stays constant.
+                const length = edge.getTotalLength();
+                this.routes[i] = Array.from({length: 65}, (_, index) => {
+                    const point = edge.getPointAtLength(length * index / 64);
+                    return {x: point.x, y: point.y};
+                });
+            });
+            this.revision = -1;
+            this.render();
+        }
+        render() {
+            const model = this.model;
+            if (this.revision !== model.revision) {
+                this.revision = model.revision;
+                this.producerLabels.forEach((label, i) => { label.textContent = `${model.messages.filter(m => m.producer === i && m.state === "pending").length} waiting`; });
+                this.workerLabels.forEach((label, i) => {
+                    const id = model.working[i];
+                    label.textContent = id != null ? `#${id} · user ${model.messages[id - 1].user}` : "Ready";
+                    this.workers[i].dataset.state = id != null ? "working" : "idle";
+                    this.histories[i].textContent = `${model.queues[i]?.length ?? 0} ${this.compact ? "wait" : "queued"} · ${model.completed[i]?.length ?? 0} done`;
+                });
+                this.action.textContent = finished(model) ? "All 12 messages finished. Replay or change the routing policy to compare." : model.action;
+                this.total.textContent = `${model.messages.filter(m => m.state === "done").length} / 12 complete`;
+                this.edges.forEach((edge, i) => edge.dataset.active = String(model.messages.some(m => m.state === "travel" && m.producer === Math.floor(i / 4) && m.processor === i % 4)));
+                this.description.textContent = `${model.options.producers} producers connected to ${model.options.processors} processors. ${this.action.textContent} ${this.total.textContent}.`;
+            }
+            model.messages.forEach((message, index) => {
+                const packet = this.packets[index];
+                const traveling = message.state === "travel" && !this.motion.matches;
+                if (packet.getAttribute("visibility") !== (traveling ? "visible" : "hidden")) packet.setAttribute("visibility", traveling ? "visible" : "hidden");
+                if (!traveling) return;
+                const t = Math.min(1, (model.time + this.accumulator - message.started) / TRAVEL_MS);
+                this.packetLabels[index].style.opacity = t > 0.2 && t < 0.8 ? "1" : "0";
+                const points = this.routes[message.producer * 4 + message.processor!];
+                const sample = t * 64, sampleIndex = Math.min(63, Math.floor(sample)), mix = sample - sampleIndex;
+                const x = points[sampleIndex].x + (points[sampleIndex + 1].x - points[sampleIndex].x) * mix;
+                const y = points[sampleIndex].y + (points[sampleIndex + 1].y - points[sampleIndex].y) * mix;
+                packet.setAttribute("transform", `translate(${x},${y})`);
+                const text = this.compact ? String(message.user) : `#${message.id} · user ${message.user}`;
+                if (this.packetLabels[index].textContent !== text) this.packetLabels[index].textContent = text;
+            });
+        }
+    }
+    if (!customElements.get("broadway-routing")) customElements.define("broadway-routing", BroadwayRouting);
+</script>
+
+<style>
+    .routing-section { width: min(1040px, calc(100vw - 2rem)); margin: 5rem calc(50% - min(520px, 50vw - 1rem)); scroll-margin-top: 2rem; }
+    .routing-intro, .routing-notes { max-width: 680px; margin-inline: auto; }
+    :global(#main.container.post-page > article.post .entry) .routing-section :global(h2) { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.15; margin-block: 0.5rem 1rem; }
+    .routing-section :global(h2)::before { content: none !important; }
+    broadway-routing { display: block; margin-block: 2rem; border-block: 1px solid var(--color-box-borders); font-family: var(--font-mono); }
+    .routing-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding-block: 1rem; font-size: 0.8rem; }
+    .routing-controls label { display: flex; align-items: center; gap: 0.5rem; }
+    .routing-controls select, .routing-controls button { min-height: 44px; padding: 0.4rem 0.65rem; font: inherit; color: var(--color-text); border: 1px solid var(--color-box-borders); background: var(--color-site-background); border-radius: 4px; cursor: pointer; }
+    .routing-controls button:hover { border-color: var(--color-links); }
+    .routing-controls :focus-visible { outline: 2px solid var(--color-links); outline-offset: 3px; }
+    .routing-controls button:disabled { opacity: 0.5; cursor: default; }
+    .routing-playback { display: flex; gap: 0.5rem; margin-left: auto; }
+    .routing-field svg { display: block; width: 100%; height: auto; overflow: visible; }
+    svg text { fill: var(--color-text-dimmer); font: 14px var(--font-mono); }
+    svg .routing-column { font-size: 12px; letter-spacing: 1px; }
+    svg .routing-name { fill: var(--color-text); font-size: 16px; }
+    svg rect { fill: var(--color-site-background); stroke: var(--color-box-borders); vector-effect: non-scaling-stroke; }
+    svg [data-state="working"] rect { stroke: var(--color-links); fill: color-mix(in srgb, var(--color-links) 5%, var(--color-site-background)); }
+    .routing-wire { fill: none; stroke: color-mix(in srgb, var(--color-text) 40%, var(--color-site-background)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .routing-wire[data-active="true"] { stroke: var(--color-links); stroke-width: 1.5; }
+    [data-packet] circle { fill: var(--color-links); }
+    [data-packet] text { fill: var(--color-links); paint-order: stroke; stroke: var(--color-site-background); stroke-width: 5px; stroke-linejoin: round; }
+    .routing-caption { display: flex; gap: 1rem; align-items: baseline; justify-content: space-between; padding-block: 1rem; border-top: 1px solid var(--color-box-borders); }
+    .routing-caption p { margin: 0; min-height: 3.2em; font-size: 0.8rem; line-height: 1.6; }
+    .routing-caption span { font-size: 0.7rem; white-space: nowrap; color: var(--color-text-dimmer); font-variant-numeric: tabular-nums; }
+    .routing-notes { font-size: 0.9rem; }
+    .routing-notes :global(details) { border-top: 1px solid var(--color-box-borders); padding-block: 1rem; }
+    .routing-notes :global(summary) { cursor: pointer; min-height: 44px; }
+    .routing-screen-reader { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+    broadway-routing:not([data-ready]) .routing-controls, broadway-routing:not([data-ready]) .routing-field, broadway-routing:not([data-ready]) .routing-caption { display: none; }
+    @media (max-width: 600px) {
+        .routing-section { margin-block: 3rem; }
+        .routing-playback { margin-left: 0; width: 100%; }
+        .routing-controls { column-gap: 0.75rem; row-gap: 0.5rem; }
+        .routing-caption { flex-direction: column; gap: 0.5rem; }
+        svg text { font-size: 13px; }
+        svg .routing-name { font-size: 14px; }
+        svg .routing-column { font-size: 11px; letter-spacing: 0; }
+    }
+</style>
