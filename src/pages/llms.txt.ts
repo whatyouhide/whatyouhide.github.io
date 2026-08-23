@@ -54,6 +54,8 @@ The blog covers technical topics including:
 ## Optional
 
 - RSS Feed: Available at BASE/feed.xml for blog updates
+- Post index: Available at BASE/posts/llms.txt with direct links to portable Markdown
+- AI resource catalog: Available at BASE/.well-known/ai-catalog.json
 - Tags: Blog posts are categorized by tags, with individual tag feeds available
 `;
 

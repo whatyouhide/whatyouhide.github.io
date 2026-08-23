@@ -1,0 +1,80 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Andrea Leopardi",
+    "identifier": "andrealeopardi.com",
+    "documentationUrl": "https://andrealeopardi.com/llms.txt"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:site-guide",
+      "displayName": "Andrea Leopardi site guide",
+      "description": "A plain-text guide to the site, its main sections, and all blog posts.",
+      "type": "text/plain",
+      "url": "https://andrealeopardi.com/llms.txt"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:post-index",
+      "displayName": "Andrea Leopardi post index",
+      "description": "A plain-text index of all posts with links to their Markdown versions.",
+      "type": "text/plain",
+      "url": "https://andrealeopardi.com/posts/llms.txt"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:homepage-markdown",
+      "displayName": "Andrea Leopardi homepage in Markdown",
+      "description": "The homepage in Markdown with portable YAML frontmatter.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/index.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:about",
+      "displayName": "About Andrea Leopardi",
+      "description": "Andrea Leopardi's biography and open-source work in Markdown.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/about.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:books",
+      "displayName": "Books by Andrea Leopardi",
+      "description": "Books written by Andrea Leopardi in Markdown.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/books.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:teaching",
+      "displayName": "Andrea Leopardi teaching resources",
+      "description": "Talks, screencasts, and interactive guides in Markdown.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/teaching.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:uses",
+      "displayName": "Tools used by Andrea Leopardi",
+      "description": "Hardware, software, and travel tools in Markdown.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/uses.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:travels",
+      "displayName": "Andrea Leopardi travels",
+      "description": "Visited countries and place notes in Markdown.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/travels.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:document:now",
+      "displayName": "What Andrea Leopardi is doing now",
+      "description": "Andrea Leopardi's current work, life, and travel notes in Markdown.",
+      "type": "text/markdown",
+      "url": "https://andrealeopardi.com/now.md"
+    },
+    {
+      "identifier": "urn:air:andrealeopardi.com:feed:posts",
+      "displayName": "Andrea Leopardi post feed",
+      "description": "The RSS feed for Andrea Leopardi's posts.",
+      "type": "application/rss+xml",
+      "url": "https://andrealeopardi.com/feed.xml"
+    }
+  ]
+}

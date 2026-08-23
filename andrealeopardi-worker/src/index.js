@@ -159,6 +159,15 @@ export default {
       return out;
     }
 
+    if (url.pathname === "/.well-known/ai-catalog.json") {
+      const res = await fetch(request);
+      const out = new Response(res.body, res);
+      if (res.status === 200) {
+        out.headers.set("Content-Type", "application/ai-catalog+json; charset=utf-8");
+      }
+      return out;
+    }
+
     if (url.pathname === "/index.md") {
       let res = await fetch(request);
       if (res.status === 404) {
