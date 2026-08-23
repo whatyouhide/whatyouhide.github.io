@@ -92,6 +92,16 @@ const AUDITED_AGENT_CRAWLERS = [
   "ora-agent",
 ];
 
+const MARKDOWN_NOT_FOUND = `# Page not found
+
+The requested URL does not exist. Use one of these links to find the content you need:
+
+- [Home](/)
+- [All posts](/posts/)
+- [Agent guide](/llms.txt)
+- [Sitemap](/sitemap.xml)
+`;
+
 export function addMissingAgentCrawlerRules(robots) {
   const additions = AUDITED_AGENT_CRAWLERS
     .filter((agent) => !new RegExp(`^User-agent: ${agent}$`, "im").test(robots))
@@ -223,9 +233,22 @@ export default {
     }
 
     if (mdRes.status === 404) {
+      const res = await fetch(request);
+
+      if (res.status === 404) {
+        const out = new Response(
+          request.method === "HEAD" ? null : MARKDOWN_NOT_FOUND,
+          {
+            status: 404,
+            headers: { "Content-Type": "text/markdown; charset=utf-8" },
+          }
+        );
+        ensureVary(out.headers);
+        return out;
+      }
+
       const htmlChoice = preferredType(accept, ["text/html"]);
       if (htmlChoice) {
-        const res = await fetch(request);
         const out = new Response(res.body, res);
         ensureVary(out.headers);
         return out;

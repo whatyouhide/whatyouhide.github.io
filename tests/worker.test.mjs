@@ -139,8 +139,10 @@ test("returns 406 when no offered representation is acceptable", async () => {
   assert.deepEqual(varyTokens(response), ["accept", "accept-encoding"]);
 });
 
-test("returns 406 when a required Markdown sibling is missing", async () => {
-  setOrigin({});
+test("returns 406 when an existing page has no Markdown representation", async () => {
+  setOrigin({
+    "/about/": { body: "<h1>About</h1>", contentType: "text/html; charset=utf-8" },
+  });
 
   const response = await worker.fetch(
     new Request("https://example.com/about/", {
@@ -150,6 +152,40 @@ test("returns 406 when a required Markdown sibling is missing", async () => {
 
   assert.equal(response.status, 406);
   assert.deepEqual(varyTokens(response), ["accept", "accept-encoding"]);
+});
+
+test("returns a useful Markdown 404 for a missing page", async () => {
+  setOrigin({});
+
+  const response = await worker.fetch(
+    new Request("https://example.com/missing/", {
+      headers: { Accept: "text/markdown, text/html;q=0" },
+    })
+  );
+
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
+  assert.deepEqual(varyTokens(response), ["accept", "accept-encoding"]);
+
+  const body = await response.text();
+  assert.match(body, /^# Page not found$/m);
+  assert.match(body, /\[Home\]\(\/\)/);
+  assert.match(body, /\[Agent guide\]\(\/llms\.txt\)/);
+  assert.match(body, /\[Sitemap\]\(\/sitemap\.xml\)/);
+});
+
+test("returns no body for a Markdown HEAD 404", async () => {
+  setOrigin({});
+
+  const response = await worker.fetch(
+    new Request("https://example.com/missing/", {
+      method: "HEAD",
+      headers: { Accept: "text/markdown" },
+    })
+  );
+
+  assert.equal(response.status, 404);
+  assert.equal(await response.text(), "");
 });
 
 test("adds only missing audited crawler groups to robots.txt", () => {
