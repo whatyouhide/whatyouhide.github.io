@@ -209,7 +209,6 @@ test("HTML pages advertise the AI catalog", async () => {
   assert.match(html, /<link\b[^>]*type="application\/ai-catalog\+json"[^>]*>/);
   assert.match(html, /<link\b[^>]*href="\/\.well-known\/ai-catalog\.json"[^>]*>/);
 });
-
 test("all machine-readable site files build with content", async () => {
   const files = [
     "robots.txt",
