@@ -92,6 +92,42 @@ test("uses llms.txt while the homepage Markdown sibling is missing", async () =>
   assert.equal(await response.text(), "# Andrea from llms.txt\n");
 });
 
+test("serves generated post Markdown through content negotiation", async () => {
+  setOrigin({
+    "/posts/example.md": {
+      body: "# Example post\n",
+      contentType: "text/plain; charset=utf-8",
+    },
+  });
+
+  const response = await worker.fetch(
+    new Request("https://example.com/posts/example/", {
+      headers: { Accept: "text/markdown" },
+    })
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
+  assert.equal(await response.text(), "# Example post\n");
+});
+
+test("serves direct post Markdown URLs", async () => {
+  setOrigin({
+    "/posts/example.md": {
+      body: "# Example post\n",
+      contentType: "text/plain; charset=utf-8",
+    },
+  });
+
+  const response = await worker.fetch(
+    new Request("https://example.com/posts/example.md")
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
+  assert.equal(await response.text(), "# Example post\n");
+});
+
 test("honors quality values and client order", async () => {
   setOrigin({
     "/": { body: "<h1>Andrea</h1>", contentType: "text/html; charset=utf-8" },

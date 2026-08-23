@@ -84,6 +84,16 @@ test("the homepage Markdown representation is useful and structured", async () =
   assert.ok(markdown.length >= 500, "homepage Markdown must contain at least 500 chars");
 });
 
+test("blog posts have portable Markdown representations", async () => {
+  const markdown = await read("dist/posts/sharing-protobuf-schemas-across-services.md");
+
+  assert.match(markdown, /^---$/m);
+  assert.match(markdown, /^title: Sharing Protobuf schemas across services$/m);
+  assert.match(markdown, /^date: '2020-02-24'$/m);
+  assert.doesNotMatch(markdown, /^import\s/m);
+  assert.ok(markdown.length >= 500, "post Markdown must contain at least 500 chars");
+});
+
 test("all machine-readable site files build with content", async () => {
   const files = ["robots.txt", "llms.txt", "sitemap.xml", "feed.xml", "index.md"];
 
