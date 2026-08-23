@@ -8,6 +8,16 @@ async function read(relativePath) {
   return readFile(new URL(relativePath, ROOT), "utf8");
 }
 
+function jsonLdNodes(html) {
+  const scripts = [...html.matchAll(
+    /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi
+  )].map((match) => JSON.parse(match[1]));
+
+  return scripts.flatMap((data) =>
+    Array.isArray(data["@graph"]) ? data["@graph"] : [data]
+  );
+}
+
 test("robots.txt allows each audited agent crawler", async () => {
   const robots = await read("dist/robots.txt");
   const agents = [
@@ -73,6 +83,45 @@ test("the raw homepage HTML has useful text and a heading hierarchy", async () =
   assert.ok(h1Position >= 0, "homepage must contain an H1");
   assert.ok(h2Position > h1Position, "homepage must contain an H2 after its H1");
   assert.ok(text.length >= 500, `homepage must contain at least 500 text chars, got ${text.length}`);
+});
+
+test("JSON-LD describes the site, profile, blog, and posts", async () => {
+  const homepageNodes = jsonLdNodes(await read("dist/index.html"));
+  const person = homepageNodes.find((node) => node["@type"] === "Person");
+  const website = homepageNodes.find((node) => node["@type"] === "WebSite");
+  const profile = homepageNodes.find((node) => node["@type"] === "ProfilePage");
+
+  assert.ok(person, "homepage must describe Andrea as a Person");
+  assert.ok(website, "homepage must describe the WebSite");
+  assert.ok(profile, "homepage must describe itself as a ProfilePage");
+  assert.equal(person["@id"], "https://andrealeopardi.com/#person");
+  assert.equal(website["@id"], "https://andrealeopardi.com/#website");
+  assert.equal(website.author["@id"], person["@id"]);
+  assert.equal(profile.mainEntity["@id"], person["@id"]);
+  assert.equal(profile.isPartOf["@id"], website["@id"]);
+  assert.ok(profile.hasPart.length > 0, "profile must reference recent posts");
+
+  const postsNodes = jsonLdNodes(await read("dist/posts/index.html"));
+  const blog = postsNodes.find((node) => node["@type"] === "Blog");
+  assert.ok(blog, "posts index must describe itself as a Blog");
+  assert.equal(blog["@id"], "https://andrealeopardi.com/posts/#blog");
+  assert.ok(blog.blogPost.length > 0, "blog must reference its posts");
+  assert.ok(
+    blog.blogPost.every((post) => post.author["@id"] === person["@id"]),
+    "every blog post must reference the canonical Person"
+  );
+
+  const postNodes = jsonLdNodes(
+    await read("dist/posts/sharing-protobuf-schemas-across-services/index.html")
+  );
+  const post = postNodes.find((node) => node["@type"] === "BlogPosting");
+  assert.ok(post, "post page must describe itself as a BlogPosting");
+  assert.equal(post.headline, "Sharing Protobuf schemas across services");
+  assert.equal(post.author["@id"], person["@id"]);
+  assert.equal(post.isPartOf["@id"], blog["@id"]);
+  assert.equal(post.mainEntityOfPage["@id"], post.url);
+  assert.match(post.datePublished, /^2020-02-24T/);
+  assert.match(post.dateModified, /^2020-02-24T/);
 });
 
 test("the homepage Markdown representation is useful and structured", async () => {

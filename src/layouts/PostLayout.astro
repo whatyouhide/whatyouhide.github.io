@@ -1,5 +1,6 @@
 ---
 import type { ImageMetadata } from "astro";
+import JsonLd from "../components/JsonLd.astro";
 import BaseLayout from "./BaseLayout.astro";
 import { siteConfig } from "../config";
 
@@ -10,9 +11,10 @@ type Props = {
   updated?: Date;
   coverImage?: string | ImageMetadata;
   math?: boolean;
+  tags?: string[];
 };
 
-const { title, description, date, updated, coverImage, math } = Astro.props;
+const { title, description, date, updated, coverImage, math, tags = [] } = Astro.props;
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -27,6 +29,28 @@ const coverImageHref = typeof coverImage === "string" ? coverImage : coverImage?
 const absoluteCover = coverImageHref
   ? new URL(coverImageHref, siteConfig.baseUrl).toString()
   : undefined;
+
+const canonical = new URL(Astro.url.pathname, siteConfig.baseUrl).toString();
+const articleData = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "@id": `${canonical}#article`,
+  url: canonical,
+  headline: title,
+  description,
+  image: absoluteCover ?? new URL(siteConfig.defaultCoverImage, siteConfig.baseUrl).toString(),
+  datePublished: date.toISOString(),
+  dateModified: (updated ?? date).toISOString(),
+  inLanguage: "en",
+  keywords: tags.length > 0 ? tags : undefined,
+  author: { "@id": `${siteConfig.baseUrl}/#person` },
+  publisher: { "@id": `${siteConfig.baseUrl}/#person` },
+  isPartOf: { "@id": `${siteConfig.baseUrl}/posts/#blog` },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": canonical,
+  },
+};
 ---
 
 <BaseLayout
@@ -37,6 +61,8 @@ const absoluteCover = coverImageHref
   publishedDate={date}
   math={math}
 >
+  <JsonLd data={articleData} slot="json-ld" />
+
   <div id="main" role="main" class="container post-page">
     <article class="post">
       <h1>{title}</h1>

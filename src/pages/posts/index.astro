@@ -1,5 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { siteConfig } from "../../config";
 import { getSortedPosts, postUrl } from "../../lib/posts";
 
 const posts = await getSortedPosts();
@@ -12,9 +14,36 @@ function truncate(text: string, max: number): string {
 function ym(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
+
+const blogId = `${siteConfig.baseUrl}/posts/#blog`;
+const blogData = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "@id": blogId,
+  url: `${siteConfig.baseUrl}/posts/`,
+  name: "Posts by Andrea Leopardi",
+  description: "Writings by Andrea Leopardi on Elixir, systems, and software.",
+  inLanguage: "en",
+  isPartOf: { "@id": `${siteConfig.baseUrl}/#website` },
+  author: { "@id": `${siteConfig.baseUrl}/#person` },
+  publisher: { "@id": `${siteConfig.baseUrl}/#person` },
+  blogPost: posts.map((post) => ({
+    "@type": "BlogPosting",
+    "@id": `${siteConfig.baseUrl}${postUrl(post)}#article`,
+    url: `${siteConfig.baseUrl}${postUrl(post)}`,
+    headline: post.data.title,
+    description: post.data.description,
+    datePublished: post.data.date.toISOString(),
+    dateModified: (post.data.updated ?? post.data.date).toISOString(),
+    author: { "@id": `${siteConfig.baseUrl}/#person` },
+    isPartOf: { "@id": blogId },
+  })),
+};
 ---
 
 <BaseLayout title="Posts" description="Writings by Andrea Leopardi on Elixir, systems, and software.">
+  <JsonLd data={blogData} slot="json-ld" />
+
   <main id="main" role="main" class="container posts-page">
     <section class="posts-index-dense" aria-labelledby="posts-heading">
       <div class="shell-section-header">

@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import JsonLd from "../components/JsonLd.astro";
 import Sidebar from "../components/Sidebar.astro";
+import { siteConfig } from "../config";
 import { getSortedPosts, postUrl } from "../lib/posts";
 
 const allPosts = await getSortedPosts();
@@ -15,9 +17,31 @@ function truncate(text: string, max: number): string {
 function ym(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
+
+const profilePageData = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  "@id": `${siteConfig.baseUrl}/#profile`,
+  url: `${siteConfig.baseUrl}/`,
+  name: siteConfig.title,
+  description: siteConfig.description,
+  inLanguage: "en",
+  isPartOf: { "@id": `${siteConfig.baseUrl}/#website` },
+  mainEntity: { "@id": `${siteConfig.baseUrl}/#person` },
+  hasPart: recentPosts.map((post) => ({
+    "@type": "BlogPosting",
+    "@id": `${siteConfig.baseUrl}${postUrl(post)}#article`,
+    url: `${siteConfig.baseUrl}${postUrl(post)}`,
+    headline: post.data.title,
+    datePublished: post.data.date.toISOString(),
+    author: { "@id": `${siteConfig.baseUrl}/#person` },
+  })),
+};
 ---
 
 <BaseLayout hideHeader>
+  <JsonLd data={profilePageData} slot="json-ld" />
+
   <div id="main" role="main" class="landing-page">
     <div id="content-container">
       <div class="shell-topbar">
