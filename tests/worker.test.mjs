@@ -77,6 +77,43 @@ test("serves homepage Markdown with protocol headers", async () => {
   assert.equal(await response.text(), "# Andrea Leopardi\n");
 });
 
+test("serves generated post Markdown through content negotiation", async () => {
+  setOrigin({
+    "/posts/example.md": {
+      body: "---\ntitle: Example\n---\n\n# Example\n",
+      contentType: "text/markdown; charset=utf-8",
+    },
+  });
+
+  const response = await worker.fetch(
+    new Request("https://example.com/posts/example/", {
+      headers: { Accept: "text/markdown" },
+    })
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
+  assert.deepEqual(varyTokens(response), ["accept", "accept-encoding"]);
+  assert.match(await response.text(), /^---\ntitle: Example/m);
+});
+
+test("serves direct post Markdown URLs", async () => {
+  setOrigin({
+    "/posts/example.md": {
+      body: "# Example\n",
+      contentType: "text/markdown; charset=utf-8",
+    },
+  });
+
+  const response = await worker.fetch(
+    new Request("https://example.com/posts/example.md")
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
+  assert.equal(await response.text(), "# Example\n");
+});
+
 test("uses llms.txt while the homepage Markdown sibling is missing", async () => {
   setOrigin({
     "/llms.txt": { body: "# Andrea from llms.txt\n", contentType: "text/plain; charset=utf-8" },

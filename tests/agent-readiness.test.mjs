@@ -78,6 +78,11 @@ test("the raw homepage HTML has useful text and a heading hierarchy", async () =
 test("the homepage Markdown representation is useful and structured", async () => {
   const markdown = await read("dist/index.md");
 
+  assert.ok(markdown.startsWith("---\n"), "homepage Markdown must open with frontmatter");
+  assert.match(markdown, /^title: Andrea Leopardi$/m);
+  assert.match(markdown, /^description: .+$/m);
+  assert.match(markdown, /^canonical: https:\/\/andrealeopardi\.com\/$/m);
+  assert.match(markdown, /^last-updated: \d{4}-\d{2}-\d{2}$/m);
   assert.match(markdown, /^# Andrea Leopardi$/m);
   assert.match(markdown, /^## Site sections$/m);
   assert.match(markdown, /^## Recent posts$/m);
