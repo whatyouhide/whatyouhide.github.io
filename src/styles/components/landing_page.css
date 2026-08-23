@@ -280,6 +280,10 @@
   }
 }
 
+.shell-role-editorial {
+  display: none;
+}
+
 /* ─── Blinking Cursor ──────────────────────────────── */
 
 @keyframes cursorBlink {
@@ -392,7 +396,7 @@
 
   /* Reset heading styles for content pages */
   h1 {
-    font-family: var(--font-mono);
+    font-family: var(--font-page-heading);
     font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -418,14 +422,19 @@
 /* Per-character animation for the name */
 .shell-name-char {
   display: inline-block;
-  visibility: hidden;
   cursor: default;
+}
 
-  &.typed {
-    visibility: visible;
-  }
+@media (--dark) {
+  .shell-name-char {
+    visibility: hidden;
 
-  &.dissolved {
-    color: transparent;
+    &.typed {
+      visibility: visible;
+    }
+
+    &.dissolved {
+      color: transparent;
+    }
   }
 }

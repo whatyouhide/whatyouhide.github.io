@@ -11,6 +11,9 @@
   --font-sans: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+  --font-editorial: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-heading: var(--font-display);
+  --font-page-heading: var(--font-mono);
 
   /* The maximum size of website content, such as posts, on any screen. */
   --max-content-width: 800px;

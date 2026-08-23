@@ -6,7 +6,7 @@ main.travels {
   padding: 0 5vw;
 
   h1 {
-    font-family: var(--font-mono);
+    font-family: var(--font-page-heading);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -321,7 +321,7 @@ main.travels {
   margin-top: 2.5em;
 
   h2 {
-    font-family: var(--font-mono);
+    font-family: var(--font-page-heading);
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.08em;

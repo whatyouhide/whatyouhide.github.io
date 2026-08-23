@@ -148,8 +148,77 @@ test("blog posts have portable Markdown representations", async () => {
   assert.ok(markdown.length >= 500, "post Markdown must contain at least 500 chars");
 });
 
+test("main static pages have portable Markdown representations", async () => {
+  const pages = ["about", "books", "teaching", "uses", "travels", "now"];
+
+  for (const page of pages) {
+    const markdown = await read(`dist/${page}.md`);
+
+    assert.ok(markdown.startsWith("---\n"), `${page}.md must open with frontmatter`);
+    assert.match(markdown, /^title: .+$/m);
+    assert.match(markdown, /^description: .+$/m);
+    assert.match(
+      markdown,
+      new RegExp(`^canonical: https://andrealeopardi\\.com/${page}/$`, "m")
+    );
+    assert.match(markdown, /^last-updated: \d{4}-\d{2}-\d{2}$/m);
+    assert.match(markdown, /^#\s+.+$/m, `${page}.md must contain an H1`);
+    assert.ok(markdown.length >= 200, `${page}.md must contain at least 200 chars`);
+  }
+});
+
+test("the modular post index links to portable Markdown", async () => {
+  const index = await read("dist/posts/llms.txt");
+
+  assert.match(index, /^# Andrea Leopardi's posts$/m);
+  assert.match(
+    index,
+    /https:\/\/andrealeopardi\.com\/posts\/sharing-protobuf-schemas-across-services\.md/
+  );
+  assert.match(
+    index,
+    /Canonical HTML: https:\/\/andrealeopardi\.com\/posts\/sharing-protobuf-schemas-across-services\//
+  );
+  assert.ok(index.length >= 1000, "post index must contain useful content");
+});
+
+test("the AI catalog has valid resource entries", async () => {
+  const catalog = JSON.parse(await read("dist/.well-known/ai-catalog.json"));
+
+  assert.equal(catalog.specVersion, "1.0");
+  assert.equal(catalog.host.displayName, "Andrea Leopardi");
+  assert.equal(catalog.host.identifier, "andrealeopardi.com");
+  assert.ok(catalog.entries.length > 0, "AI catalog must contain entries");
+
+  const identifiers = new Set(catalog.entries.map((entry) => entry.identifier));
+  assert.equal(identifiers.size, catalog.entries.length, "catalog identifiers must be unique");
+
+  for (const entry of catalog.entries) {
+    assert.match(entry.identifier, /^urn:air:andrealeopardi\.com:/);
+    assert.ok(entry.displayName, "catalog entries must have display names");
+    assert.match(entry.type, /^[^/]+\/[^/]+$/);
+    assert.equal(Boolean(entry.url) + Boolean(entry.data), 1, "entries need one URL or data value");
+    if (entry.url) assert.match(entry.url, /^https:\/\/andrealeopardi\.com\//);
+  }
+});
+
+test("HTML pages advertise the AI catalog", async () => {
+  const html = await read("dist/index.html");
+
+  assert.match(html, /<link\b[^>]*rel="ai-catalog"[^>]*>/);
+  assert.match(html, /<link\b[^>]*type="application\/ai-catalog\+json"[^>]*>/);
+  assert.match(html, /<link\b[^>]*href="\/\.well-known\/ai-catalog\.json"[^>]*>/);
+});
 test("all machine-readable site files build with content", async () => {
-  const files = ["robots.txt", "llms.txt", "sitemap.xml", "feed.xml", "index.md"];
+  const files = [
+    "robots.txt",
+    "llms.txt",
+    "posts/llms.txt",
+    ".well-known/ai-catalog.json",
+    "sitemap.xml",
+    "feed.xml",
+    "index.md",
+  ];
 
   for (const file of files) {
     const body = await read(`dist/${file}`);

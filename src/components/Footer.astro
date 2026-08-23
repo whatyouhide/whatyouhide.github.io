@@ -4,11 +4,11 @@ import { siteConfig } from "../config";
 
 <footer>
   <nav class="footer-links">
-    <a href={`https://github.com/${siteConfig.githubUsername}`} target="_blank">github</a>
-    <a href={`mailto:${siteConfig.email}`}>email</a>
-    <a href={siteConfig.blueskyUrl} target="_blank">bluesky</a>
-    <a href="/feed.xml">rss</a>
-    <a href="/privacy/">privacy</a>
+    <a href={`https://github.com/${siteConfig.githubUsername}`} target="_blank" data-editorial-label="GitHub">github</a>
+    <a href={`mailto:${siteConfig.email}`} data-editorial-label="Email">email</a>
+    <a href={siteConfig.blueskyUrl} target="_blank" data-editorial-label="Bluesky">bluesky</a>
+    <a href="/feed.xml" data-editorial-label="RSS">rss</a>
+    <a href="/privacy/" data-editorial-label="Privacy">privacy</a>
   </nav>
   <span class="footer-meta">pid 1 · up <span id="uptime">0s</span></span>
 </footer>

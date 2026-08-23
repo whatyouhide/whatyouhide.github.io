@@ -8,12 +8,12 @@ function isActive(prefix: string): boolean {
 }
 
 const navItems: Array<{ href: string; label: string; prefix?: string; external?: boolean }> = [
-  { href: "/posts/", label: "/posts", prefix: "/posts" },
-  { href: "/teaching/", label: "/teaching", prefix: "/teaching" },
-  { href: siteConfig.talksYoutubePlaylistUrl, label: "/talks", external: true },
-  { href: "/books/", label: "/books", prefix: "/books" },
-  { href: "/uses/", label: "/uses", prefix: "/uses" },
-  { href: "/travels/", label: "/travels", prefix: "/travels" },
+  { href: "/posts/", label: "posts", prefix: "/posts" },
+  { href: "/teaching/", label: "teaching", prefix: "/teaching" },
+  { href: siteConfig.talksYoutubePlaylistUrl, label: "talks", external: true },
+  { href: "/books/", label: "books", prefix: "/books" },
+  { href: "/uses/", label: "uses", prefix: "/uses" },
+  { href: "/travels/", label: "travels", prefix: "/travels" },
 ];
 ---
 
@@ -32,18 +32,31 @@ const navItems: Array<{ href: string; label: string; prefix?: string; external?:
     <div class="shell-role-line">
       <span class="shell-prompt">$</span>
       <span class="shell-role-text">
-        platform eng @ <a href="https://knock.app" target="_blank">knock</a>
+        <span class="shell-role-terminal">
+          platform eng @ <a href="https://knock.app" target="_blank">knock</a>
+        </span>
+        <span class="shell-role-editorial">
+          Platform engineering at <a href="https://knock.app" target="_blank">Knock</a>
+        </span>
       </span>
     </div>
     <div class="shell-role-line">
       <span class="shell-prompt">$</span>
       <span class="shell-role-text">
-        <a href="https://elixir-lang.org" target="_blank">elixir</a> core team
+        <span class="shell-role-terminal">
+          <a href="https://elixir-lang.org" target="_blank">elixir</a> core team
+        </span>
+        <span class="shell-role-editorial">
+          <a href="https://elixir-lang.org" target="_blank">Elixir</a> core team
+        </span>
       </span>
     </div>
     <div class="shell-role-line">
       <span class="shell-prompt">$</span>
-      <span class="shell-role-text">writer, teacher, speaker</span>
+      <span class="shell-role-text">
+        <span class="shell-role-terminal">writer, teacher, speaker</span>
+        <span class="shell-role-editorial">Writing, teaching, speaking</span>
+      </span>
     </div>
     <div class="shell-role-line">
       <span class="shell-prompt">$</span>
@@ -60,7 +73,7 @@ const navItems: Array<{ href: string; label: string; prefix?: string; external?:
           target={item.external ? "_blank" : undefined}
           class={`shell-nav-item${active ? " shell-nav-active" : ""}`}
         >
-          {item.label}
+          <span class="shell-nav-prefix" aria-hidden="true">/</span>{item.label}
         </a>
       );
     })}

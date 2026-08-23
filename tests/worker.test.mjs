@@ -97,6 +97,25 @@ test("serves generated post Markdown through content negotiation", async () => {
   assert.match(await response.text(), /^---\ntitle: Example/m);
 });
 
+test("serves a main page Markdown representation through content negotiation", async () => {
+  setOrigin({
+    "/about.md": {
+      body: "---\ntitle: About\n---\n\n# About\n",
+      contentType: "text/markdown; charset=utf-8",
+    },
+  });
+
+  const response = await worker.fetch(
+    new Request("https://example.com/about/", {
+      headers: { Accept: "text/markdown" },
+    })
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
+  assert.match(await response.text(), /^---\ntitle: About/m);
+});
+
 test("serves direct post Markdown URLs", async () => {
   setOrigin({
     "/posts/example.md": {
@@ -112,6 +131,25 @@ test("serves direct post Markdown URLs", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Content-Type"), "text/markdown; charset=utf-8");
   assert.equal(await response.text(), "# Example\n");
+});
+
+test("serves the AI catalog with its registered media type", async () => {
+  setOrigin({
+    "/.well-known/ai-catalog.json": {
+      body: '{"specVersion":"1.0","entries":[]}',
+      contentType: "application/json; charset=utf-8",
+    },
+  });
+
+  const response = await worker.fetch(
+    new Request("https://example.com/.well-known/ai-catalog.json")
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(
+    response.headers.get("Content-Type"),
+    "application/ai-catalog+json; charset=utf-8"
+  );
 });
 
 test("uses llms.txt while the homepage Markdown sibling is missing", async () => {
