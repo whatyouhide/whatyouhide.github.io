@@ -27,6 +27,38 @@ test("robots.txt allows each audited agent crawler", async () => {
   }
 });
 
+test("robots.txt blocks training-only crawlers", async () => {
+  const robots = await read("dist/robots.txt");
+  const agents = ["CCBot", "Bytespider"];
+
+  for (const agent of agents) {
+    const group = new RegExp(`User-agent: ${agent}\\s+Disallow: /`, "i");
+    assert.match(robots, group, `${agent} must have an explicit Disallow rule`);
+  }
+});
+
+test("all blog posts have valid sitemap lastmod dates", async () => {
+  const sitemap = await read("dist/sitemap.xml");
+  const postEntries = sitemap.match(
+    /<url><loc>[^<]+\/posts\/[^<]+<\/loc>(?:<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>)?<\/url>/g
+  ) ?? [];
+  const datedPostEntries = postEntries.filter((entry) =>
+    /<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/.test(entry)
+  );
+
+  assert.ok(postEntries.length > 0, "sitemap must contain blog posts");
+  assert.equal(
+    datedPostEntries.length,
+    postEntries.length,
+    "every blog post must have a lastmod date"
+  );
+  assert.match(
+    sitemap,
+    /<loc>https:\/\/andrealeopardi\.com\/posts\/advent-of-code-2022\/<\/loc><lastmod>2022-12-26<\/lastmod>/,
+    "updated must take precedence over the original publication date"
+  );
+});
+
 test("the raw homepage HTML has useful text and a heading hierarchy", async () => {
   const html = await read("dist/index.html");
   const h1Position = html.search(/<h1\b/i);

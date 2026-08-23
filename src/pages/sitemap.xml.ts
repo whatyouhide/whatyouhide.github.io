@@ -21,14 +21,22 @@ export async function GET(context: APIContext) {
   const posts = await getSortedPosts();
   const places = await getCollection("places");
 
-  const paths = [
-    ...STATIC_PATHS,
-    ...posts.map(postUrl),
-    ...places.map((p) => `/places/${p.id.replace(/\/index$/, "")}/`),
+  const entries = [
+    ...STATIC_PATHS.map((path) => ({ path })),
+    ...posts.map((post) => ({
+      path: postUrl(post),
+      lastmod: (post.data.updated ?? post.data.date).toISOString().slice(0, 10),
+    })),
+    ...places.map((place) => ({
+      path: `/places/${place.id.replace(/\/index$/, "")}/`,
+    })),
   ];
 
-  const urls = paths
-    .map((p) => `  <url><loc>${baseUrl}${p}</loc></url>`)
+  const urls = entries
+    .map(({ path, lastmod }) => {
+      const lastmodElement = lastmod ? `<lastmod>${lastmod}</lastmod>` : "";
+      return `  <url><loc>${baseUrl}${path}</loc>${lastmodElement}</url>`;
+    })
     .join("\n");
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
