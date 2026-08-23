@@ -4,6 +4,7 @@ import { getSortedPosts, postUrl } from "../lib/posts";
 
 export async function GET(_: APIContext) {
   const posts = (await getSortedPosts()).slice(0, 10);
+  const lastUpdated = new Date().toISOString().slice(0, 10);
   const recentPosts = posts
     .map((post) => {
       const url = `${siteConfig.baseUrl}${postUrl(post)}`;
@@ -11,7 +12,14 @@ export async function GET(_: APIContext) {
     })
     .join("\n");
 
-  const body = `# Andrea Leopardi
+  const body = `---
+title: Andrea Leopardi
+description: The personal website of Andrea Leopardi, with articles about Elixir, distributed systems, software platforms, testing, and system design.
+canonical: ${siteConfig.baseUrl}/
+last-updated: ${lastUpdated}
+---
+
+# Andrea Leopardi
 
 Andrea Leopardi is a software engineer from Italy. He works as a platform engineer at [Knock](https://knock.app) and has been a member of the [Elixir](https://elixir-lang.org) core team since 2016. His work focuses on Elixir, distributed systems, software platforms, testing, and system design.
 
