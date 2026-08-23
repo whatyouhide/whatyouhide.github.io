@@ -111,7 +111,8 @@ const canonical = new URL(Astro.url.pathname, siteConfig.baseUrl).toString();
 
         const nameLink = document.getElementById("shell-name-link");
         const isLandingPage = document.querySelector(".landing-page");
-        if (nameLink && isLandingPage) {
+        const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (nameLink && isLandingPage && isDarkMode) {
           const name = nameLink.textContent || "";
           nameLink.textContent = "";
 

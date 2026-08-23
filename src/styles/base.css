@@ -23,7 +23,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 600;
   letter-spacing: 0.015em;
 
@@ -349,13 +349,13 @@ main.books {
   padding: 0 5vw;
 
   h1 {
-    font-family: var(--font-mono);
+    font-family: var(--font-page-heading);
     font-weight: 700;
     letter-spacing: -0.03em;
   }
 
   h2 {
-    font-family: var(--font-display);
+    font-family: var(--font-page-heading);
     font-weight: 700;
     letter-spacing: -0.03em;
   }
@@ -657,7 +657,7 @@ article.post {
   h3,
   h4,
   h5 {
-    font-family: var(--font-display);
+    font-family: var(--font-page-heading);
     letter-spacing: 0.01em;
     text-transform: none;
 
@@ -696,7 +696,7 @@ article.post {
   h4,
   h5,
   h6 {
-    font-family: var(--font-mono);
+    font-family: var(--font-page-heading);
     text-align: left;
     letter-spacing: 0.01em;
   }
