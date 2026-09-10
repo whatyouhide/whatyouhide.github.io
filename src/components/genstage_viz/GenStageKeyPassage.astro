@@ -1,20 +1,18 @@
+---
+import NeatAnnotation from "../neat-annotation.astro";
+---
+
 <section
     class="gsx-key-passage"
     aria-label="Key passage about minimum and maximum demand"
 >
-    <span
+    <NeatAnnotation
         class="gsx-key-passage__note"
+        note="// the whole trick"
+        direction="e"
+        mark={false}
         aria-hidden="true"
-    >
-        // the whole trick
-    </span>
-    <svg
-        class="gsx-key-passage__arrow"
-        viewBox="0 0 116 58"
-        aria-hidden="true"
-    >
-        <path d="M4 10 C34 5, 62 34, 105 28 L92 19 M105 28 L92 39" />
-    </svg>
+    />
 
     <svg
         class="gsx-key-passage__brace"

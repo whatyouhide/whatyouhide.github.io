@@ -1,0 +1,28 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import "@fontsource/shantell-sans/latin-400.css";
+import "../styles/vendor/neat-annotations.css";
+
+interface Props extends HTMLAttributes<"span"> {
+  note?: string;
+  direction?: "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
+  mark?: boolean;
+}
+
+const { note, direction = "n", mark = true, class: className, ...attrs } = Astro.props;
+---
+
+<!-- Keep essential text in HTML. The note is a visual aid. -->
+<span
+  {...attrs}
+  class:list={["neat-annotation", "ann", `ann-${direction}`, { "ann-no-mark": !mark }, className]}
+  data-note={note}
+><slot /></span>
+
+<style>
+  .neat-annotation {
+    --ann-color: var(--color-links);
+    --ann-font: var(--font-handwritten);
+    font-synthesis: none;
+  }
+</style>

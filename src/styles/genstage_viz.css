@@ -55,8 +55,7 @@ genstage-multiple-consumers-demo {
   pointer-events: none;
 }
 
-.gsx-key-passage__brace path,
-.gsx-key-passage__arrow path {
+.gsx-key-passage__brace path {
   fill: none;
   stroke: var(--gsx-ink);
   stroke-linecap: round;
@@ -65,29 +64,23 @@ genstage-multiple-consumers-demo {
   vector-effect: non-scaling-stroke;
 }
 
-.gsx-key-passage__note {
+.gsx-key-passage__note.ann {
+  --ann-label-max-width: 10rem;
   position: absolute;
   z-index: 2;
-  color: var(--gsx-ink);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.035em;
-  line-height: 1;
-  white-space: nowrap;
-  top: 0.65rem;
-  left: 0.3rem;
-  transform: rotate(-3deg);
+  top: 1rem;
+  left: 10.5rem;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
-.gsx-key-passage__arrow {
-  position: absolute;
-  z-index: 2;
-  top: 0.55rem;
-  left: 5.5rem;
-  width: 5.35rem;
-  overflow: visible;
-  pointer-events: none;
+.gsx-key-passage__note.ann::before {
+  transform: rotate(45deg);
+}
+
+.gsx-key-passage__note.ann::after {
+  font-size: 0.85rem;
 }
 
 .gsx-key-passage__takeaway {
@@ -104,7 +97,7 @@ genstage-multiple-consumers-demo {
   -webkit-box-decoration-break: clone;
 }
 
-@media (min-width: 1180px) {
+@media (--wide) {
   #main.container.post-page > article.post .entry:has(.gsx-key-passage) {
     overflow-x: visible;
   }
@@ -122,15 +115,13 @@ genstage-multiple-consumers-demo {
     height: 100%;
   }
 
-  .gsx-key-passage__note {
-    top: calc(50% - 2rem);
-    left: -8.35rem;
+  .gsx-key-passage__note.ann {
+    top: 50%;
+    left: -0.35rem;
   }
 
-  .gsx-key-passage__arrow {
-    top: calc(50% - 1.45rem);
-    left: -6.95rem;
-    width: 6.5rem;
+  .gsx-key-passage__note.ann::before {
+    transform: none;
   }
 }
 
