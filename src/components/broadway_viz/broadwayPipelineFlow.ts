@@ -1,4 +1,5 @@
 import { advancePipeline, createPipeline, nextPipelineEvent, pipelineFinished, PIPELINE_STEP, type PipelineModel, type PipelineOptions } from "./broadwayPipelineModel";
+import { BroadwayReadableCaption, CAPTION_DWELL_MS } from "./broadwayReadableCaption";
 
 type Point = {x:number; y:number};
 const svgNS = "http://www.w3.org/2000/svg";
@@ -36,6 +37,7 @@ export class BroadwayPipelineFlow {
     replay: HTMLButtonElement;
     action: HTMLElement;
     announcement: HTMLElement;
+    caption: BroadwayReadableCaption;
 
     constructor(public root: HTMLElement, options: PipelineOptions) {
         this.model = createPipeline(options);
@@ -77,6 +79,7 @@ export class BroadwayPipelineFlow {
         this.replay = root.querySelector("[data-flow-replay]")!;
         this.action = root.querySelector("[data-flow-action]")!;
         this.announcement = root.querySelector("[data-flow-announcement]")!;
+        this.caption = new BroadwayReadableCaption(this.action.textContent ?? this.model.action, performance.now());
         this.play.addEventListener("click", this.toggle);
         this.next.addEventListener("click", this.step);
         this.replay.addEventListener("click", this.replayRun);
@@ -89,6 +92,7 @@ export class BroadwayPipelineFlow {
     configure(options: PipelineOptions) {
         if (Object.keys(options).every(key => options[key as keyof PipelineOptions] === this.model.options[key as keyof PipelineOptions])) return;
         this.model = createPipeline(options); this.accumulator = 0; this.dwell = 0; this.revision = -1;
+        setText(this.action, this.caption.reset(this.model.action, performance.now()));
         this.render(); this.sync();
     }
     stop() { cancelAnimationFrame(this.frame); this.frame = 0; this.lastTime = 0; }
@@ -101,17 +105,22 @@ export class BroadwayPipelineFlow {
     };
     preference = () => { if (this.motion.matches) this.running = false; this.sync(); this.render(); };
     toggle = () => { this.running = !this.running; this.sync(); this.announce(); };
-    step = () => { this.running = false; this.accumulator = 0; nextPipelineEvent(this.model); this.render(); this.sync(); this.announce(); };
-    replayRun = () => { this.model = createPipeline(this.model.options); this.accumulator = 0; this.dwell = 0; this.revision = -1; this.running = !this.motion.matches; this.render(); this.sync(); this.announce(); };
+    step = () => { this.running = false; this.accumulator = 0; nextPipelineEvent(this.model); this.render(true); this.sync(); this.announce(); };
+    replayRun = () => {
+        this.model = createPipeline(this.model.options); this.accumulator = 0; this.dwell = 0; this.revision = -1; this.running = !this.motion.matches;
+        setText(this.action, this.caption.reset(this.model.action, performance.now()));
+        this.render(); this.sync(); this.announce();
+    };
     announce() { setText(this.announcement, this.action.textContent ?? ""); }
     tick = (now: number) => {
         const delta = this.lastTime ? Math.min(80, now - this.lastTime) : 0;
         this.lastTime = now;
         if (pipelineFinished(this.model)) {
             this.dwell += delta;
-            if (this.dwell >= 2200) {
+            if (this.dwell >= CAPTION_DWELL_MS + 2200) {
                 this.model = createPipeline(this.model.options);
                 this.accumulator = 0; this.dwell = 0; this.revision = -1;
+                setText(this.action, this.caption.reset(this.model.action, performance.now()));
                 this.next.disabled = false;
             }
         } else {
@@ -149,7 +158,7 @@ export class BroadwayPipelineFlow {
         const x = route[i].x + (route[i + 1].x - route[i].x) * t, y = route[i].y + (route[i + 1].y - route[i].y) * t;
         packet.setAttribute("transform", `translate(${x},${y})`);
     }
-    render() {
+    render(forceCaption = false) {
         const model = this.model;
         if (model.revision !== this.revision) {
             this.revision = model.revision;
@@ -165,8 +174,6 @@ export class BroadwayPipelineFlow {
                 setAttribute(node, "data-flow-active", String(!!batch || count > 0));
             });
             this.workers.forEach(node => setAttribute(node, "data-flow-active", String(model.batches.some(b => b.key === Number(node.dataset.batcherIndex) && b.worker === Number(node.dataset.workerIndex) && b.state === "working"))));
-            const complete = pipelineFinished(model);
-            setText(this.action, complete ? `${model.messages.length} messages ${["stored at the source", "received by producers", "processed", "formed into batches", "processed in batches"][model.options.chapter]}.` : model.action);
             // Only one path gets emphasis. Other in-flight messages stay visible.
             const focus = model.messages.filter(m => ["fetch","dispatch","collect"].includes(m.state)).sort((a, b) => b.started - a.started || b.id - a.id)[0];
             let selected: SVGGElement | undefined;
@@ -179,6 +186,9 @@ export class BroadwayPipelineFlow {
             if (batch) selected = this.wires[3][batch.key * 4 + batch.worker];
             this.wires.flat().forEach(wire => setAttribute(wire, "data-flow-active", String(wire === selected)));
         }
+        const complete = pipelineFinished(model);
+        const action = complete ? `${model.messages.length} messages ${["stored at the source", "received by producers", "processed", "formed into batches", "processed in batches"][model.options.chapter]}.` : model.action;
+        setText(this.action, this.caption.update(action, performance.now(), forceCaption));
         model.messages.forEach((message, i) => {
             let route: Point[] | undefined;
             if (message.state === "arrival") route = this.sourceRoute;

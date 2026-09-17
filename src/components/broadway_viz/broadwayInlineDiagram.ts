@@ -1,5 +1,6 @@
 import { advancePipeline, pipelineFinished, PIPELINE_STEP, type PipelineOptions } from "./broadwayPipelineModel";
 import { createInlinePipeline, edgePath, edgePoint, inlineLayout, inlineState, nextInlineEvent, type InlineLayout } from "./broadwayInlineScene";
+import { BroadwayReadableCaption, CAPTION_DWELL_MS } from "./broadwayReadableCaption";
 
 const ns = "http://www.w3.org/2000/svg";
 const attr = (node: Element, name: string, value: string) => { if (node.getAttribute(name) !== value) node.setAttribute(name, value); };
@@ -38,11 +39,13 @@ class BroadwayInlineDiagram extends HTMLElement {
     revision = -1;
     width = 0;
     state!: ReturnType<typeof inlineState>;
+    captionClock!: BroadwayReadableCaption;
 
     connectedCallback() {
         this.root = this.closest("broadway-scroll-explainer")!;
         this.svg = this.querySelector("svg")!;
         this.caption = this.querySelector("[data-inline-caption]")!;
+        this.captionClock = new BroadwayReadableCaption(this.caption.textContent ?? "", performance.now());
         this.play = this.querySelector("[data-inline-play]")!;
         this.next = this.querySelector("[data-inline-next]")!;
         this.replay = this.querySelector("[data-inline-replay]")!;
@@ -84,14 +87,14 @@ class BroadwayInlineDiagram extends HTMLElement {
         if (Object.keys(options).every(key => options[key as keyof PipelineOptions] === this.model.options[key as keyof PipelineOptions])) return;
         this.model = createInlinePipeline(options);
         this.accumulator = 0; this.dwell = 0;
-        this.build(); this.sync();
+        this.build(true); this.sync();
     };
     measure = () => {
         const width = Math.round(this.getBoundingClientRect().width);
         if (!width || width === this.width) return;
         this.width = width; this.build();
     };
-    build() {
+    build(forceCaption = false) {
         this.layout = inlineLayout(this.model.options, this.width || 358);
         attr(this.svg, "viewBox", `0 0 ${this.layout.width} ${this.layout.height}`);
         const field = element("g", { "aria-hidden": "true" });
@@ -116,9 +119,9 @@ class BroadwayInlineDiagram extends HTMLElement {
             field.append(packet); return packet;
         });
         this.svg.replaceChildren(field);
-        this.revision = -1; this.render();
+        this.revision = -1; this.render(forceCaption);
     }
-    render() {
+    render(forceCaption = false) {
         if (this.revision !== this.model.revision) {
             this.revision = this.model.revision;
             this.state = inlineState(this.model);
@@ -127,10 +130,11 @@ class BroadwayInlineDiagram extends HTMLElement {
                 attr(node.group, "data-active", String(state.active)); text(node.status, state.status);
             }
             this.sourceMarks.forEach((mark, i) => attr(mark, "visibility", this.model.messages[i].state === "source" ? "visible" : "hidden"));
-            text(this.caption, this.state.caption);
-            attr(this.svg, "aria-label", `${this.dataset.title}. ${this.state.caption}`);
             this.next.disabled = pipelineFinished(this.model);
         }
+        const caption = this.captionClock.update(this.state.caption, performance.now(), forceCaption);
+        text(this.caption, caption);
+        attr(this.svg, "aria-label", `${this.dataset.title}. ${caption}`);
         this.packets.forEach((node, i) => {
             const packet = this.state.packets[i];
             const edge = packet && this.layout.edges.find(edge => edge.id === packet.edge);
@@ -152,13 +156,13 @@ class BroadwayInlineDiagram extends HTMLElement {
     toggle = () => { this.running = !this.running; this.sync(); };
     step = () => {
         this.running = false; this.accumulator = 0;
-        nextInlineEvent(this.model); this.render(); this.sync();
+        nextInlineEvent(this.model); this.render(true); this.sync();
         text(this.announcement, this.state.caption);
     };
     restart = () => {
         this.model = createInlinePipeline(this.options());
         this.accumulator = 0; this.dwell = 0; this.revision = -1;
-        this.running = !this.motion.matches; this.render(); this.sync();
+        this.running = !this.motion.matches; this.render(true); this.sync();
         text(this.announcement, this.state.caption);
     };
     tick = (now: number) => {
@@ -167,7 +171,11 @@ class BroadwayInlineDiagram extends HTMLElement {
         this.last = now;
         if (pipelineFinished(this.model)) {
             this.dwell += delta;
-            if (this.dwell >= 2200) { this.model = createInlinePipeline(this.options()); this.revision = -1; this.accumulator = 0; this.dwell = 0; }
+            if (this.dwell >= CAPTION_DWELL_MS + 2200) {
+                this.model = createInlinePipeline(this.options()); this.revision = -1; this.accumulator = 0; this.dwell = 0;
+                const state = inlineState(this.model);
+                text(this.caption, this.captionClock.reset(state.caption, performance.now()));
+            }
         } else {
             this.accumulator += delta;
             while (this.accumulator >= PIPELINE_STEP && !pipelineFinished(this.model)) { advancePipeline(this.model); this.accumulator -= PIPELINE_STEP; }

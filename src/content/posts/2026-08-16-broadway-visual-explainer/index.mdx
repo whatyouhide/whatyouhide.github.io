@@ -42,7 +42,7 @@ Broadway ships with official producers for all the major message queues, but you
 <BroadwayExplainerStep slot="producers" title="Producers" chapter={1}>
 A Broadway producer is "just" an Elixir process (a `GenStage.Producer` if you're nasty). Broadway itself is a big old GenStage pipeline: producer processes wait for event **demand** from downstream in the pipeline.
 
-More process means fetching more data in parallel from the original source. Is that *always* good? Depends. You need to know your **ordering** semantics. For example, if multiple producers fetch in parallel from a single Kafka topic/partition, you'll lose the ordering of events within that topic/partition. If you don't need ordering, multiple producers can increase the throughput of events you suck out of your data source.
+More processes means fetching more data in parallel from the original source. Is that *always* good? Depends. You need to know your **ordering** semantics. For example, if multiple producers fetch in parallel from a single Kafka topic/partition, you'll lose the ordering of events within that topic/partition. If you don't need ordering, multiple producers can increase the throughput of events you suck out of your data source.
 
 Most producers are "passive" in some way: they have to ask the data source for more data (an HTTP `GET` for SQS, a `Fetch` request in Kafka, and so on). Downstream demand is what drives *when* producers ask for more events.
 </BroadwayExplainerStep>
@@ -77,7 +77,7 @@ The `:concurrency` option under each batcher controls the number of batch proces
 
 ## Routing
 
-By default, a Broadway pipeline doesn't are about *message order* and processes all messages (and batches) concurrently. Sometimes, you will have to impose ordering yourself though, because you need strict ordering. You can do that via the `:partition_by` option: all messages with a given partition key are processed by the same processor/batch processor.
+By default, a Broadway pipeline doesn't care about *message order* and processes all messages (and batches) concurrently. Sometimes, you will have to impose ordering yourself though, because you need strict ordering. You can do that via the `:partition_by` option: all messages with a given partition key are processed by the same processor/batch processor.
 
 Luckily, producers for sources where strict ordering is a prerequisite (like Apache Kafka) set `:partition_by` correctly for you.
 
