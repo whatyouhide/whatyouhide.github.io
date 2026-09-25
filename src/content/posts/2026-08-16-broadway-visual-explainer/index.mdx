@@ -42,7 +42,7 @@ Broadway ships with official producers for all the major message queues, but you
 <BroadwayExplainerStep slot="producers" title="Producers" chapter={1}>
 A Broadway producer is "just" an Elixir process (a `GenStage.Producer` if you're nasty). Broadway itself is a big old GenStage pipeline: producer processes wait for event **demand** from downstream in the pipeline.
 
-More processes means fetching more data in parallel from the original source. Is that *always* good? Depends. You need to know your **ordering** semantics. For example, if multiple producers fetch in parallel from a single Kafka topic/partition, you'll lose the ordering of events within that topic/partition. If you don't need ordering, multiple producers can increase the throughput of events you suck out of your data source.
+More processes means fetching more data in parallel from the original source. Is that *always* good? Depends. You need to know your **ordering** semantics. For example, if multiple producers could fetch in parallel from a single Kafka `(topic, partition)` pair, you'd lose the ordering of events within that topic/partition. If you don't need ordering, multiple producers can increase the throughput of events you suck out of your data source.
 
 Most producers are "passive" in some way: they have to ask the data source for more data (an HTTP `GET` for SQS, a `Fetch` request in Kafka, and so on). Downstream demand is what drives *when* producers ask for more events.
 </BroadwayExplainerStep>
